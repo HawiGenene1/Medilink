@@ -1,0 +1,37 @@
+/* Layout Styles */
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+
+.auth-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Container */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Grid System */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -10px;
+}
+
+.col {
+  flex: 1;
+  padding: 10px;
+}
