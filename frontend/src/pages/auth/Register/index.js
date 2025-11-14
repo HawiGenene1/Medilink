@@ -1,28 +1,52 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
+import { useAuth } from '../../../contexts/AuthContext';
 import './Register.css';
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // TODO: Connect to backend API (Week 2 task)
-      // const response = await fetch('http://localhost:5000/api/auth/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(values)
-      // });
-      // const data = await response.json();
+      // Split name into firstName and lastName
+      const nameParts = values.name.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || nameParts[0];
+
+      // Prepare user data for backend
+      const userData = {
+        firstName,
+        lastName,
+        email: values.email,
+        password: values.password,
+        phone: values.phone,
+        role: 'customer' // Default role for registration
+      };
+
+      const result = await register(userData);
       
-      console.log('Register form values:', values);
-      message.info('Ready to connect to backend API');
-      
+      if (result.success) {
+        message.success('Registration successful! Welcome to MediLink.');
+        // Redirect to customer home after successful registration
+        navigate('/customer/home');
+      } else {
+        // Display validation errors if any
+        if (result.errors && Array.isArray(result.errors)) {
+          result.errors.forEach(err => {
+            message.error(err.msg || err.message);
+          });
+        } else {
+          message.error(result.message || 'Registration failed. Please try again.');
+        }
+      }
     } catch (error) {
       message.error('An error occurred. Please try again.');
+      console.error('Registration error:', error);
     } finally {
       setLoading(false);
     }
@@ -63,6 +87,21 @@ const Register = () => {
             <Input 
               prefix={<MailOutlined />} 
               placeholder="Enter your email" 
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Phone Number"
+            name="phone"
+            rules={[
+              { required: true, message: 'Please input your phone number!' },
+              { pattern: /^[\d\s\-\+\(\)]+$/, message: 'Please enter a valid phone number!' }
+            ]}
+          >
+            <Input 
+              prefix={<PhoneOutlined />} 
+              placeholder="Enter your phone number (e.g., +1234567890)" 
               size="large"
             />
           </Form.Item>

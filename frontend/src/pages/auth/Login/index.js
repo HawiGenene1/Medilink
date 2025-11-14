@@ -1,28 +1,53 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { useAuth } from '../../../contexts/AuthContext';
 import './Login.css';
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // TODO: Connect to backend API (Week 2 task)
-      // const response = await fetch('http://localhost:5000/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(values)
-      // });
-      // const data = await response.json();
+      const result = await login(values);
       
-      console.log('Login form values:', values);
-      message.info('Ready to connect to backend API');
-      
+      if (result.success) {
+        message.success('Login successful!');
+        
+        // Redirect based on user role
+        const role = result.user.role;
+        switch (role) {
+          case 'customer':
+            navigate('/customer/home');
+            break;
+          case 'pharmacy_staff':
+            navigate('/pharmacy-staff/inventory');
+            break;
+          case 'pharmacy_admin':
+            navigate('/pharmacy-admin/dashboard');
+            break;
+          case 'cashier':
+            navigate('/cashier/dashboard');
+            break;
+          case 'delivery':
+            navigate('/delivery/dashboard');
+            break;
+          case 'admin':
+            navigate('/admin/dashboard');
+            break;
+          default:
+            navigate('/');
+        }
+      } else {
+        message.error(result.message || 'Login failed. Please check your credentials.');
+      }
     } catch (error) {
       message.error('An error occurred. Please try again.');
+      console.error('Login error:', error);
     } finally {
       setLoading(false);
     }
