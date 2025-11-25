@@ -1,90 +1,183 @@
-const express = require('express');
-const router = express.Router();
-const { body } = require('express-validator');
-const { register, login, getCurrentUser } = require('../controllers/authController');
-const { authenticate } = require('../middleware/authMiddleware');
+const User = require("../models/User");
+const { validationResult } = require("express-validator");
+const jwt = require("jsonwebtoken");
 
-/**
- * @route   POST /api/auth/register
- * @desc    Register a new user
- * @access  Public
- */
-router.post(
-  '/register',
-  [
-    body('firstName')
-      .trim()
-      .notEmpty()
-      .withMessage('First name is required')
-      .isLength({ min: 2, max: 50 })
-      .withMessage('First name must be between 2 and 50 characters'),
-    
-    body('lastName')
-      .trim()
-      .notEmpty()
-      .withMessage('Last name is required')
-      .isLength({ min: 2, max: 50 })
-      .withMessage('Last name must be between 2 and 50 characters'),
-    
-    body('email')
-      .trim()
-      .notEmpty()
-      .withMessage('Email is required')
-      .isEmail()
-      .withMessage('Please provide a valid email')
-      .normalizeEmail(),
-    
-    body('password')
-      .notEmpty()
-      .withMessage('Password is required')
-      .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters long')
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-      .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
-    
-    body('phone')
-      .trim()
-      .notEmpty()
-      .withMessage('Phone number is required')
-      .matches(/^[\d\s\-\+\(\)]+$/)
-      .withMessage('Please provide a valid phone number'),
-    
-    body('role')
-      .optional()
-      .isIn(['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'])
-      .withMessage('Invalid role specified')
-  ],
-  register
-);
+// Generate JWT Token
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET || "fallback_secret", {
+    expiresIn: "30d",
+  });
+};
 
-/**
- * @route   POST /api/auth/login
- * @desc    Login user and return JWT token
- * @access  Public
- */
-router.post(
-  '/login',
-  [
-    body('email')
-      .trim()
-      .notEmpty()
-      .withMessage('Email is required')
-      .isEmail()
-      .withMessage('Please provide a valid email')
-      .normalizeEmail(),
+// @desc    Register user
+// @route   POST /api/auth/register
+// @access  Public
+const register = async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: errors.array(),
+      });
+    }
+
+    const { firstName, lastName, email, password, phone, role } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists with this email",
+      });
+    }
+
+    // Create new user
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      role: role || "customer", // Default to customer if no role provided
+    });
+
+    await user.save();
+
+    // Generate token
+    const token = generateToken(user._id);
+
+    res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      data: {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+        },
+        token,
+      },
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error during registration",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
+const login = async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: errors.array(),
+      });
+    }
+
+    const { email, password } = req.body;
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Check password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Generate token
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      data: {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+        },
+        token,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error during login",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get current user
+// @route   GET /api/auth/me
+// @access  Private
+const getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("-password");
     
-    body('password')
-      .notEmpty()
-      .withMessage('Password is required')
-  ],
-  login
-);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-/**
- * @route   GET /api/auth/me
- * @desc    Get current user profile
- * @access  Private
- */
-router.get('/me', authenticate, getCurrentUser);
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          createdAt: user.createdAt,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Get current user error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
 
-module.exports = router;
+module.exports = {
+  register,
+  login,
+  getCurrentUser,
+};
