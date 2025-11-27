@@ -20,6 +20,11 @@ const Home = () => {
               Get authentic medicines, expert consultations, and fast delivery - all from the comfort of your home. 
               Join thousands of satisfied customers who trust us with their healthcare needs.
             </p>
+            <div className="cta-buttons" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+              <Link to="/medicines" className="btn btn-primary" style={{ minWidth: '220px' }}>
+                <MedicineBoxOutlined /> Browse All Medicines
+              </Link>
+            </div>
             <div className="auth-options">
               <div className="auth-option">
                 <h3>For Customers</h3>
