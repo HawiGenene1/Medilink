@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingOutlined, MedicineBoxOutlined, SafetyOutlined, RocketOutlined } from '@ant-design/icons';
+import { ShoppingOutlined, MedicineBoxOutlined, SafetyOutlined, UserAddOutlined, ShopOutlined } from '@ant-design/icons';
 import './Home.css';
 
 const Home = () => {
@@ -11,21 +11,62 @@ const Home = () => {
         <div className="hero-content">
           <div className="hero-text">
             <h1 className="hero-title">
-              Welcome to <span className="brand">MediLink</span>
+              Your Health, <span className="highlight">Our Priority</span>
             </h1>
             <p className="hero-subtitle">
-              Your Trusted Online Pharmacy & Medicine Management System
+              Ethiopia's Leading Online Pharmacy & Healthcare Platform
             </p>
             <p className="hero-description">
-              Access quality medicines, manage prescriptions, and get your health supplies delivered right to your doorstep.
+              Get authentic medicines, expert consultations, and fast delivery - all from the comfort of your home. 
+              Join thousands of satisfied customers who trust us with their healthcare needs.
             </p>
-            <div className="cta-buttons">
-              <Link to="/register" className="btn btn-primary">
-                <RocketOutlined /> Get Started
+            <div className="cta-buttons" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+              <Link to="/medicines" className="btn btn-primary" style={{ minWidth: '220px' }}>
+                <MedicineBoxOutlined /> Browse All Medicines
               </Link>
-              <Link to="/login" className="btn btn-secondary">
-                Login
-              </Link>
+            </div>
+            <div className="auth-options">
+              <div className="auth-option">
+                <h3>For Customers</h3>
+                <div className="auth-buttons">
+                  <Link to="/register?role=customer" className="btn btn-primary">
+                    <UserAddOutlined /> Sign Up as Customer
+                  </Link>
+                  <Link to="/login?role=customer" className="btn btn-outline">
+                    Sign In as Customer
+                  </Link>
+                </div>
+              </div>
+              
+              <div className="divider">
+                <span>OR</span>
+              </div>
+              
+              <div className="auth-option">
+                <h3>For Pharmacies</h3>
+                <div className="auth-buttons">
+                  <Link to="/register?role=pharmacy" className="btn btn-primary">
+                    <ShopOutlined /> Register Your Pharmacy
+                  </Link>
+                  <Link to="/login?role=pharmacy" className="btn btn-outline">
+                    Pharmacy Sign In
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <div className="hero-trust">
+              <div className="trust-item">
+                <SafetyOutlined className="trust-icon" />
+                <span>100% Genuine Medicines</span>
+              </div>
+              <div className="trust-item">
+                <MedicineBoxOutlined className="trust-icon" />
+                <span>Free Delivery</span>
+              </div>
+              <div className="trust-item">
+                <ShoppingOutlined className="trust-icon" />
+                <span>Easy Returns</span>
+              </div>
             </div>
           </div>
           <div className="hero-image">
@@ -67,23 +108,12 @@ const Home = () => {
             
             <div className="feature-card">
               <div className="feature-icon">
-                <RocketOutlined />
+                <ShoppingOutlined />
               </div>
               <h3>Fast Delivery</h3>
               <p>Quick and reliable delivery service to get your medicines when you need them</p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="cta-section">
-        <div className="container">
-          <h2>Ready to Get Started?</h2>
-          <p>Join thousands of users managing their health with MediLink</p>
-          <Link to="/register" className="btn btn-primary btn-large">
-            Create Your Account
-          </Link>
         </div>
       </section>
     </div>
