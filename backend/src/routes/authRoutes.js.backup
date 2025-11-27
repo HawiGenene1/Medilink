@@ -1,6 +1,8 @@
+<<<<<<< HEAD
 const User = require("../models/User");
 const { validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
+=======
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
@@ -13,6 +15,7 @@ const {
 
 router.post("/request-reset", requestPasswordReset);
 router.post("/reset-password/:token", resetPassword);
+>>>>>>> fcfec1f (Email & Password Services)
 
 // Generate JWT Token
 const generateToken = (userId) => {

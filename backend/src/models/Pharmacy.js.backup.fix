@@ -31,8 +31,7 @@ const pharmacySchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model("Pharmacy", pharmacySchema);
-const mongoose = require('mongoose');
+module.exports = mongoose.model("Pharmacy", pharmacySchema);`r`nconst mongoose = require('mongoose');
 
 const pharmacySchema = new mongoose.Schema({
   name: {
@@ -159,5 +158,4 @@ pharmacySchema.index({ name: 'text', description: 'text' });
 
 const Pharmacy = mongoose.model('Pharmacy', pharmacySchema);
 
-module.exports = Pharmacy;
-
+module.exports = Pharmacy;`r`n

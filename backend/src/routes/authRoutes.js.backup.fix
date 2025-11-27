@@ -1,7 +1,6 @@
 const User = require("../models/User");
 const { validationResult } = require("express-validator");
-const jwt = require("jsonwebtoken");
-const express = require('express');
+const jwt = require("jsonwebtoken");`r`nconst express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { register, login, getCurrentUser } = require('../controllers/authController');
@@ -12,8 +11,7 @@ const {
 } = require("../controllers/passwordController");
 
 router.post("/request-reset", requestPasswordReset);
-router.post("/reset-password/:token", resetPassword);
-
+router.post("/reset-password/:token", resetPassword);`r`n
 // Generate JWT Token
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET || "fallback_secret", {

@@ -95,7 +95,9 @@ role: {
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  resetToken: {type: String, default:null},
+  resetTokenExpire:{type: Date, default:null},
 }, {
   timestamps: true
 });

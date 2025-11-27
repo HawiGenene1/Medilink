@@ -52,9 +52,17 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.json());
+app.use(express.json()); // parse JSON requests
+app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
+app.use("/api/test", require("./routes/testRoutes"));
+
+// Get environment variables
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGODB_URI ||  process.loadEnvFile.MONGODB_URI;
 
 // Connect to MongoDB
-const MONGO_URI = process.env.MONGO_URI;
+//const MONGO_URI = process.env.MONGO_URI;
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.log('MongoDB connection error:', err));
@@ -109,7 +117,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
