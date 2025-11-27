@@ -20,22 +20,39 @@ const userSchema = new mongoose.Schema({
     trim: true,
     match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
   },
+  // password: {
+  //   type: String,
+  //   required: [true, 'Password is required'],
+  //   minlength: [6, 'Password must be at least 6 characters'],
+  //   select: false // Don't return password by default in queries
+  // },
+  // phone: {
+  //   type: String,
+  //   required: [true, 'Phone number is required'],
+  //   trim: true
+  // },
+  // role: {
+  //   type: String,
+  //   enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
+  //   default: 'customer'
+  // },
+
   password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Don't return password by default in queries
-  },
-  phone: {
-    type: String,
-    required: [true, 'Phone number is required'],
-    trim: true
-  },
-  role: {
-    type: String,
-    enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
-    default: 'customer'
-  },
+  type: String,
+  required: true,
+  select: false
+},
+username: {
+  type: String,
+  required: true,
+  unique: true
+},
+role: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Role",
+  required: true
+},
+
   // For staff members - link to their pharmacy
   pharmacyId: {
     type: mongoose.Schema.Types.ObjectId,

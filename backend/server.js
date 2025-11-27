@@ -3,20 +3,29 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
+
+// Initialize Express app
 const app = express();
+
+// Configure environment variables
+
+require('dotenv').config();
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // parse JSON requests
-app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
 
-// Get environment variables
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGODB_URI;
+
+
+app.use(express.json());
 
 // Connect to MongoDB
+
+
+const MONGO_URI = process.env.MONGO_URI;
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log(' MongoDB connected successfully'))
+
+
+.then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.log('MongoDB connection error:', err));
 
 // Import routes
@@ -69,8 +78,10 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(` Server running on port ${PORT}`);
-  console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
-});
 
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+});
