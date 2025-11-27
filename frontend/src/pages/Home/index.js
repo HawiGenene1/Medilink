@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingOutlined, MedicineBoxOutlined, SafetyOutlined, UserAddOutlined, ShopOutlined, RocketOutlined } from '@ant-design/icons';
+import { ShoppingOutlined, MedicineBoxOutlined, SafetyOutlined, UserAddOutlined, ShopOutlined } from '@ant-design/icons';
 import './Home.css';
 
 const Home = () => {
@@ -103,23 +103,12 @@ const Home = () => {
             
             <div className="feature-card">
               <div className="feature-icon">
-                <RocketOutlined />
+                <ShoppingOutlined />
               </div>
               <h3>Fast Delivery</h3>
               <p>Quick and reliable delivery service to get your medicines when you need them</p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="cta-section">
-        <div className="container">
-          <h2>Ready to Get Started?</h2>
-          <p>Join thousands of users managing their health with MediLink</p>
-          <Link to="/register" className="btn btn-primary btn-large">
-            Create Your Account
-          </Link>
         </div>
       </section>
     </div>
