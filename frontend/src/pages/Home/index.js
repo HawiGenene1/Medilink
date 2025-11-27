@@ -11,21 +11,36 @@ const Home = () => {
         <div className="hero-content">
           <div className="hero-text">
             <h1 className="hero-title">
-              Welcome to <span className="brand">MediLink</span>
+              Your Health, <span className="highlight">Our Priority</span>
             </h1>
             <p className="hero-subtitle">
-              Your Trusted Online Pharmacy & Medicine Management System
+              Ethiopia's Leading Online Pharmacy & Healthcare Platform
             </p>
             <p className="hero-description">
-              Access quality medicines, manage prescriptions, and get your health supplies delivered right to your doorstep.
+              Get authentic medicines, expert consultations, and fast delivery - all from the comfort of your home. 
+              Join thousands of satisfied customers who trust us with their healthcare needs.
             </p>
             <div className="cta-buttons">
               <Link to="/register" className="btn btn-primary">
-                <RocketOutlined /> Get Started
+                <RocketOutlined /> Get Started for Free
               </Link>
-              <Link to="/login" className="btn btn-secondary">
-                Login
+              <Link to="/login" className="btn btn-outline">
+                Sign In
               </Link>
+            </div>
+            <div className="hero-trust">
+              <div className="trust-item">
+                <SafetyOutlined className="trust-icon" />
+                <span>100% Genuine Medicines</span>
+              </div>
+              <div className="trust-item">
+                <MedicineBoxOutlined className="trust-icon" />
+                <span>Free Delivery</span>
+              </div>
+              <div className="trust-item">
+                <ShoppingOutlined className="trust-icon" />
+                <span>Easy Returns</span>
+              </div>
             </div>
           </div>
           <div className="hero-image">
