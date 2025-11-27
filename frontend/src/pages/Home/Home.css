@@ -33,16 +33,10 @@
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  align-items: center;
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 60px;
   align-items: center;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .hero-text {
@@ -77,18 +71,65 @@
   line-height: 1.6;
 }
 
-.hero-image {
+/* Auth Options */
+.auth-options {
+  margin: 2.5rem 0;
+  max-width: 800px;
+}
+
+.auth-option {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+}
+
+.auth-option:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.auth-option h3 {
+  color: #fff;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.auth-buttons {
   display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
   justify-content: center;
 }
 
-.cta-buttons {
+.divider {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 3rem;
-  flex-wrap: wrap;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
 }
 
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.divider span {
+  padding: 0 1rem;
+}
+
+/* Button Styles */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -99,10 +140,37 @@
   text-decoration: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid transparent;
-  font-size: 1.05rem;
+  font-size: 1rem;
   cursor: pointer;
-  min-width: 180px;
+  min-width: 200px;
   text-align: center;
+  margin: 0.25rem 0;
+}
+
+.btn-primary {
+  background-color: #4a6cf7;
+  color: white;
+  border: 2px solid #4a6cf7;
+  box-shadow: 0 4px 15px rgba(74, 108, 247, 0.3);
+}
+
+.btn-primary:hover {
+  background-color: #3a5ce4;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 25px rgba(74, 108, 247, 0.4);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(5px);
+}
+
+.btn-outline:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .btn svg {
@@ -110,30 +178,7 @@
   font-size: 1.1em;
 }
 
-.btn-primary {
-  background-color: #ffd700;
-  color: #1a1a2e;
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-}
-
-.btn-primary:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 6px 25px rgba(255, 215, 0, 0.4);
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(5px);
-}
-
-.btn-outline:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
+/* Hero Trust Section */
 .hero-trust {
   display: flex;
   gap: 2rem;

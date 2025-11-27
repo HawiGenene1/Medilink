@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingOutlined, MedicineBoxOutlined, SafetyOutlined, RocketOutlined } from '@ant-design/icons';
+import { ShoppingOutlined, MedicineBoxOutlined, SafetyOutlined, UserAddOutlined, ShopOutlined, RocketOutlined } from '@ant-design/icons';
 import './Home.css';
 
 const Home = () => {
@@ -20,13 +20,34 @@ const Home = () => {
               Get authentic medicines, expert consultations, and fast delivery - all from the comfort of your home. 
               Join thousands of satisfied customers who trust us with their healthcare needs.
             </p>
-            <div className="cta-buttons">
-              <Link to="/register" className="btn btn-primary">
-                <RocketOutlined /> Get Started for Free
-              </Link>
-              <Link to="/login" className="btn btn-outline">
-                Sign In
-              </Link>
+            <div className="auth-options">
+              <div className="auth-option">
+                <h3>For Customers</h3>
+                <div className="auth-buttons">
+                  <Link to="/register?role=customer" className="btn btn-primary">
+                    <UserAddOutlined /> Sign Up as Customer
+                  </Link>
+                  <Link to="/login?role=customer" className="btn btn-outline">
+                    Sign In as Customer
+                  </Link>
+                </div>
+              </div>
+              
+              <div className="divider">
+                <span>OR</span>
+              </div>
+              
+              <div className="auth-option">
+                <h3>For Pharmacies</h3>
+                <div className="auth-buttons">
+                  <Link to="/register?role=pharmacy" className="btn btn-primary">
+                    <ShopOutlined /> Register Your Pharmacy
+                  </Link>
+                  <Link to="/login?role=pharmacy" className="btn btn-outline">
+                    Pharmacy Sign In
+                  </Link>
+                </div>
+              </div>
             </div>
             <div className="hero-trust">
               <div className="trust-item">
