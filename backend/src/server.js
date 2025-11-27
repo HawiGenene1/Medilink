@@ -51,21 +51,23 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.json());
 app.use(express.json()); // parse JSON requests
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
 app.use("/api/test", require("./routes/testRoutes"));
 
 // Get environment variables
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGODB_URI ||  process.loadEnvFile.MONGODB_URI;
+const MONGO_URI = process.env.MONGODB_URI;
 
-// Connect to MongoDB
-//const MONGO_URI = process.env.MONGO_URI;
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.log('MongoDB connection error:', err));
+// Connect to MongoDB only if URI is provided
+if (MONGO_URI) {
+  mongoose
+    .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('MongoDB connected successfully'))
+    .catch(err => console.log('MongoDB connection error:', err));
+} else {
+  console.log('MONGODB_URI not set. Skipping MongoDB connection.');
+}
 
 // Import routes (only import what exists)
 const authRoutes = require('./routes/authRoutes');

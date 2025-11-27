@@ -66,10 +66,14 @@
 // module.exports = { authenticate };
 const jwt = require("jsonwebtoken");
 
-exports.authRequired = (roles = []) => {
+// Role-based auth middleware factory
+const authRequired = (roles = []) => {
   return (req, res, next) => {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
+      const authHeader = req.headers.authorization || "";
+      const token = authHeader.startsWith("Bearer ")
+        ? authHeader.split(" ")[1]
+        : null;
 
       if (!token) {
         return res.status(401).json({ success: false, message: "Token required" });
@@ -87,4 +91,12 @@ exports.authRequired = (roles = []) => {
       return res.status(401).json({ success: false, message: "Invalid token" });
     }
   };
+};
+
+// Basic auth (no role restrictions) for routes like /api/auth/me
+const authenticate = authRequired();
+
+module.exports = {
+  authRequired,
+  authenticate,
 };
