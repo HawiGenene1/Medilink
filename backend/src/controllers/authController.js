@@ -2,6 +2,9 @@ const User = require('../models/User');
 const { generateToken } = require('../config/jwt');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
+const { generatePassword } = require('../utils/passwordGenerator');
+const { sendWelcomeEmail } = require('../services/emailService');
+const logger = require('../utils/logger');
 
 /**
  * @route   POST /api/auth/register
@@ -19,8 +22,9 @@ const register = async (req, res) => {
       });
     }
 
-    const { firstName, lastName, email, password, phone, role } = req.body;
+    const { firstName, lastName, email, phone, role = 'customer' } = req.body;
 
+    // Check if user already exists
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({
@@ -29,18 +33,45 @@ const register = async (req, res) => {
       });
     }
 
+    // Generate a secure password for customers, or use provided one for other roles
+    let password;
+    if (role === 'customer') {
+      password = generatePassword(12);
+    } else {
+      // For non-customer roles, password is required in the request
+      if (!req.body.password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password is required for this user role',
+        });
+      }
+      password = req.body.password;
+    }
+
+    // Create new user
     user = new User({
       firstName,
       lastName,
       email,
-      password,
       phone,
-      role: role || 'customer',
+      role,
+      // Password will be hashed in the pre-save hook
+      password
     });
 
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
+    // Hash password and save user
     await user.save();
+    
+    // If this is a customer, send welcome email with generated password
+    if (role === 'customer') {
+      try {
+        await sendWelcomeEmail(email, `${firstName} ${lastName}`, password);
+        logger.info(`Welcome email sent to ${email}`);
+      } catch (emailError) {
+        // Log the error but don't fail the registration
+        logger.error('Failed to send welcome email:', emailError);
+      }
+    }
 
     const token = generateToken({
       userId: user._id,

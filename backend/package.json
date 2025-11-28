@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed": "node src/seedDatabase.js"
+    "seed": "node src/seedDatabase.js",
+    "test": "NODE_ENV=test jest --detectOpenHandles --forceExit",
+    "test:unit": "NODE_ENV=test jest --testPathPattern=unit",
+    "test:integration": "NODE_ENV=test jest --testPathPattern=integration"
   },
   "author": "",
   "license": "ISC",
@@ -16,11 +19,19 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-validator": "^7.3.1",
+    "formik": "^2.4.9",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.0.0",
-    "nodemailer": "^7.0.11"
+    "nodemailer": "^7.0.11",
+    "react-bootstrap-icons": "^1.11.6",
+    "react-hook-form": "^7.66.1",
+    "winston": "^3.18.3",
+    "yup": "^1.7.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "express-rate-limit": "^8.2.1",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.11",
+    "supertest": "^7.1.4"
   }
 }
