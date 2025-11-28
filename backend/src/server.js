@@ -67,20 +67,18 @@ const MONGO_URI = process.env.MONGODB_URI;
 //     .catch(err => console.log('MongoDB connection error:', err));
 // } else {
 //   console.log('MONGODB_URI not set. Skipping MongoDB connection.');
-// }
 mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.log('MongoDB connection error:', err));
 
-
 // Import routes (only import what exists)
 const authRoutes = require('./routes/authRoutes');
-// const adminRoutes = require('./routes/adminRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const pharmacyRoutes = require('./routes/pharmacyRoutes');
 // const cashierRoutes = require('./routes/cashierRoutes');
 // const customerRoutes = require('./routes/customerRoutes');
 // const deliveryRoutes = require('./routes/deliveryRoutes');
 // const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
-// const pharmacyRoutes = require('./routes/pharmacyRoutes');
 
 // Import middleware (comment out if files don't exist)
 // const { authenticate } = require('./middleware/authMiddleware');
@@ -88,18 +86,18 @@ const authRoutes = require('./routes/authRoutes');
 
 // API Routes (only use what exists)
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/pharmacy', pharmacyRoutes);
 // Medicines API
 try {
   app.use('/api/medicines', require('./routes/medicineRoutes'));
 } catch (e) {
   console.warn('Medicine routes not mounted:', e.message);
 }
-// app.use('/api/admin', authenticate, authorize('admin'), adminRoutes);
 // app.use('/api/cashier', authenticate, authorize('cashier'), cashierRoutes);
 // app.use('/api/customer', authenticate, authorize('customer'), customerRoutes);
 // app.use('/api/delivery', authenticate, authorize('delivery'), deliveryRoutes);
 // app.use('/api/pharmacy-admin', authenticate, authorize('pharmacy_admin'), pharmacyAdminRoutes);
-// app.use('/api/pharmacy', authenticate, authorize('pharmacy_staff', 'pharmacy_admin'), pharmacyRoutes);
 
 // Test route
 app.get('/', (req, res) => {
