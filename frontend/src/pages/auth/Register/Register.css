@@ -25,3 +25,23 @@
 .register-card .ant-card-head-title {
   color: white;
 }
+
+.info-message {
+  display: flex;
+  align-items: center;
+  background-color: #f0f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  padding: 10px 15px;
+  margin-bottom: 16px;
+  color: #1890ff;
+}
+
+.info-message .anticon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.info-message span {
+  font-size: 14px;
+}

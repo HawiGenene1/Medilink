@@ -60,14 +60,18 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGODB_URI;
 
 // Connect to MongoDB only if URI is provided
-if (MONGO_URI) {
-  mongoose
-    .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('MongoDB connected successfully'))
-    .catch(err => console.log('MongoDB connection error:', err));
-} else {
-  console.log('MONGODB_URI not set. Skipping MongoDB connection.');
-}
+// if (MONGO_URI) {
+//   mongoose
+//     .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+//     .then(() => console.log('MongoDB connected successfully'))
+//     .catch(err => console.log('MongoDB connection error:', err));
+// } else {
+//   console.log('MONGODB_URI not set. Skipping MongoDB connection.');
+// }
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB connected successfully'))
+  .catch(err => console.log('MongoDB connection error:', err));
+
 
 // Import routes (only import what exists)
 const authRoutes = require('./routes/authRoutes');
@@ -84,6 +88,12 @@ const authRoutes = require('./routes/authRoutes');
 
 // API Routes (only use what exists)
 app.use('/api/auth', authRoutes);
+// Medicines API
+try {
+  app.use('/api/medicines', require('./routes/medicineRoutes'));
+} catch (e) {
+  console.warn('Medicine routes not mounted:', e.message);
+}
 // app.use('/api/admin', authenticate, authorize('admin'), adminRoutes);
 // app.use('/api/cashier', authenticate, authorize('cashier'), cashierRoutes);
 // app.use('/api/customer', authenticate, authorize('customer'), customerRoutes);

@@ -1,0 +1,121 @@
+/* Pharmacy Registration Form Styles */
+.pharmacy-register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  padding: 20px;
+}
+
+.pharmacy-register-card {
+  width: 100%;
+  max-width: 800px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.register-header h2 {
+  color: #1890ff;
+  margin-bottom: 8px;
+}
+
+.register-header p {
+  color: #666;
+  margin: 0;
+}
+
+.form-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.form-section h3 {
+  color: #1890ff;
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.form-row .form-item {
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-actions {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.register-button {
+  width: 100%;
+  max-width: 300px;
+  height: 40px;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+
+.login-link {
+  color: #666;
+}
+
+.login-link a {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.document-note {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .form-row .form-item {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  .form-row .form-item:last-child {
+    margin-bottom: 0;
+  }
+  
+  .pharmacy-register-card {
+    margin: 0 10px;
+  }
+}
+
+/* Ant Design overrides */
+.ant-upload.ant-upload-select {
+  width: 100%;
+}
+
+.ant-upload-list-item {
+  margin-top: 8px;
+}
+
+.ant-form-item-label > label {
+  font-weight: 500;
+}

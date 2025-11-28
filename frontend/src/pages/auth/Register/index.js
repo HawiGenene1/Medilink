@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Card, message } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, message, Typography } from 'antd';
+import { UserOutlined, MailOutlined, PhoneOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import './Register.css';
 
@@ -23,7 +23,6 @@ const Register = () => {
         firstName,
         lastName,
         email: values.email,
-        password: values.password,
         phone: values.phone,
         role: 'customer' // Default role for registration
       };
@@ -106,42 +105,11 @@ const Register = () => {
             />
           </Form.Item>
 
-          <Form.Item
-            label="Password"
-            name="password"
-            rules={[
-              { required: true, message: 'Please input your password!' },
-              { min: 6, message: 'Password must be at least 6 characters!' }
-            ]}
-          >
-            <Input.Password 
-              prefix={<LockOutlined />} 
-              placeholder="Enter your password" 
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Confirm Password"
-            name="confirmPassword"
-            dependencies={['password']}
-            rules={[
-              { required: true, message: 'Please confirm your password!' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('password') === value) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(new Error('Passwords do not match!'));
-                },
-              }),
-            ]}
-          >
-            <Input.Password 
-              prefix={<LockOutlined />} 
-              placeholder="Confirm your password" 
-              size="large"
-            />
+          <Form.Item>
+            <div className="info-message">
+              <InfoCircleOutlined />
+              <span>A secure password will be generated and sent to your email.</span>
+            </div>
           </Form.Item>
 
           <Form.Item>
