@@ -84,11 +84,6 @@ const MedicineList = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={3} className="d-flex align-items-end">
-                <Button variant="primary" className="w-100">
-                  <Plus /> Add New Medicine
-                </Button>
-              </Col>
             </Row>
           </Form>
         </Card.Body>
