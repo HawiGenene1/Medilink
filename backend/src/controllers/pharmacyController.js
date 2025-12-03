@@ -117,10 +117,76 @@ const checkPharmacyStatus = async (req, res) => {
   }
 };
 
+/**
+ * @route   GET /api/pharmacy/subscription
+ * @desc    Get pharmacy subscription details
+ * @access  Private (Pharmacy Admin)
+ */
+const getPharmacySubscription = async (req, res) => {
+  try {
+    // In a real implementation, you would get the pharmacy ID from the authenticated user
+    // For now, we'll use a placeholder response
+    res.json({
+      success: true,
+      data: {
+        plan: 'basic',
+        status: 'active',
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        features: [
+          'inventory_management',
+          'sales_tracking',
+          'basic_reporting'
+        ]
+      }
+    });
+  } catch (error) {
+    logger.error('Get pharmacy subscription error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching subscription details',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+/**
+ * @route   POST /api/pharmacy/subscription/request-renewal
+ * @desc    Request subscription renewal
+ * @access  Private (Pharmacy Admin)
+ */
+const requestSubscriptionRenewal = async (req, res) => {
+  try {
+    const { mode = 'monthly' } = req.body;
+    
+    // In a real implementation, you would process the renewal request here
+    // This is just a placeholder response
+    res.status(200).json({
+      success: true,
+      message: `Subscription renewal request received for ${mode} plan`,
+      data: {
+        requestId: `sub_req_${Date.now()}`,
+        status: 'pending_payment',
+        requestedPlan: mode,
+        requestedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logger.error('Subscription renewal request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing renewal request',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 // Admin functions would go here (approvePharmacy, rejectPharmacy, etc.)
 // These would be protected by admin middleware
 
 module.exports = {
   registerPharmacy,
-  checkPharmacyStatus
+  checkPharmacyStatus,
+  getPharmacySubscription,
+  requestSubscriptionRenewal
 };
