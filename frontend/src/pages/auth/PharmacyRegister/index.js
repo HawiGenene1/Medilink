@@ -6,11 +6,9 @@ import {
   UserOutlined, 
   MailOutlined, 
   PhoneOutlined, 
-  IdcardOutlined, 
-  FileTextOutlined,
+  IdcardOutlined,
   UploadOutlined
 } from '@ant-design/icons';
-import { useAuth } from '../../../contexts/AuthContext';
 import './PharmacyRegister.css';
 
 const { TextArea } = Input;
@@ -18,7 +16,6 @@ const { TextArea } = Input;
 const PharmacyRegister = () => {
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState([]);
-  const { register } = useAuth();
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
@@ -28,20 +25,18 @@ const PharmacyRegister = () => {
       // Prepare form data for file uploads
       const formData = new FormData();
       
-      // Add all form fields to formData
+      // Add form values to formData
       Object.keys(values).forEach(key => {
-        if (key === 'establishedDate') {
-          formData.append(key, values[key].format('YYYY-MM-DD'));
-        } else if (key === 'address') {
-          formData.append('address', JSON.stringify(values[key]));
-        } else if (values[key] !== undefined) {
+        if (values[key] !== undefined && values[key] !== null) {
           formData.append(key, values[key]);
         }
       });
 
       // Add files to formData
       fileList.forEach(file => {
-        formData.append('documents', file.originFileObj);
+        if (file.originFileObj) {
+          formData.append('documents', file.originFileObj);
+        }
       });
 
       // Send registration request
@@ -55,13 +50,13 @@ const PharmacyRegister = () => {
       if (response.ok) {
         message.success('Pharmacy registration submitted for approval. We will contact you soon!');
         // Redirect to status check page
-        navigate(`/pharmacy/status/${data.data.id}`);
+        navigate(`/pharmacy/status/${data.data?.id || ''}`);
       } else {
         message.error(data.message || 'Registration failed. Please try again.');
       }
     } catch (error) {
       console.error('Registration error:', error);
-      message.error('An error occurred. Please try again.');
+      message.error('An error occurred during registration. Please try again.');
     } finally {
       setLoading(false);
     }

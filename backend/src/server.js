@@ -45,9 +45,11 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const medicineRoutes = require('./routes/medicineRoutes');
 
 // Initialize Express app
 const app = express();
+app.use('/api/medicines', medicineRoutes);
 
 // Middleware
 app.use(cors());
@@ -60,16 +62,19 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGODB_URI;
 
 // Connect to MongoDB only if URI is provided
-// if (MONGO_URI) {
-//   mongoose
-//     .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-//     .then(() => console.log('MongoDB connected successfully'))
-//     .catch(err => console.log('MongoDB connection error:', err));
-// } else {
-//   console.log('MONGODB_URI not set. Skipping MongoDB connection.');
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.log('MongoDB connection error:', err));
+if (MONGO_URI) {
+  mongoose.connect(MONGO_URI)
+    .then(() => console.log('MongoDB connected successfully'))
+    .catch(err => {
+      console.error('MongoDB connection error:', err.message);
+      console.log('Make sure MongoDB is running and the connection string is correct');
+      process.exit(1);
+    });
+} else {
+  console.error('MONGODB_URI not set in environment variables');
+  console.log('Please create a .env file with MONGODB_URI=mongodb://localhost:27017/medilink');
+  process.exit(1);
+}
 
 // Import routes (only import what exists)
 const authRoutes = require('./routes/authRoutes');

@@ -102,8 +102,6 @@ const tempPharmacySchema = new mongoose.Schema({
 });
 
 // Indexes
-tempPharmacySchema.index({ email: 1 }, { unique: true });
-tempPharmacySchema.index({ 'licenseNumber': 1 }, { unique: true });
 tempPharmacySchema.index({ status: 1 });
 
 // Pre-save hook to update updatedAt
