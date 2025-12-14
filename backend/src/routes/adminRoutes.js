@@ -10,12 +10,11 @@ const {
   deactivateSubscription,
   renewSubscription
 } = require('../controllers/adminController');
-const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // Protect all routes - admin only
-router.use(protect);
+router.use(authenticate);
 router.use(authorize('admin'));
 
 // ============ PHARMACY REGISTRATION ROUTES ============

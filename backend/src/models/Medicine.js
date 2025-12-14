@@ -1,180 +1,59 @@
-// const mongoose = require('mongoose');
-
-// const medicineSchema = new mongoose.Schema({
-//   name: {
-//     type: String,
-//     required: [true, 'Medicine name is required'],
-//     trim: true
-//   },
-//   brand: {
-//     type: String,
-//     required: [true, 'Brand name is required'],
-//     trim: true
-//   },
-//   genericName: {
-//     type: String,
-//     trim: true
-//   },
-//   category: {
-//     type: mongoose.Schema.Types.ObjectId,
-//     ref: 'Category'
-//   },
-//   description: {
-//     type: String,
-//     trim: true
-//   },
-//   price: {
-//     type: Number,
-//     required: [true, 'Price is required'],
-//     min: [0, 'Price cannot be negative']
-//   },
-//   quantity: {
-//     type: Number,
-//     required: [true, 'Quantity is required'],
-//     min: [0, 'Quantity cannot be negative'],
-//     default: 0
-//   },
-//   unit: {
-//     type: String,
-//     enum: ['tablet', 'capsule', 'bottle', 'box', 'tube', 'vial', 'ampoule', 'sachet', 'strip'],
-//     default: 'tablet'
-//   },
-//   dosage: {
-//     type: String,
-//     trim: true
-//   },
-//   manufacturer: {
-//     type: String,
-//     trim: true
-//   },
-//   expiryDate: {
-//     type: Date,
-//     required: [true, 'Expiry date is required']
-//   },
-//   manufactureDate: {
-//     type: Date
-//   },
-//   batchNumber: {
-//     type: String,
-//     trim: true
-//   },
-//   requiresPrescription: {
-//     type: Boolean,
-//     default: false
-//   },
-//   pharmacyId: {
-//     type: mongoose.Schema.Types.ObjectId,
-//     ref: 'Pharmacy',
-//     required: [true, 'Pharmacy ID is required']
-//   },
-//   images: [{
-//     type: String
-//   }],
-//   sideEffects: [{
-//     type: String
-//   }],
-//   usageInstructions: {
-//     type: String,
-//     trim: true
-//   },
-//   warnings: [{
-//     type: String
-//   }],
-//   storage: {
-//     type: String,
-//     trim: true
-//   },
-//   isActive: {
-//     type: Boolean,
-//     default: true
-//   },
-//   rating: {
-//     type: Number,
-//     min: 0,
-//     max: 5,
-//     default: 0
-//   },
-//   reviewCount: {
-//     type: Number,
-//     default: 0
-//   },
-//   soldCount: {
-//     type: Number,
-//     default: 0
-//   },
-//   createdAt: {
-//     type: Date,
-//     default: Date.now
-//   },
-//   updatedAt: {
-//     type: Date,
-//     default: Date.now
-//   }
-// }, {
-//   timestamps: true
-// });
-
-// // Index for searching
-// medicineSchema.index({ name: 'text', brand: 'text', genericName: 'text', description: 'text' });
-
-// // Index for pharmacy
-// medicineSchema.index({ pharmacyId: 1 });
-
-// // Index for category
-// medicineSchema.index({ category: 1 });
-
-// // Virtual for checking if medicine is expired
-// medicineSchema.virtual('isExpired').get(function() {
-//   return this.expiryDate < new Date();
-// });
-
-// // Virtual for checking if low stock
-// medicineSchema.virtual('isLowStock').get(function() {
-//   return this.quantity < 10;
-// });
-
-// const Medicine = mongoose.model('Medicine', medicineSchema);
-
-// module.exports = Medicine;
-
-// backend/src/models/Medicine.js
+// In models/Medicine.js
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const medicineSchema = new mongoose.Schema({
-  name: {
+const locationSchema = new Schema({
+  type: {
     type: String,
-    required: true,
-    trim: true,
-    index: true
+    enum: ['Point'],
+    required: true
   },
-  description: String,
-  price: {
-    type: Number,
-    required: true,
-    min: 0
+  coordinates: {
+    type: [Number], // [longitude, latitude]
+    required: true
   },
-  stock: {
-    type: Number,
-    required: true,
-    min: 0
+  address: String,
+  city: String,
+  region: String,
+  country: String,
+  postalCode: String
+}, { _id: false });
+
+const medicineSchema = new Schema({
+  // ... existing fields ...
+  
+  // Add location reference
+  location: {
+    type: locationSchema,
+    index: '2dsphere' // For geospatial queries
   },
-  category: {
-    type: String,
-    required: true,
-    enum: ['prescription', 'otc', 'supplement', 'equipment']
+  
+  // Add text index for better search
+  searchText: String // Will contain searchable text
+}, {
+  timestamps: true
+});
+
+// Create text index for search
+medicineSchema.index({
+  name: 'text',
+  manufacturer: 'text',
+  'activeIngredients.name': 'text',
+  searchText: 'text'
+}, {
+  weights: {
+    name: 10,
+    manufacturer: 5,
+    'activeIngredients.name': 3,
+    searchText: 1
   },
-  manufacturer: String,
-  imageUrl: String,
-  requiresPrescription: {
-    type: Boolean,
-    default: false
-  },
-  dosage: String,
-  sideEffects: [String],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  default_language: 'english'
+});
+
+// Pre-save hook to update searchText
+medicineSchema.pre('save', function(next) {
+  this.searchText = `${this.name} ${this.manufacturer} ${this.activeIngredients.map(i => i.name).join(' ')}`;
+  next();
 });
 
 module.exports = mongoose.model('Medicine', medicineSchema);
