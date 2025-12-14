@@ -1,38 +1,39 @@
 const Medicine = require('../models/Medicine');
+const FilterService = require('../services/filterService');
 
 /**
  * GET /api/medicines
- * Query params: search, category, minPrice, maxPrice, sort
+ * Query params: search, category, categories, type, types, brand, brands, manufacturer, manufacturers,
+ *                minPrice, maxPrice, inStock, requiresPrescription, sortBy, sortOrder, page, limit
  */
 const getMedicines = async (req, res) => {
   try {
-    const { search, category, minPrice, maxPrice, sort } = req.query;
-    const filter = {};
-
-    if (search) {
-      // simple text search on name and description
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    if (category) filter.category = category;
-    if (minPrice) filter.price = { ...(filter.price || {}), $gte: Number(minPrice) };
-    if (maxPrice) filter.price = { ...(filter.price || {}), $lte: Number(maxPrice) };
-
-    let query = Medicine.find(filter);
-
-    if (sort) {
-      const sortField = sort === 'price' ? 'price' : 'name';
-      query = query.sort(sortField);
-    }
-
-    const medicines = await query.exec();
-    return res.json(medicines);
+    const result = await FilterService.filterMedicines(req.query);
+    return res.json({
+      success: true,
+      data: result.medicines,
+      pagination: result.pagination
+    });
   } catch (error) {
     console.error('getMedicines error:', error);
     return res.status(500).json({ success: false, message: 'Server error fetching medicines' });
+  }
+};
+
+/**
+ * GET /api/medicines/filter-options
+ * Returns available filter options for medicines
+ */
+const getMedicineFilterOptions = async (req, res) => {
+  try {
+    const options = await FilterService.getMedicineFilterOptions();
+    return res.json({
+      success: true,
+      data: options
+    });
+  } catch (error) {
+    console.error('getMedicineFilterOptions error:', error);
+    return res.status(500).json({ success: false, message: 'Server error fetching filter options' });
   }
 };
 
@@ -51,4 +52,5 @@ const getMedicineById = async (req, res) => {
 module.exports = {
   getMedicines,
   getMedicineById,
+  getMedicineFilterOptions,
 };
