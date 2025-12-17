@@ -201,15 +201,10 @@ describe('FilterService Integration', () => {
       ];
       
       jest.spyOn(Order, 'find').mockReturnValue({
-        populate: jest.fn().mockReturnValue({
-          sort: jest.fn().mockReturnValue({
-            skip: jest.fn().mockReturnValue({
-              limit: jest.fn().mockReturnValue({
-                exec: jest.fn().mockResolvedValue(mockOrders)
-              })
-            })
-          })
-        })
+        populate: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue(mockOrders)
       });
 
       jest.spyOn(Order, 'countDocuments').mockResolvedValue(2);

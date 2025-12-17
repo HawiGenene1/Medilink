@@ -224,8 +224,7 @@ class FilterService {
           .populate('items.medicine', 'name price')
           .sort(sort)
           .skip(skip)
-          .limit(limit)
-          .exec(),
+          .limit(limit),
         Order.countDocuments(filter)
       ]);
 
