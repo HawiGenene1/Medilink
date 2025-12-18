@@ -43,19 +43,25 @@
 
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const medicineRoutes = require('./routes/medicineRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
 
 // Initialize Express app
 const app = express();
-app.use('/api/medicines', medicineRoutes);
 
 // Middleware
 app.use(cors());
 app.use(express.json()); // parse JSON requests
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
 app.use("/api/test", require("./routes/testRoutes"));
+app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// Static file serving for uploaded prescriptions
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadsDir));
 
 // Get environment variables
 const PORT = process.env.PORT || 5000;
@@ -93,6 +99,8 @@ const pharmacyRoutes = require('./routes/pharmacyRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/pharmacy', pharmacyRoutes);
+app.use('/api/medicines', medicineRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
 // Medicines API
 try {
   app.use('/api/medicines', require('./routes/medicineRoutes'));

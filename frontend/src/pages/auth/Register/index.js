@@ -37,7 +37,7 @@ const Register = () => {
         // Display validation errors if any
         if (result.errors && Array.isArray(result.errors)) {
           result.errors.forEach(err => {
-            message.error(err.msg || err.message);
+            message.error(err.msg || err.message || 'An error occurred');
           });
         } else {
           message.error(result.message || 'Registration failed. Please try again.');

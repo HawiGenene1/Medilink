@@ -1,7 +1,8 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import authAPI from '../services/api/auth';
+// frontend/src/contexts/AuthContext.js
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../services/api';
 
-// Create Auth Context
 const AuthContext = createContext(null);
 
 // Custom hook to use auth context
@@ -18,113 +19,78 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Initialize auth state from localStorage
+  // Check if user is logged in on initial load
   useEffect(() => {
-    const initializeAuth = () => {
-      const storedUser = authAPI.getUser();
-      const token = authAPI.getToken();
-
-      if (storedUser && token) {
-        setUser(storedUser);
-        setIsAuthenticated(true);
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const response = await api.get('/auth/me');
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('token');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    initializeAuth();
+    checkAuth();
   }, []);
 
-  /**
-   * Register new user
-   */
-  const register = async (userData) => {
+  // Login function
+  const login = async (email, password) => {
     try {
-      const response = await authAPI.register(userData);
-      
-      if (response.success) {
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-        return { success: true, user: response.data.user };
-      }
-      
-      return { success: false, message: response.message };
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        message: error.message || 'Registration failed',
-        errors: error.errors 
-      };
+      console.error('Login failed:', error);
+      return { success: false, message: error.response?.data?.message || 'Login failed' };
     }
   };
 
-  /**
-   * Login user
-   */
-  const login = async (credentials) => {
-    try {
-      const response = await authAPI.login(credentials);
-      
-      if (response.success) {
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-        return { success: true, user: response.data.user };
-      }
-      
-      return { success: false, message: response.message };
-    } catch (error) {
-      return { 
-        success: false, 
-        message: error.message || 'Login failed',
-        errors: error.errors 
-      };
-    }
-  };
-
-  /**
-   * Logout user
-   */
+  // Logout function
   const logout = () => {
-    authAPI.logout();
+    localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
+    navigate('/login');
   };
 
-  /**
-   * Update user data
-   */
-  const updateUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
-
-  /**
-   * Check if user has specific role
-   */
-  const hasRole = (roles) => {
+  // Check if user has required role
+  const hasRole = (requiredRole) => {
     if (!user) return false;
-    if (Array.isArray(roles)) {
-      return roles.includes(user.role);
-    }
-    return user.role === roles;
+    if (user.role === 'admin') return true;
+    return user.role === requiredRole;
+  };
+
+  // Check if user has any of the required roles
+  const hasAnyRole = (roles) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return roles.includes(user.role);
   };
 
   const value = {
     user,
     isAuthenticated,
     loading,
-    register,
     login,
     logout,
-    updateUser,
-    hasRole
+    hasRole,
+    hasAnyRole
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;

@@ -1,18 +1,16 @@
+// frontend/src/App.js
 import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import AppRouter from './routes/AppRouter';
-import './styles/global.css';
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <AuthProvider>
-        <div className="app">
-          <AppRouter />
-        </div>
+        <AppRouter />
       </AuthProvider>
-    </Router>
+    </BrowserRouter>
   );
 }
 
