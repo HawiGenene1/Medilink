@@ -65,8 +65,6 @@ const MONGO_URI = process.env.MONGODB_URI;
 //     .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
 //     .then(() => console.log('MongoDB connected successfully'))
 //     .catch(err => console.log('MongoDB connection error:', err));
-// } else {
-//   console.log('MONGODB_URI not set. Skipping MongoDB connection.');
 mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.log('MongoDB connection error:', err));
@@ -75,6 +73,7 @@ mongoose.connect(MONGO_URI)
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const pharmacyRoutes = require('./routes/pharmacyRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
 // const cashierRoutes = require('./routes/cashierRoutes');
 // const customerRoutes = require('./routes/customerRoutes');
 // const deliveryRoutes = require('./routes/deliveryRoutes');
@@ -88,6 +87,7 @@ const pharmacyRoutes = require('./routes/pharmacyRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/pharmacy', pharmacyRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 // Medicines API
 try {
   app.use('/api/medicines', require('./routes/medicineRoutes'));
