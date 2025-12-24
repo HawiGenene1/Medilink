@@ -1,8 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { registerPharmacy, checkPharmacyStatus, getPharmacySubscription, requestSubscriptionRenewal } = require('../controllers/pharmacyController');
-const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+const { registerPharmacy, checkPharmacyStatus } = require('../controllers/pharmacyController');
 const router = express.Router();
 
 // @route   POST /api/pharmacy/register
@@ -28,19 +26,3 @@ router.post('/register', [
 // @desc    Check registration status of a pharmacy
 // @access  Public
 router.get('/status/:id', checkPharmacyStatus);
-
-// ============ SUBSCRIPTION ROUTES (Protected) ============
-
-// @route   GET /api/pharmacy/subscription
-// @desc    Get pharmacy subscription details
-// @access  Private (Pharmacy Admin)
-router.get('/subscription', protect, authorize('pharmacy_admin'), getPharmacySubscription);
-
-// @route   POST /api/pharmacy/subscription/request-renewal
-// @desc    Request subscription renewal
-// @access  Private (Pharmacy Admin)
-router.post('/subscription/request-renewal', protect, authorize('pharmacy_admin'), [
-  body('mode').optional().isIn(['monthly', 'annually'])
-], requestSubscriptionRenewal);
-
-module.exports = router;
