@@ -1,6 +1,6 @@
 // frontend/src/contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const AuthContext = createContext(null);
@@ -13,38 +13,59 @@ export const useAuth = () => {
   }
   return context;
 };
-
+// Development-only mock user
+const devUser = {
+  _id: 'dev-user-123',
+  email: 'dev@example.com',
+  firstName: 'Dev',
+  lastName: 'User',
+  role: 'customer',
+  isEmailVerified: true
+};
 // Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Check if user is logged in on initial load
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const response = await api.get('/auth/me');
-          setUser(response.data.user);
+     // In development, automatically log in with dev user
+  if (process.env.NODE_ENV === 'development' && !user) {
+    setUser(devUser);
+    setIsAuthenticated(true);
+    setLoading(false);
+    return;
+  }
+    const token = localStorage.getItem('token');
+    if (token) {
+      api.get('/auth/current-user')
+        .then(response => {
+          setUser(response.data);
           setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        localStorage.removeItem('token');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          setUser(null);
+          setIsAuthenticated(false);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   // Login function
   const login = async (email, password) => {
+     // In development, bypass actual login
+  if (process.env.NODE_ENV === 'development') {
+    setUser(devUser);
+    setIsAuthenticated(true);
+    return { success: true, user: devUser };
+  }
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
@@ -60,6 +81,11 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function
   const logout = () => {
+     // In development, just reset to dev user
+  if (process.env.NODE_ENV === 'development') {
+    setUser(devUser);
+    return;
+  }
     localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
@@ -82,7 +108,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    isAuthenticated,
+    isAuthenticated:  process.env.NODE_ENV === 'development' ? true : isAuthenticated,
     loading,
     login,
     logout,
