@@ -16,7 +16,7 @@ const PrescriptionReview = lazy(() => import('../components/pharmacy-staff/Presc
 
 // Customer Pages
 const CustomerLayout = lazy(() => import('../layouts/CustomerLayout'));
-const CustomerHome = lazy(() => import('../pages/customer/Home'));
+const CustomerDashboard = lazy(() => import('../pages/customer/Home'));
 const PrescriptionsPage = lazy(() => import('../pages/customer/Prescriptions'));
 const OrdersPage = lazy(() => import('../pages/customer/Orders'));
 const CartPage = lazy(() => import('../pages/customer/Cart'));
@@ -56,8 +56,8 @@ const AppRouter = () => {
             </ProtectedRoute>
           }
         >
-          <Route index element={<CustomerHome />} />
-          <Route path="home" element={<CustomerHome />} />
+          <Route index element={<CustomerDashboard />} />
+          <Route path="home" element={<CustomerDashboard />} />
           <Route path="prescriptions" element={<PrescriptionsPage />} />
           <Route path="orders" element={<OrdersPage />}>
             <Route index element={<Navigate to="list" replace />} />
@@ -69,18 +69,16 @@ const AppRouter = () => {
         </Route>
 
         {/* Development-only routes */}
-        {process.env.NODE_ENV === 'development' && (
-          <Route
-            path="/dev/customer"
-            element={
-              <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-                <CustomerLayout>
-                  <CustomerHome />
-                </CustomerLayout>
-              </div>
-            }
-          />
-        )}
+        <Route
+          path="/dev/customer"
+          element={
+            <ProtectedRoute allowedRoles={['customer']}>
+              <CustomerLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<CustomerDashboard />} />
+        </Route>
 
         {/* Pharmacy Staff Routes */}
         <Route
