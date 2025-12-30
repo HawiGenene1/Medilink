@@ -17,9 +17,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "colors": "^1.4.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.2",
-    "morgan": "^1.10.1",
-    "node-cron": "^4.2.1"
+    "validator": "^13.15.26"
   }
 }

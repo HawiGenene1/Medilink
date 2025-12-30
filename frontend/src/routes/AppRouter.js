@@ -1,51 +1,101 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-
-// Layouts
+// frontend/src/routes/AppRouter.js
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Spin } from 'antd';
 import MainLayout from '../layouts/MainLayout';
 import AuthLayout from '../layouts/AuthLayout';
-
-// Components
 import ProtectedRoute from './ProtectedRoute';
 
-// Auth Pages
-import Login from '../pages/auth/Login';
-import Register from '../pages/auth/Register';
-import PharmacyRegister from '../pages/auth/PharmacyRegister';
+// Lazy load components for better performance
+const Home = lazy(() => import('../pages/Home'));
+const MedicineList = lazy(() => import('../pages/medicines/MedicineList'));
+const MedicineDetail = lazy(() => import('../pages/medicines/MedicineDetail'));
+const Login = lazy(() => import('../pages/auth/Login'));
+const Register = lazy(() => import('../pages/auth/Register'));
+const PrescriptionReview = lazy(() => import('../components/pharmacy-staff/PrescriptionReview'));
 
-// Pages
-import Home from '../pages/Home';
-import CustomerHome from '../pages/customer/Home';
-import MedicineList from '../pages/medicines/MedicineList';
-import MedicineDetail from '../pages/medicines/MedicineDetail';
+// Customer Pages
+const CustomerLayout = lazy(() => import('../layouts/CustomerLayout'));
+const CustomerDashboard = lazy(() => import('../pages/customer/Home'));
+const PrescriptionsPage = lazy(() => import('../pages/customer/Prescriptions'));
+const OrdersPage = lazy(() => import('../pages/customer/Orders'));
+const CartPage = lazy(() => import('../pages/customer/Cart'));
+const ProfilePage = lazy(() => import('../pages/customer/Profile'));
+
+// Loading component for Suspense fallback
+const Loading = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <Spin size="large" />
+  </div>
+);
 
 const AppRouter = () => {
   return (
-    <Routes>
-      {/* Auth Routes */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/pharmacy/register" element={<PharmacyRegister />} />
-      </Route>
+    <Suspense fallback={<Loading />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/medicines" element={<MedicineList />} />
+          <Route path="/medicines/:id" element={<MedicineDetail />} />
+        </Route>
 
-      {/* Main Routes */}
-      <Route element={<MainLayout />}>
-  <Route path="/" element={<Home />} />
-  <Route path="/medicines" element={<MedicineList />} />
-  <Route path="/medicines/:id" element={<MedicineDetail />} />
-        
-        {/* Customer Routes */}
-        <Route 
-          path="/customer/home" 
+        {/* Auth Routes */}
+        <Route path="/auth" element={<AuthLayout />}>
+          <Route index element={<Navigate to="login" replace />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+        </Route>
+
+        {/* Customer Routes - Protected */}
+        <Route
+          path="/customer"
           element={
             <ProtectedRoute allowedRoles={['customer']}>
-              <CustomerHome />
+              <CustomerLayout />
             </ProtectedRoute>
-          } 
+          }
+        >
+          <Route index element={<CustomerDashboard />} />
+          <Route path="home" element={<CustomerDashboard />} />
+          <Route path="prescriptions" element={<PrescriptionsPage />} />
+          <Route path="orders" element={<OrdersPage />}>
+            <Route index element={<Navigate to="list" replace />} />
+            <Route path="list" element={<OrdersPage />} />
+            <Route path=":orderId" element={<div>Order Details</div>} />
+          </Route>
+          <Route path="cart" element={<CartPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+        </Route>
+
+        {/* Development-only routes */}
+        <Route
+          path="/dev/customer"
+          element={
+            <ProtectedRoute allowedRoles={['customer']}>
+              <CustomerLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<CustomerDashboard />} />
+        </Route>
+
+        {/* Pharmacy Staff Routes */}
+        <Route
+          path="/prescriptions/review"
+          element={
+            <ProtectedRoute allowedRoles={['pharmacy_staff', 'pharmacy_admin', 'admin']}>
+              <MainLayout>
+                <PrescriptionReview />
+              </MainLayout>
+            </ProtectedRoute>
+          }
         />
-      </Route>
-    </Routes>
+
+        {/* 404 - Not Found */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 };
 

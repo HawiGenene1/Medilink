@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Card, message, Typography } from 'antd';
+import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, MailOutlined, PhoneOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import './Register.css';
@@ -37,7 +37,7 @@ const Register = () => {
         // Display validation errors if any
         if (result.errors && Array.isArray(result.errors)) {
           result.errors.forEach(err => {
-            message.error(err.msg || err.message);
+            message.error(err.msg || err.message || 'An error occurred');
           });
         } else {
           message.error(result.message || 'Registration failed. Please try again.');
@@ -95,7 +95,7 @@ const Register = () => {
             name="phone"
             rules={[
               { required: true, message: 'Please input your phone number!' },
-              { pattern: /^[\d\s\-\+\(\)]+$/, message: 'Please enter a valid phone number!' }
+              { pattern: /^[\d\s\-+()]+$/, message: 'Please enter a valid phone number!' }
             ]}
           >
             <Input 

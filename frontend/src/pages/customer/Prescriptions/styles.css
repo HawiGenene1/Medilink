@@ -1,0 +1,95 @@
+.prescriptions-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.upload-section {
+  margin-bottom: 24px;
+}
+
+.upload-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px dashed #d9d9d9;
+  transition: all 0.3s;
+}
+
+.upload-card:hover {
+  border-color: #1890ff;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+}
+
+.upload-area {
+  padding: 40px 0;
+  text-align: center;
+  background: #fafafa;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.upload-area:hover {
+  background: #f5f5f5;
+}
+
+.ant-upload-text {
+  font-size: 16px;
+  margin: 8px 0 4px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.ant-upload-hint {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+}
+
+.prescriptions-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Status tags */
+.ant-tag {
+  padding: 0 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .prescriptions-page {
+    padding: 16px;
+  }
+  
+  .page-header h2 {
+    font-size: 20px;
+  }
+  
+  .upload-card {
+    margin-bottom: 16px;
+  }
+  
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    padding: 12px 8px;
+  }
+}
+
+/* Animation for new uploads */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.prescriptions-card .ant-table {
+  animation: fadeIn 0.3s ease-out;
+}

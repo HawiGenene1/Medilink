@@ -22,9 +22,11 @@
     "formik": "^2.4.9",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.0.0",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.11",
     "react-bootstrap-icons": "^1.11.6",
     "react-hook-form": "^7.66.1",
+    "redis": "^5.10.0",
     "winston": "^3.18.3",
     "yup": "^1.7.1"
   },

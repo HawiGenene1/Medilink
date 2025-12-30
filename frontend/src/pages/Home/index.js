@@ -1,119 +1,218 @@
+// frontend/src/pages/Home/index.js
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingOutlined, MedicineBoxOutlined, SafetyOutlined, UserAddOutlined, ShopOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { 
+  MedicineBoxOutlined, 
+  SafetyOutlined, 
+  UserAddOutlined, 
+  ClockCircleFilled, 
+  TeamOutlined,
+  TruckOutlined
+} from '@ant-design/icons';
+import { Button, Card, Row, Col, Typography, Space, Carousel } from 'antd';
 import './Home.css';
 
+const { Title, Text, Paragraph } = Typography;
+
 const Home = () => {
+  const navigate = useNavigate();
+
+  const handleCustomerRegister = (e) => {
+    e.preventDefault();
+    navigate('/auth/register?role=customer');
+  };
+
+  const handlePharmacyLogin = (e) => {
+    e.preventDefault();
+    navigate('/auth/login?role=pharmacy');
+  };
+
+  const handlePharmacyRegister = (e) => {
+    e.preventDefault();
+    navigate('/auth/register?role=pharmacy');
+  };
+
+  const features = [
+    {
+      icon: <MedicineBoxOutlined className="feature-icon" />,
+      title: 'Wide Range of Medicines',
+      description: 'Access to a comprehensive collection of prescription and over-the-counter medications.'
+    },
+    {
+      icon: <ClockCircleFilled className="feature-icon" />,
+      title: '24/7 Availability',
+      description: 'Order your medicines anytime, anywhere with our round-the-clock service.'
+    },
+    {
+      icon: <SafetyOutlined className="feature-icon" />,
+      title: '100% Authentic',
+      description: 'Guaranteed genuine medicines sourced directly from verified manufacturers.'
+    },
+    {
+      icon: <TruckOutlined className="feature-icon" />,
+      title: 'Fast Delivery',
+      description: 'Quick and reliable delivery right to your doorstep.'
+    }
+  ];
+
+  const testimonials = [
+    {
+      quote: "This platform has made managing my prescriptions so much easier. Highly recommended!",
+      author: "Alem T.",
+      role: "Satisfied Customer"
+    },
+    {
+      quote: "As a pharmacy owner, this platform has helped me reach more customers efficiently.",
+      author: "Yohannes M.",
+      role: "Pharmacy Owner"
+    },
+    {
+      quote: "The delivery is always on time, and the customer service is excellent.",
+      author: "Selam W.",
+      role: "Regular User"
+    }
+  ];
+
   return (
     <div className="home-page">
       {/* Hero Section */}
       <section className="hero-section">
-        <div className="hero-content">
-          <div className="hero-text">
-            <h1 className="hero-title">
-              Your Health, <span className="highlight">Our Priority</span>
-            </h1>
-            <p className="hero-subtitle">
-              Ethiopia's Leading Online Pharmacy & Healthcare Platform
-            </p>
-            <p className="hero-description">
-              Get authentic medicines, expert consultations, and fast delivery - all from the comfort of your home. 
-              Join thousands of satisfied customers who trust us with their healthcare needs.
-            </p>
-            <div className="cta-buttons" style={{ marginBottom: '2rem', textAlign: 'center' }}>
-              <Link to="/medicines" className="btn btn-primary" style={{ minWidth: '220px' }}>
-                <MedicineBoxOutlined /> Browse All Medicines
-              </Link>
-            </div>
-            <div className="auth-options">
-              <div className="auth-option">
-                <h3>For Customers</h3>
-                <div className="auth-buttons">
-                  <Link to="/register?role=customer" className="btn btn-primary">
-                    <UserAddOutlined /> Sign Up as Customer
-                  </Link>
-                  <Link to="/login?role=customer" className="btn btn-outline">
-                    Sign In as Customer
-                  </Link>
+        <div className="container">
+          <Row gutter={[48, 24]} align="middle">
+            <Col xs={24} md={12}>
+              <div className="hero-content">
+                <Text className="hero-badge">#1 Online Pharmacy in Ethiopia</Text>
+                <Title level={1} className="hero-title">
+                  Your Health, <span className="highlight">Our Priority</span>
+                </Title>
+                <Title level={4} className="hero-subtitle">
+                  Ethiopia's Leading Online Pharmacy & Healthcare Platform
+                </Title>
+                <Paragraph className="hero-description">
+                  Get authentic medicines, expert consultations, and fast delivery - all from the comfort of your home. 
+                  Join thousands of satisfied customers who trust us with their healthcare needs.
+                </Paragraph>
+                <Space size="large" className="hero-buttons">
+                  <Button 
+                    type="primary" 
+                    size="large" 
+                    icon={<MedicineBoxOutlined />}
+                    onClick={() => navigate('/medicines')}
+                    className="btn-primary"
+                  >
+                    Browse Medicines
+                  </Button>
+                  <Button 
+                    size="large" 
+                    icon={<UserAddOutlined />}
+                    onClick={handleCustomerRegister}
+                    className="btn-secondary"
+                  >
+                    Sign Up Free
+                  </Button>
+                </Space>
+                <div className="hero-stats">
+                  <div className="stat-item">
+                    <TeamOutlined className="stat-icon" />
+                    <div>
+                      <div className="stat-number">10,000+</div>
+                      <div className="stat-label">Happy Customers</div>
+                    </div>
+                  </div>
+                  <div className="stat-item">
+                    <MedicineBoxOutlined className="stat-icon" />
+                    <div>
+                      <div className="stat-number">5,000+</div>
+                      <div className="stat-label">Medicines</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <div className="divider">
-                <span>OR</span>
+            </Col>
+            <Col xs={24} md={12}>
+              <div className="hero-image-container">
+                <img 
+                  src="https://img.freepik.com/free-vector/online-doctor-concept-illustration_114360-1830.jpg" 
+                  alt="Healthcare professionals" 
+                  className="hero-image"
+                />
               </div>
-              
-              <div className="auth-option">
-                <h3>For Pharmacies</h3>
-                <div className="auth-buttons">
-                  <Link to="/register?role=pharmacy" className="btn btn-primary">
-                    <ShopOutlined /> Register Your Pharmacy
-                  </Link>
-                  <Link to="/login?role=pharmacy" className="btn btn-outline">
-                    Pharmacy Sign In
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <div className="hero-trust">
-              <div className="trust-item">
-                <SafetyOutlined className="trust-icon" />
-                <span>100% Genuine Medicines</span>
-              </div>
-              <div className="trust-item">
-                <MedicineBoxOutlined className="trust-icon" />
-                <span>Free Delivery</span>
-              </div>
-              <div className="trust-item">
-                <ShoppingOutlined className="trust-icon" />
-                <span>Easy Returns</span>
-              </div>
-            </div>
-          </div>
-          <div className="hero-image">
-            <div className="floating-card">
-              <MedicineBoxOutlined className="hero-icon" />
-            </div>
-          </div>
+            </Col>
+          </Row>
         </div>
       </section>
 
       {/* Features Section */}
       <section className="features-section">
         <div className="container">
-          <h2 className="section-title">Why Choose MediLink?</h2>
-          <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon">
-                <ShoppingOutlined />
+          <Title level={2} className="section-title">Why Choose MediLink?</Title>
+          <Row gutter={[24, 24]}>
+            {features.map((feature, index) => (
+              <Col xs={24} sm={12} lg={6} key={index}>
+                <Card className="feature-card" hoverable>
+                  <div className="feature-icon-container">
+                    {feature.icon}
+                  </div>
+                  <Title level={4} className="feature-title">{feature.title}</Title>
+                  <Paragraph className="feature-description">{feature.description}</Paragraph>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="testimonials-section">
+        <div className="container">
+          <Title level={2} className="section-title">What Our Users Say</Title>
+          <Carousel autoplay>
+            {testimonials.map((testimonial, index) => (
+              <div key={index} className="testimonial-slide">
+                <div className="testimonial-content">
+                  <blockquote>"{testimonial.quote}"</blockquote>
+                  <div className="testimonial-author">
+                    <strong>{testimonial.author}</strong>
+                    <span>{testimonial.role}</span>
+                  </div>
+                </div>
               </div>
-              <h3>Easy Online Ordering</h3>
-              <p>Browse and order medicines from verified pharmacies with just a few clicks</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon">
-                <MedicineBoxOutlined />
-              </div>
-              <h3>Verified Medicines</h3>
-              <p>All medicines are sourced from licensed pharmacies and verified suppliers</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon">
-                <SafetyOutlined />
-              </div>
-              <h3>Secure & Safe</h3>
-              <p>Your health data and transactions are protected with industry-standard security</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon">
-                <ShoppingOutlined />
-              </div>
-              <h3>Fast Delivery</h3>
-              <p>Quick and reliable delivery service to get your medicines when you need them</p>
-            </div>
-          </div>
+            ))}
+          </Carousel>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="cta-section">
+        <div className="container">
+          <Card className="cta-card">
+            <Row align="middle" gutter={[24, 24]}>
+              <Col xs={24} md={16}>
+                <Title level={3} className="cta-title">Ready to get started?</Title>
+                <Paragraph className="cta-description">
+                  Join thousands of satisfied customers and pharmacies using MediLink today.
+                </Paragraph>
+              </Col>
+              <Col xs={24} md={8} className="cta-buttons">
+                <Button 
+                  type="primary" 
+                  size="large" 
+                  onClick={handleCustomerRegister}
+                  className="btn-primary"
+                >
+                  Get Started
+                </Button>
+                <Button 
+                  type="default" 
+                  size="large" 
+                  onClick={handlePharmacyRegister}
+                  className="btn-outline"
+                >
+                  For Pharmacies
+                </Button>
+              </Col>
+            </Row>
+          </Card>
         </div>
       </section>
     </div>

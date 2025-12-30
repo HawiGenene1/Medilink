@@ -1,18 +1,40 @@
+// frontend/src/App.js
 import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import AppRouter from './routes/AppRouter';
-import './styles/global.css';
 
 function App() {
+  // Development-only console log
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Running in development mode');
+  }
+
   return (
-    <Router>
+    <BrowserRouter>
       <AuthProvider>
-        <div className="app">
-          <AppRouter />
-        </div>
+        {process.env.NODE_ENV === 'development' && (
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              background: '#ffeb3b',
+              color: '#000',
+              padding: '4px',
+              textAlign: 'center',
+              zIndex: 9999,
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            DEVELOPMENT MODE - Using mock authentication
+          </div>
+        )}
+        <AppRouter />
       </AuthProvider>
-    </Router>
+    </BrowserRouter>
   );
 }
 
