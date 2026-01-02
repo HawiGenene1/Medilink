@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Layout, Menu, Card, Row, Col, Typography, Button, Badge, List, Avatar, 
-  Tag, Space, Input, Dropdown, message, Modal, Upload, Skeleton, Empty
+  Tag, Space, Input, Dropdown, message, Modal, Upload, Empty
 } from 'antd';
 import { 
   ShoppingCartOutlined, 
