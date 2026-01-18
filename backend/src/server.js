@@ -1,29 +1,3 @@
-// require('dotenv').config();
-// const express = require('express');
-// const mongoose = require('mongoose');
-// const cors = require('cors');
-
-// // Initialize Express app
-// const app = express();
-
-// // Middleware
-// app.use(cors());
-// app.use(express.json());
-
-// // Import routes
-// const authRoutes = require('./routes/authRoutes');
-
-// // API Routes
-// app.use('/api/auth', authRoutes);
-
-// // Test route
-// app.get('/', (req, res) => {
-//   res.json({
-//     success: true,
-//     message: 'Medilink backend is running!',
-//     version: '1.0.0'
-//   });
-// });
 
 // // MongoDB connection
 // const MONGO_URI = process.env.MONGODB_URI;

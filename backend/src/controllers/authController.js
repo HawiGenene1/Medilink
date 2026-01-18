@@ -6,6 +6,32 @@ const { generatePassword } = require('../utils/passwordGenerator');
 const { sendWelcomeEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
 
+// Function to generate a unique username
+const generateUsername = async (firstName, lastName) => {
+  if (!firstName || !lastName) {
+    throw new Error('First name and last name are required');
+  }
+
+  // Create base username (e.g., 'john.doe')
+  const baseUsername = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/[^a-z0-9.]/g, '');
+  let username = baseUsername;
+  let counter = 1;
+  let userExists = true;
+
+  // Check if username exists and append number if it does
+  while (userExists) {
+    const existingUser = await User.findOne({ username });
+    if (!existingUser) {
+      userExists = false;
+    } else {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+  }
+
+  return username;
+};
+
 /**
  * @route   POST /api/auth/register
  * @desc    Register a new user
@@ -48,15 +74,20 @@ const register = async (req, res) => {
       password = req.body.password;
     }
 
+    // Generate a unique username
+    const username = await generateUsername(firstName, lastName);
+    
     // Create new user
     user = new User({
       firstName,
       lastName,
       email,
+      username,
       phone,
       role,
       // Password will be hashed in the pre-save hook
-      password
+      password,
+      isEmailVerified: role === 'customer' // Auto-verify email for customers
     });
 
     // Hash password and save user

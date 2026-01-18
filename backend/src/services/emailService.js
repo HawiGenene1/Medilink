@@ -12,7 +12,13 @@ const transporter = nodemailer.createTransport({
     maxConnections: 5,
     maxMessages: 100,
     rateDelta: 1000,
-    rateLimit: 5
+    rateLimit: 5,
+    // Add connection timeout and debug options
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
+    debug: true,
+    logger: true
 });
 
 // Verify connection configuration
