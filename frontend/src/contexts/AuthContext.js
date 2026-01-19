@@ -13,6 +13,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
 // Development-only mock user
 const devUser = {
   _id: 'dev-user-123',
@@ -22,6 +23,10 @@ const devUser = {
   role: 'customer',
   isEmailVerified: true
 };
+
+// Development-only mock token
+const devToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkZXYtdXNlci0xMjMiLCJlbWFpbCI6ImRldkBleGFtcGxlLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTYzNTc5MDQwMCwiZXhwIjoxNjM1ODc2ODAwfQ.mock-token-for-development';
+
 // Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -30,15 +35,11 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   // Check if user is logged in on initial load
+  // Check if user is logged in on initial load
+  // Check if user is logged in on initial load
   useEffect(() => {
-     // In development, automatically log in with dev user
-  if (process.env.NODE_ENV === 'development' && !user) {
-    setUser(devUser);
-    setIsAuthenticated(true);
-    setLoading(false);
-    return;
-  }
     const token = localStorage.getItem('token');
+
     if (token) {
       api.get('/auth/current-user')
         .then(response => {
@@ -60,19 +61,39 @@ export const AuthProvider = ({ children }) => {
 
   // Login function
   const login = async (email, password) => {
-     // In development, bypass actual login
-  if (process.env.NODE_ENV === 'development') {
-    setUser(devUser);
-    setIsAuthenticated(true);
-    return { success: true, user: devUser };
-  }
+    // In development, return mock user based on email
+    if (process.env.NODE_ENV === 'development') {
+      let role = 'customer';
+      if (email.includes('admin')) role = 'admin';
+      if (email.includes('pharmacy')) role = 'pharmacy_admin';
+      if (email.includes('staff')) role = 'pharmacy_staff';
+      if (email.includes('cashier')) role = 'cashier';
+      if (email.includes('delivery')) role = 'delivery';
+
+      const mockUser = {
+        _id: 'mock-user-' + role,
+        email,
+        firstName: role.toUpperCase(),
+        lastName: 'User',
+        role: role
+      };
+
+      // Create a dummy JWT with the role encoded
+      const mockToken = `header.${btoa(JSON.stringify({ email, role }))}.signature`;
+
+      setUser(mockUser);
+      setIsAuthenticated(true);
+      localStorage.setItem('token', mockToken);
+      return { success: true, user: mockUser };
+    }
+
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
-      return { success: true };
+      return { success: true, user }; // Return user for redirect logic
     } catch (error) {
       console.error('Login failed:', error);
       return { success: false, message: error.response?.data?.message || 'Login failed' };
@@ -81,15 +102,10 @@ export const AuthProvider = ({ children }) => {
 
   // Logout function
   const logout = () => {
-     // In development, just reset to dev user
-  if (process.env.NODE_ENV === 'development') {
-    setUser(devUser);
-    return;
-  }
     localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
-    navigate('/login');
+    navigate('/'); // Redirect to home on logout
   };
 
   // Check if user has required role
@@ -108,7 +124,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    isAuthenticated:  process.env.NODE_ENV === 'development' ? true : isAuthenticated,
+    isAuthenticated,
     loading,
     login,
     logout,

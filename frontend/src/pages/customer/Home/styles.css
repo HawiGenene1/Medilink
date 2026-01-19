@@ -1,32 +1,8 @@
-/* Layout */
-.site-layout {
-  margin-left: 0;
-  transition: all 0.2s;
-  min-height: 100vh;
+/* Customer Dashboard - Simple version for use inside CustomerLayout */
+.customer-dashboard {
+  padding: 24px;
   background-color: #f5f7fa;
-}
-
-.site-layout-header {
-  position: fixed;
-  top: 0;
-  z-index: 1000;
-  width: 100%;
-  padding: 0 16px;
-  background: #fff !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  height: 64px;
-  left: 0;
-}
-
-.site-layout-content {
-  margin: 80px 16px 24px;
-  min-height: calc(100vh - 112px);
-  transition: all 0.2s;
-  padding: 0 8px;
-  max-width: 100%;
-  overflow-x: hidden;
+  min-height: 100vh;
 }
 
 .container {

@@ -28,7 +28,7 @@ const Register = () => {
       };
 
       const result = await register(userData);
-      
+
       if (result.success) {
         message.success('Registration successful! Welcome to MediLink.');
         // Redirect to customer home after successful registration
@@ -53,8 +53,8 @@ const Register = () => {
 
   return (
     <div className="register-container">
-      <Card 
-        title="Register for MediLink" 
+      <Card
+        title="Register for MediLink"
         className="register-card"
       >
         <Form
@@ -68,9 +68,9 @@ const Register = () => {
             name="name"
             rules={[{ required: true, message: 'Please input your name!' }]}
           >
-            <Input 
-              prefix={<UserOutlined />} 
-              placeholder="Enter your full name" 
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="Enter your full name"
               size="large"
             />
           </Form.Item>
@@ -83,9 +83,9 @@ const Register = () => {
               { type: 'email', message: 'Please enter a valid email!' }
             ]}
           >
-            <Input 
-              prefix={<MailOutlined />} 
-              placeholder="Enter your email" 
+            <Input
+              prefix={<MailOutlined />}
+              placeholder="Enter your email"
               size="large"
             />
           </Form.Item>
@@ -98,9 +98,9 @@ const Register = () => {
               { pattern: /^[\d\s\-+()]+$/, message: 'Please enter a valid phone number!' }
             ]}
           >
-            <Input 
-              prefix={<PhoneOutlined />} 
-              placeholder="Enter your phone number (e.g., +1234567890)" 
+            <Input
+              prefix={<PhoneOutlined />}
+              placeholder="Enter your phone number (e.g., +1234567890)"
               size="large"
             />
           </Form.Item>
@@ -113,9 +113,9 @@ const Register = () => {
           </Form.Item>
 
           <Form.Item>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
+            <Button
+              type="primary"
+              htmlType="submit"
               loading={loading}
               block
               size="large"
@@ -125,7 +125,7 @@ const Register = () => {
           </Form.Item>
 
           <div style={{ textAlign: 'center' }}>
-            <Link to="/login">
+            <Link to="/auth/login">
               Already have an account? Login
             </Link>
           </div>

@@ -13,11 +13,11 @@ const Login = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      const result = await login(values);
-      
+      const result = await login(values.email, values.password);
+
       if (result.success) {
         message.success('Login successful!');
-        
+
         // Redirect based on user role
         const role = result.user.role;
         switch (role) {
@@ -55,8 +55,8 @@ const Login = () => {
 
   return (
     <div className="login-container">
-      <Card 
-        title="Login to MediLink" 
+      <Card
+        title="Login to MediLink"
         className="login-card"
       >
         <Form
@@ -73,9 +73,9 @@ const Login = () => {
               { type: 'email', message: 'Please enter a valid email!' }
             ]}
           >
-            <Input 
-              prefix={<UserOutlined />} 
-              placeholder="Enter your email" 
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="Enter your email"
               size="large"
             />
           </Form.Item>
@@ -85,17 +85,17 @@ const Login = () => {
             name="password"
             rules={[{ required: true, message: 'Please input your password!' }]}
           >
-            <Input.Password 
-              prefix={<LockOutlined />} 
-              placeholder="Enter your password" 
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Enter your password"
               size="large"
             />
           </Form.Item>
 
           <Form.Item>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
+            <Button
+              type="primary"
+              htmlType="submit"
               loading={loading}
               block
               size="large"
@@ -104,10 +104,21 @@ const Login = () => {
             </Button>
           </Form.Item>
 
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <Link to="/register">
               Don't have an account? Register
             </Link>
+          </div>
+
+          {/* Dev Helper - Quick Login */}
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '16px' }}>
+            <p style={{ fontSize: '12px', color: '#888', textAlign: 'center' }}>Demo Quick Login:</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+              <Button size="small" onClick={() => onFinish({ email: 'customer@test.com', password: '123' })}>Customer</Button>
+              <Button size="small" onClick={() => onFinish({ email: 'pharmacy@test.com', password: '123' })}>Pharmacy</Button>
+              <Button size="small" onClick={() => onFinish({ email: 'admin@test.com', password: '123' })}>Admin</Button>
+              <Button size="small" onClick={() => onFinish({ email: 'staff@test.com', password: '123' })}>Staff</Button>
+            </div>
           </div>
         </Form>
       </Card>
