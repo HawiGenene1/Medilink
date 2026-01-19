@@ -98,18 +98,18 @@ const CustomerDashboard = () => {
             action: () => navigate('/customer/prescriptions')
         },
         {
-            title: 'Track Order',
+            title: 'My Cart',
             icon: <ShoppingCartOutlined />,
             color: '#FFB300',
             bgColor: 'rgba(255, 179, 0, 0.1)',
-            action: () => navigate('/customer/orders')
+            action: () => navigate('/customer/cart')
         },
         {
             title: 'Nearby Pharmacies',
             icon: <EnvironmentOutlined />,
             color: '#E53935',
             bgColor: 'rgba(229, 57, 53, 0.1)',
-            action: () => setViewMode('map')
+            action: () => navigate('/customer/pharmacies')
         },
     ];
 
@@ -241,16 +241,16 @@ const CustomerDashboard = () => {
 
                     <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
                         <Col xs={24} md={12}>
-                            <Card className="stats-banner-mini" style={{ background: 'linear-gradient(135deg, #1E88E5 0%, #1565C0 100%)', borderRadius: '16px', color: 'white', border: 'none' }}>
+                            <Card className="stats-banner-mini" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
                                 <Space size="large">
                                     <div className="banner-stat">
-                                        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Active Orders</Text>
-                                        <Title level={2} style={{ color: 'white', margin: 0 }}>{stats.activeOrders}</Title>
+                                        <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Active Orders</Text>
+                                        <Title level={2} style={{ margin: 0, color: 'var(--primary-color)' }}>{stats.activeOrders}</Title>
                                     </div>
-                                    <div style={{ width: '1px', height: '40px', background: 'rgba(255,255,255,0.2)' }} />
+                                    <div style={{ width: '1px', height: '40px', background: 'var(--border-color)' }} />
                                     <div className="banner-stat">
-                                        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>Delivery</Text>
-                                        <Title level={2} style={{ color: 'white', margin: 0 }}>{stats.delivery}</Title>
+                                        <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Delivery</Text>
+                                        <Title level={2} style={{ margin: 0, color: 'var(--primary-color)' }}>{stats.delivery}</Title>
                                     </div>
                                 </Space>
                             </Card>

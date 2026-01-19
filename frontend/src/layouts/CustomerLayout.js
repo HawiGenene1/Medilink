@@ -25,6 +25,11 @@ const CustomerLayout = () => {
             label: 'Find Medicines',
         },
         {
+            key: '/customer/cart',
+            icon: <ShoppingCartOutlined />,
+            label: 'My Cart',
+        },
+        {
             key: '/customer/prescriptions',
             icon: <FileTextOutlined />,
             label: 'My Prescriptions',
