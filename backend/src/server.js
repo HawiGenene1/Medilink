@@ -45,6 +45,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 // Initialize Express app
 const app = express();
@@ -54,6 +55,7 @@ app.use(cors());
 app.use(express.json()); // parse JSON requests
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
 app.use("/api/test", require("./routes/testRoutes"));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Get environment variables
 const PORT = process.env.PORT || 5000;
@@ -75,6 +77,12 @@ mongoose.connect(MONGO_URI)
 
 // Import routes (only import what exists)
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes'); // Added
+const medicineRoutes = require('./routes/medicineRoutes'); // Added
+const prescriptionRoutes = require('./routes/prescriptionRoutes'); // Added
+const orderRoutes = require('./routes/orderRoutes'); // Added
+const deliveryRoutes = require('./routes/deliveryRoutes'); // Added
+const favoriteRoutes = require('./routes/favoriteRoutes'); // Added
 // const adminRoutes = require('./routes/adminRoutes');
 // const cashierRoutes = require('./routes/cashierRoutes');
 // const customerRoutes = require('./routes/customerRoutes');
@@ -88,6 +96,13 @@ const authRoutes = require('./routes/authRoutes');
 
 // API Routes (only use what exists)
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes); // Added
+app.use('/api/medicines', medicineRoutes); // Added
+app.use('/api/prescriptions', prescriptionRoutes); // Added
+app.use('/api/orders', orderRoutes); // Added
+app.use('/api/delivery', deliveryRoutes); // Added
+app.use('/api/favorites', favoriteRoutes); // Added
+
 // Medicines API
 try {
   app.use('/api/medicines', require('./routes/medicineRoutes'));

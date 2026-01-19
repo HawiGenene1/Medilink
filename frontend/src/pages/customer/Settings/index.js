@@ -11,32 +11,56 @@ import {
     EyeInvisibleOutlined,
     EyeTwoTone
 } from '@ant-design/icons';
+import { useAuth } from '../../../contexts/AuthContext';
+import api from '../../../services/api';
+import { App } from 'antd';
 import './Settings.css';
 
 const { Title, Text, Paragraph } = Typography;
 
 const Settings = () => {
+    const { user } = useAuth();
+    const { message } = App.useApp();
+    const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('profile');
 
-    const onFinish = (values) => {
-        console.log('Update Success:', values);
+    const onFinish = async (values) => {
+        setLoading(true);
+        try {
+            await api.put('/users/profile', values);
+            message.success('Profile updated successfully');
+        } catch (error) {
+            console.error('Update failed:', error);
+            message.error('Failed to update profile');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const ProfileSettings = () => (
         <div className="settings-section fade-in">
             <div className="avatar-upload-wrapper">
                 <CustomBadge count={<Button size="small" shape="circle" icon={<CameraOutlined />} className="cam-btn" />} offset={[-10, 110]}>
-                    <Avatar size={120} icon={<UserOutlined />} className="profile-avatar-large" />
+                    <Avatar size={120} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} className="profile-avatar-large" />
                 </CustomBadge>
                 <div className="avatar-info">
-                    <Title level={4} style={{ margin: 0 }}>Hawi Genene</Title>
-                    <Text type="secondary">Customer since Jan 2026</Text>
+                    <Title level={4} style={{ margin: 0 }}>{user?.firstName} {user?.lastName}</Title>
+                    <Text type="secondary">Customer</Text>
                 </div>
             </div>
 
             <Divider />
 
-            <Form layout="vertical" onFinish={onFinish} initialValues={{ firstName: 'Hawi', lastName: 'Genene', email: 'hawi@example.com', phone: '+251 911 223344' }}>
+            <Form
+                layout="vertical"
+                onFinish={onFinish}
+                initialValues={{
+                    firstName: user?.firstName || '',
+                    lastName: user?.lastName || '',
+                    email: user?.email || '',
+                    phone: user?.phone || ''
+                }}
+            >
                 <Row gutter={16}>
                     <Col span={12}>
                         <Form.Item label="First Name" name="firstName">
@@ -55,7 +79,7 @@ const Settings = () => {
                 <Form.Item label="Phone Number" name="phone">
                     <Input />
                 </Form.Item>
-                <Button type="primary" htmlType="submit">Save Profile Changes</Button>
+                <Button type="primary" htmlType="submit" loading={loading}>Save Profile Changes</Button>
             </Form>
         </div>
     );

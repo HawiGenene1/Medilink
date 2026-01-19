@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space } from 'antd';
+import React, { useState, useRef } from 'react';
+import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App } from 'antd';
 import {
   UserOutlined,
   MailOutlined,
@@ -10,12 +10,53 @@ import {
   EditOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 
 const Profile = () => {
   const { user } = useAuth();
+  const { message } = App.useApp();
   const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    setLoading(true);
+    try {
+      // Upload to backend
+      const response = await api.post('/users/profile-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Update local user context if needed
+      // Ideally AuthContext should provide a way to update user data
+      // For now, we rely on the reload or manual local storage update
+      const updatedUser = { ...user, avatar: response.data.avatar };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+
+      message.success('Profile image updated successfully');
+      // Simple reload to refresh context
+      window.location.reload();
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      message.error('Failed to upload image');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
+  };
 
   // Mock Addresses
   const addresses = [
@@ -134,12 +175,22 @@ const Profile = () => {
         <Col xs={24} md={8}>
           <Card style={{ textAlign: 'center', borderRadius: '16px' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-              <Avatar size={100} icon={<UserOutlined />} style={{ backgroundColor: '#4361ee' }} />
+              <Avatar size={100} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} style={{ backgroundColor: '#4361ee' }} />
               <Button
                 shape="circle"
                 icon={<UploadOutlined />}
                 size="small"
                 style={{ position: 'absolute', bottom: 0, right: 0 }}
+                onClick={triggerFileInput}
+                loading={loading}
+              />
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept="image/*"
+                onChange={handleImageUpload}
+                capture="user" // Optional: prompts camera on mobile
               />
             </div>
             <Title level={4} style={{ margin: 0 }}>{user?.firstName} {user?.lastName}</Title>

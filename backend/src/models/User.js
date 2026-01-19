@@ -69,6 +69,10 @@ const userSchema = new mongoose.Schema({
     zipCode: String,
     country: String
   },
+  avatar: {
+    type: String,
+    default: ''
+  },
   // For delivery personnel
   vehicleInfo: {
     type: {
