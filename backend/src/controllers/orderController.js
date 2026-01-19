@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 // Order Controller for handling order-related operations
 
 const Order = require('../models/Order');
@@ -81,15 +82,15 @@ const createOrder = async (req, res) => {
 
     // Calculate delivery fee (could be based on distance, order amount, etc.)
     const deliveryFee = calculateDeliveryFee(deliveryAddress, totalAmount);
-    
+
     // Calculate tax (example: 15% of subtotal)
     const tax = totalAmount * 0.15;
-    
+
     // Calculate final amount
     const finalAmount = totalAmount + deliveryFee + tax;
 
     // Check if prescription is required for any item
-    const requiresPrescription = orderItems.some(item => 
+    const requiresPrescription = orderItems.some(item =>
       item.requiresPrescription && !prescriptionImage
     );
 
@@ -231,7 +232,7 @@ const getOrderDetails = async (req, res) => {
 
     // Check if user is authorized to view this order
     if (
-      order.customer._id.toString() !== req.user.userId && 
+      order.customer._id.toString() !== req.user.userId &&
       req.user.role !== 'admin' &&
       (!order.pharmacy || order.pharmacy._id.toString() !== req.user.pharmacyId)
     ) {
@@ -338,11 +339,77 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+/**
+ * @route   GET /api/orders/:orderId/tracking
+ * @desc    Get live tracking info for an order
+ * @access  Private (Customer, Pharmacy, Admin)
+ */
+const getOrderTracking = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Development Fallback for mock IDs like ORD-1024
+    if (id.startsWith('ORD-') && process.env.NODE_ENV === 'development') {
+      return res.json({
+        success: true,
+        data: {
+          status: 'out_for_delivery',
+          statusHistory: [
+            { status: 'pending', timestamp: new Date(Date.now() - 3600000), note: 'Order created' },
+            { status: 'confirmed', timestamp: new Date(Date.now() - 3000000), note: 'Pharmacy confirmed' },
+            { status: 'preparing', timestamp: new Date(Date.now() - 2400000), note: 'Preparing order' },
+            { status: 'out_for_delivery', timestamp: new Date(Date.now() - 600000), note: 'Driver picked up' }
+          ],
+          deliveryPerson: {
+            name: 'Samuel Girma',
+            phone: '+251 911 223344',
+            location: { latitude: 9.0227, longitude: 38.7460 }
+          },
+          destination: { latitude: 9.0300, longitude: 38.7500 }
+        }
+      });
+    }
+
+    const order = await Order.findById(id)
+      .populate('deliveryPerson', 'firstName lastName phone currentLocation')
+      .select('status statusHistory deliveryPerson deliveryAddress');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        status: order.status,
+        statusHistory: order.statusHistory,
+        deliveryPerson: order.deliveryPerson ? {
+          name: `${order.deliveryPerson.firstName} ${order.deliveryPerson.lastName}`,
+          phone: order.deliveryPerson.phone,
+          location: order.deliveryPerson.currentLocation
+        } : null,
+        destination: order.deliveryAddress?.coordinates
+      }
+    });
+
+  } catch (error) {
+    logger.error('Failed to fetch tracking info:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch tracking info',
+      error: error.message
+    });
+  }
+};
+
 // Helper function to calculate delivery fee (example implementation)
 function calculateDeliveryFee(deliveryAddress, orderAmount) {
   // Base delivery fee
   let fee = 50; // Base fee in ETB
-  
+
   // Free delivery for orders above 1000 ETB
   if (orderAmount > 1000) {
     return 0;
@@ -351,7 +418,7 @@ function calculateDeliveryFee(deliveryAddress, orderAmount) {
   // Add distance-based fee (example)
   // In a real app, you would use a mapping service to calculate distance
   // and apply appropriate fees based on zones or distance brackets
-  
+
   return fee;
 }
 
@@ -359,5 +426,6 @@ module.exports = {
   createOrder,
   getMyOrders,
   getOrderDetails,
-  cancelOrder
+  cancelOrder,
+  getOrderTracking
 };
