@@ -1,0 +1,125 @@
+/* Medicine Detail Styles */
+.medicine-detail-container {
+    padding: 24px 0;
+}
+
+.clinical-tag {
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-weight: 600;
+}
+
+.detail-tabs-wrapper {
+    margin-top: 40px;
+}
+
+.tab-content {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 0 0 16px 16px;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    min-height: 200px;
+}
+
+/* Ant Design Tabs Customization */
+.medilink-tabs .ant-tabs-nav {
+    margin-bottom: 0 !important;
+}
+
+.medilink-tabs .ant-tabs-tab {
+    padding: 12px 24px !important;
+    font-weight: 500;
+}
+
+.medilink-tabs .ant-tabs-nav::before {
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Pharmacy Selection Items */
+.pharmacy-availability-list {
+    background: #ffffff;
+    border-radius: 0 0 16px 16px;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    padding: 24px;
+}
+
+.pharmacy-selection-item {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pharmacy-selection-item:hover {
+    border-color: var(--primary-color);
+    background: rgba(30, 136, 229, 0.02);
+}
+
+.pharmacy-selection-item.selected {
+    border-color: var(--primary-color);
+    background: rgba(30, 136, 229, 0.05);
+    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.1);
+}
+
+.bullet-separator {
+    padding: 0 4px;
+    color: #cbd5e1;
+}
+
+/* Sticky Action Panel */
+.sticky-action-panel {
+    position: sticky;
+    top: 88px;
+    /* Header height (64) + spacing */
+}
+
+.action-card-modern {
+    border-radius: 20px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+.action-input-group {
+    margin-bottom: 24px;
+}
+
+.medilink-quantity-input {
+    border-radius: 8px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.price-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.add-to-cart-btn {
+    height: 48px !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+}
+
+.trust-badges {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f0fdf4;
+    border-radius: 12px;
+}
+
+@media (max-width: 992px) {
+    .sticky-action-panel {
+        position: relative;
+        top: 0;
+        margin-top: 24px;
+    }
+}

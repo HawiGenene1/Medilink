@@ -1,0 +1,144 @@
+/* Checkout Styles */
+.checkout-container {
+    padding-bottom: 60px;
+    position: relative;
+}
+
+.clinical-stepper-wrapper {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-color);
+}
+
+.medilink-steps .ant-steps-item-title {
+    font-weight: 600 !important;
+    font-size: 14px !important;
+}
+
+.checkout-main-card {
+    border-radius: 20px !important;
+    border: 1px solid var(--border-color) !important;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.checkout-main-card .ant-card-body {
+    padding: 32px !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.checkout-step-content {
+    flex: 1;
+}
+
+/* Address Options */
+.address-option-card,
+.payment-option-card {
+    border-radius: 12px !important;
+    border: 1px solid var(--border-color) !important;
+    cursor: pointer;
+    transition: all 0.3s ease !important;
+}
+
+.address-option-card:hover,
+.payment-option-card:hover {
+    border-color: var(--primary-color) !important;
+    background: rgba(30, 136, 229, 0.02);
+}
+
+.address-option-card.selected,
+.payment-option-card.selected {
+    border-color: var(--primary-color) !important;
+    background: rgba(30, 136, 229, 0.05);
+    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.1);
+}
+
+.add-address-btn {
+    height: 50px !important;
+    border-radius: 12px !important;
+    border-style: dashed !important;
+}
+
+/* Prescription Preview */
+.prescription-review-item {
+    border-radius: 12px !important;
+    background: #f8fafc !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* Footer Actions */
+.checkout-footer-actions {
+    margin-top: 40px;
+}
+
+.step-btn,
+.place-order-btn {
+    height: 52px !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+}
+
+/* Summary Sidebar */
+.checkout-summary-sidebar {
+    border-radius: 20px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--border-color) !important;
+    position: sticky;
+    top: 88px;
+}
+
+.price-breakdown .p-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.total-display {
+    text-align: center;
+    background: #f0f7ff;
+    padding: 16px;
+    border-radius: 12px;
+}
+
+/* Success Overlay */
+.success-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .clinical-stepper-wrapper {
+        padding: 16px;
+    }
+}
