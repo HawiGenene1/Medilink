@@ -55,6 +55,23 @@ export const AuthProvider = ({ children }) => {
           setLoading(false);
         });
     } else {
+      // Auto-login in development mode
+      if (process.env.NODE_ENV === 'development') {
+        const mockUser = {
+          _id: 'cashier123',
+          firstName: 'Test',
+          lastName: 'Cashier',
+          email: 'cashier@test.com',
+          role: 'cashier',
+          pharmacyId: '12345'
+        };
+        const mockToken = 'mock-jwt-token-for-cashier';
+
+        console.log('🔓 Auto-logging in as Cashier (Dev Mode)');
+        setUser(mockUser);
+        setIsAuthenticated(true);
+        localStorage.setItem('token', mockToken);
+      }
       setLoading(false);
     }
   }, []);

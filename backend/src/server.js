@@ -69,39 +69,29 @@ const MONGO_URI = process.env.MONGODB_URI;
 //     .catch(err => console.log('MongoDB connection error:', err));
 // } else {
 //   console.log('MONGODB_URI not set. Skipping MongoDB connection.');
-// }
 mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => console.log('MongoDB connection error:', err));
 
-
 // Import routes (only import what exists)
 const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes'); // Added
-const medicineRoutes = require('./routes/medicineRoutes'); // Added
-const prescriptionRoutes = require('./routes/prescriptionRoutes'); // Added
-const orderRoutes = require('./routes/orderRoutes'); // Added
-const deliveryRoutes = require('./routes/deliveryRoutes'); // Added
-const favoriteRoutes = require('./routes/favoriteRoutes'); // Added
-// const adminRoutes = require('./routes/adminRoutes');
-// const cashierRoutes = require('./routes/cashierRoutes');
-// const customerRoutes = require('./routes/customerRoutes');
-// const deliveryRoutes = require('./routes/deliveryRoutes');
-// const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
-// const pharmacyRoutes = require('./routes/pharmacyRoutes');
-
-// Import middleware (comment out if files don't exist)
-// const { authenticate } = require('./middleware/authMiddleware');
-// const { authorize } = require('./middleware/roleMiddleware');
+const userRoutes = require('./routes/userRoutes'); 
+const medicineRoutes = require('./routes/medicineRoutes'); 
+const prescriptionRoutes = require('./routes/prescriptionRoutes'); 
+const orderRoutes = require('./routes/orderRoutes'); 
+const deliveryRoutes = require('./routes/deliveryRoutes'); 
+const favoriteRoutes = require('./routes/favoriteRoutes'); 
+const chapaRoutes = require('./routes/chapaRoutes');
 
 // API Routes (only use what exists)
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes); // Added
-app.use('/api/medicines', medicineRoutes); // Added
-app.use('/api/prescriptions', prescriptionRoutes); // Added
-app.use('/api/orders', orderRoutes); // Added
-app.use('/api/delivery', deliveryRoutes); // Added
-app.use('/api/favorites', favoriteRoutes); // Added
+app.use('/api/users', userRoutes); 
+app.use('/api/medicines', medicineRoutes); 
+app.use('/api/prescriptions', prescriptionRoutes); 
+app.use('/api/orders', orderRoutes); 
+app.use('/api/delivery', deliveryRoutes); 
+app.use('/api/favorites', favoriteRoutes); 
+app.use('/api/payments/chapa', chapaRoutes);
 
 // Medicines API
 try {

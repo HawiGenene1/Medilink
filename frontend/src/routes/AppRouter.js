@@ -20,6 +20,8 @@ import CustomerMedicines from '../pages/customer/Medicines';
 import CustomerMedicineDetail from '../pages/customer/Medicines/MedicineDetail';
 import CustomerCart from '../pages/customer/Cart';
 import CustomerCheckout from '../pages/customer/Checkout';
+import OrderCheckout from '../pages/customer/OrderCheckout'; // Real Chapa Payment
+import PaymentStatus from '../pages/customer/PaymentStatus'; // Payment Verification
 import CustomerOrders from '../pages/customer/Orders';
 import CustomerOrderTracking from '../pages/customer/Orders/OrderTracking';
 import CustomerPrescriptions from '../pages/customer/Prescriptions';
@@ -68,8 +70,11 @@ const AppRouter = () => {
           {/* Add placeholder routes for other menu items to avoid 404s in demo */}
           <Route path="/customer/medicines" element={<CustomerMedicines />} />
           <Route path="/customer/medicines/:id" element={<CustomerMedicineDetail />} />
+          <Route path="/customer/items" element={<CustomerCart />} />
           <Route path="/customer/cart" element={<CustomerCart />} />
           <Route path="/customer/checkout" element={<CustomerCheckout />} />
+          <Route path="/customer/orders/:orderId/checkout" element={<OrderCheckout />} />
+          <Route path="/customer/orders/:orderId/payment-status" element={<PaymentStatus />} />
           <Route path="/customer/prescriptions" element={<CustomerPrescriptions />} />
           <Route path="/customer/orders" element={<CustomerOrders />} />
           <Route path="/customer/orders/track/:id" element={<CustomerOrderTracking />} />
