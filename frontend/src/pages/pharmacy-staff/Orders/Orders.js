@@ -92,12 +92,22 @@ const PharmacyStaffOrders = () => {
         setSelectedOrder(null);
     };
 
-    // Filter Logic (Client side search for now, status is server side)
-    const filteredOrders = orders.filter(order => {
-        const matchesSearch = order.customer.toLowerCase().includes(searchText.toLowerCase()) ||
-            order.id.toLowerCase().includes(searchText.toLowerCase());
-        return matchesSearch;
-    });
+    const handleUpdateStatus = async (newStatus) => {
+        try {
+            setLoading(true);
+            const response = await ordersAPI.updateStatus(selectedOrder.key, newStatus);
+            if (response.data.success) {
+                message.success(`Order status updated to ${newStatus}`);
+                handleCloseModal();
+                fetchOrders();
+            }
+        } catch (error) {
+            console.error('Failed to update status:', error);
+            message.error(error.response?.data?.message || 'Failed to update status');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const columns = [
         {
@@ -173,11 +183,13 @@ const PharmacyStaffOrders = () => {
                                 prefix={<FilterOutlined />}
                             >
                                 <Option value="All">All Status</Option>
-                                <Option value="Pending">Pending</Option>
-                                <Option value="Processing">Processing</Option>
-                                <Option value="Ready">Ready</Option>
-                                <Option value="Completed">Completed</Option>
-                                <Option value="Cancelled">Cancelled</Option>
+                                <Option value="pending">Pending</Option>
+                                <Option value="verified">Verified</Option>
+                                <Option value="processing">Processing</Option>
+                                <Option value="prepared">Prepared</Option>
+                                <Option value="ready">Ready</Option>
+                                <Option value="completed">Completed</Option>
+                                <Option value="cancelled">Cancelled</Option>
                             </Select>
                         </Col>
                         <Col xs={24} md={10} style={{ textAlign: 'right' }}>
@@ -209,7 +221,7 @@ const PharmacyStaffOrders = () => {
                     <Space>
                         <ShoppingOutlined />
                         <span>Order Details - {selectedOrder?.id}</span>
-                        <Tag color={getStatusColor(selectedOrder?.status)}>{selectedOrder?.status}</Tag>
+                        <Tag color={getStatusColor(selectedOrder?.status)}>{selectedOrder?.status?.toUpperCase()}</Tag>
                     </Space>
                 }
                 open={isModalVisible}
@@ -218,14 +230,19 @@ const PharmacyStaffOrders = () => {
                     <Button key="close" onClick={handleCloseModal}>
                         Close
                     </Button>,
-                    selectedOrder?.status === 'Pending' && (
-                        <Button key="process" type="primary" onClick={handleCloseModal}>
-                            Process Order
+                    selectedOrder?.status === 'pending' && (
+                        <Button key="process" type="primary" onClick={() => handleUpdateStatus('verified')}>
+                            Verify Order
                         </Button>
                     ),
-                    selectedOrder?.status === 'Processing' && (
-                        <Button key="ready" type="primary" style={{ backgroundColor: '#13c2c2' }} onClick={handleCloseModal}>
-                            Mark Ready
+                    selectedOrder?.status === 'verified' && (
+                        <Button key="ready" type="primary" style={{ backgroundColor: '#13c2c2' }} onClick={() => handleUpdateStatus('prepared')}>
+                            Mark Prepared (Deduct Stock)
+                        </Button>
+                    ),
+                    ['prepared', 'processing'].includes(selectedOrder?.status) && (
+                        <Button key="out" type="primary" onClick={() => handleUpdateStatus('out_for_delivery')}>
+                            Out for Delivery
                         </Button>
                     )
                 ]}
