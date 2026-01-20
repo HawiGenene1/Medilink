@@ -45,50 +45,60 @@ export const authAPI = {
 
 // Medicines API
 export const medicinesAPI = {
-  search: (query, filters = {}, page = 1, limit = 10) => 
-    api.get('/medicines/search', { 
-      params: { 
-        q: query, 
-        page, 
-        limit, 
-        ...filters 
-      } 
+  search: (query, filters = {}, page = 1, limit = 10) =>
+    api.get('/medicines/search', {
+      params: {
+        q: query,
+        page,
+        limit,
+        ...filters
+      }
     }),
   getById: (id) => api.get(`/medicines/${id}`),
   getCategories: () => api.get('/medicines/categories'),
+  // Pharmacy management
+  add: (data) => api.post('/medicines', data),
+  update: (id, data) => api.put(`/medicines/${id}`, data),
+  delete: (id) => api.delete(`/medicines/${id}`),
+  updateStock: (id, adjustment) => api.patch(`/medicines/${id}/stock`, { adjustment }),
 };
 
 // Orders API
 export const ordersAPI = {
   create: (orderData) => api.post('/orders', orderData),
-  getAll: (page = 1, limit = 10) => 
+  getAll: (page = 1, limit = 10) =>
     api.get('/orders', { params: { page, limit } }),
   getById: (id) => api.get(`/orders/${id}`),
   cancel: (id) => api.patch(`/orders/${id}/cancel`),
   getStatus: (id) => api.get(`/orders/${id}/status`),
+  // Pharmacy Staff endpoints
+  getPharmacyOrders: (pharmacyId, params) =>
+    api.get(`/orders/pharmacy/${pharmacyId}`, { params }),
+  updateStatus: (orderId, status) =>
+    api.put(`/orders/${orderId}/status`, { status }),
 };
 
 // Prescriptions API
 export const prescriptionsAPI = {
-  upload: (formData) => 
+  upload: (formData) =>
     api.post('/prescriptions', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     }),
-  getAll: (page = 1, limit = 10) => 
+  getAll: (page = 1, limit = 10) =>
     api.get('/prescriptions', { params: { page, limit } }),
   getById: (id) => api.get(`/prescriptions/${id}`),
-  updateStatus: (id, status) => 
+  updateStatus: (id, status) =>
     api.patch(`/prescriptions/${id}/status`, { status }),
 };
 
 // Cart API
 export const cartAPI = {
   getCart: () => api.get('/cart'),
-  addItem: (medicineId, quantity = 1) => 
+  addItem: (medicineId, quantity = 1) =>
     api.post('/cart/items', { medicineId, quantity }),
-  updateItem: (itemId, quantity) => 
+  updateItem: (itemId, quantity) =>
     api.patch(`/cart/items/${itemId}`, { quantity }),
   removeItem: (itemId) => api.delete(`/cart/items/${itemId}`),
   clearCart: () => api.delete('/cart'),
