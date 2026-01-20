@@ -35,6 +35,10 @@ import MedicineDetail from '../pages/medicines/MedicineDetail';
 import PharmacyLayout from '../layouts/PharmacyLayout';
 import Inventory from '../pages/pharmacy-staff/Inventory';
 import PharmacyDashboard from '../pages/pharmacy-admin/Dashboard';
+import PharmacyStaffDashboard from '../pages/pharmacy-staff/Dashboard/Dashboard';
+import PharmacyStaffMedicines from '../pages/pharmacy-staff/Medicines/Medicines';
+import PharmacyStaffOrders from '../pages/pharmacy-staff/Orders/Orders';
+import InventoryAlerts from '../pages/pharmacy-staff/InventoryAlerts/InventoryAlerts';
 
 // Admin & Other Pages
 import AdminLayout from '../layouts/AdminLayout';
@@ -85,6 +89,10 @@ const AppRouter = () => {
       <Route element={<ProtectedRoute allowedRoles={['pharmacy_admin', 'pharmacy_staff']} />}>
         <Route element={<PharmacyLayout />}>
           <Route path="/pharmacy-staff/inventory" element={<Inventory />} />
+          <Route path="/pharmacy-staff/dashboard" element={<PharmacyStaffDashboard />} />
+          <Route path="/pharmacy-staff/medicines" element={<PharmacyStaffMedicines />} />
+          <Route path="/pharmacy-staff/orders" element={<PharmacyStaffOrders />} />
+          <Route path="/pharmacy-staff/inventory-alerts" element={<InventoryAlerts />} />
           <Route path="/pharmacy-admin/dashboard" element={<PharmacyDashboard />} />
         </Route>
       </Route>

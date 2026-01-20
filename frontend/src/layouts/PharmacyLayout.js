@@ -5,7 +5,8 @@ import {
     DashboardOutlined,
     MedicineBoxOutlined,
     ShoppingOutlined,
-    TeamOutlined
+    TeamOutlined,
+    AlertOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -17,20 +18,24 @@ const PharmacyLayout = () => {
 
     const menuItems = [
         {
-            key: '/pharmacy-admin/dashboard',
+            key: isOwner ? '/pharmacy-admin/dashboard' : '/pharmacy-staff/dashboard',
             icon: <DashboardOutlined />,
             label: 'Dashboard',
-            hidden: !isOwner
         },
         {
-            key: '/pharmacy-staff/inventory',
+            key: '/pharmacy-staff/medicines',
             icon: <MedicineBoxOutlined />,
-            label: 'Inventory',
+            label: 'Medicines',
         },
         {
             key: '/pharmacy-staff/orders',
             icon: <ShoppingOutlined />,
             label: 'Orders',
+        },
+        {
+            key: '/pharmacy-staff/inventory-alerts',
+            icon: <AlertOutlined />,
+            label: 'Inventory Alerts',
         },
         {
             key: '/pharmacy-admin/staff',
