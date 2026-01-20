@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Tabs, Form, Input, Button, Switch, Avatar, Upload, Space, Divider, Alert, List } from 'antd';
+import { Row, Col, Card, Typography, Tabs, Form, Input, Button, Switch, Avatar, Upload, Space, Divider, Alert, List, Modal, Steps } from 'antd';
 import {
     UserOutlined,
     LockOutlined,
@@ -10,20 +10,50 @@ import {
     EnvironmentOutlined,
     EyeInvisibleOutlined,
     EyeTwoTone,
-    MailOutlined
+    MailOutlined,
+    ExclamationCircleOutlined,
+    WarningOutlined,
+    FrownOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
 import { App } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import './Settings.css';
 
 const { Title, Text, Paragraph } = Typography;
 
 const Settings = () => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const { message } = App.useApp();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('security'); // Changed default active tab
+
+    // Delete Account State
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+    const [deleteStep, setDeleteStep] = useState(0);
+    const [confirmText, setConfirmText] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteFinal = async () => {
+        setIsDeleting(true);
+        try {
+            await api.delete('/users/profile');
+            message.success('Account deleted successfully. We hope to see you again.');
+            logout();
+            navigate('/');
+        } catch (error) {
+            console.error('Deletion failed:', error);
+            message.error('Failed to delete account. Please try again.');
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteModalVisible(false);
+        }
+    };
+
+    const nextDeleteStep = () => setDeleteStep(prev => prev + 1);
+    const prevDeleteStep = () => setDeleteStep(prev => prev - 1);
 
     const SecuritySettings = () => (
         <div className="settings-section fade-in">
@@ -140,7 +170,9 @@ const Settings = () => {
                 )}
             />
             <Divider />
-            <Button danger block>Delete Account</Button>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+                Version 1.1.0 (Build 20260120)
+            </Text>
         </div>
     );
 
@@ -168,6 +200,135 @@ const Settings = () => {
                     className="settings-tabs"
                 />
             </Card>
+
+            {/* Subtle Delete Account Section */}
+            <div style={{ marginTop: '64px', borderTop: '1px solid #f0f0f0', paddingTop: '32px', textAlign: 'center' }}>
+                <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
+                    No longer need your account?
+                </Text>
+                <Button
+                    type="link"
+                    danger
+                    size="small"
+                    icon={<ExclamationCircleOutlined />}
+                    onClick={() => {
+                        setIsDeleteModalVisible(true);
+                        setDeleteStep(0);
+                        setConfirmText('');
+                    }}
+                >
+                    Delete Account
+                </Button>
+            </div>
+
+            {/* Delete Account multi-step Modal */}
+            <Modal
+                title={
+                    <Space>
+                        <WarningOutlined style={{ color: '#ff4d4f' }} />
+                        <span>Delete Account</span>
+                    </Space>
+                }
+                open={isDeleteModalVisible}
+                onCancel={() => setIsDeleteModalVisible(false)}
+                footer={null}
+                width={500}
+                centered
+            >
+                <Steps
+                    size="small"
+                    current={deleteStep}
+                    style={{ marginBottom: '24px' }}
+                    items={[
+                        { title: 'Warning' },
+                        { title: 'Impact' },
+                        { title: 'Confirm' }
+                    ]}
+                />
+
+                <div className="delete-flow-content" style={{ minHeight: '180px' }}>
+                    {deleteStep === 0 && (
+                        <div className="step-fade-in">
+                            <Alert
+                                message="Permanent Action"
+                                description="Deleting your account is irreversible. All your data will be permanently wiped from our secure clinical servers."
+                                type="error"
+                                showIcon
+                                style={{ marginBottom: '16px' }}
+                            />
+                            <Paragraph>
+                                Are you sure you want to proceed? You will lose access to all your prescriptions and order history immediately.
+                            </Paragraph>
+                            <div style={{ textAlign: 'right', marginTop: '24px' }}>
+                                <Button onClick={() => setIsDeleteModalVisible(false)} style={{ marginRight: '8px' }}>
+                                    Keep My Account
+                                </Button>
+                                <Button type="primary" danger onClick={nextDeleteStep}>
+                                    I Understand, Proceed
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {deleteStep === 1 && (
+                        <div className="step-fade-in">
+                            <Title level={5}>What happens when you delete your account:</Title>
+                            <List
+                                size="small"
+                                dataSource={[
+                                    'Access to all active prescriptions will be lost.',
+                                    'Order history and digital receipts will be deleted.',
+                                    'Saved pharmacies and favorites will be removed.',
+                                    'Pharmacists will no longer be able to access your counseling history.'
+                                ]}
+                                renderItem={item => <List.Item><Text type="secondary">• {item}</Text></List.Item>}
+                                style={{ marginBottom: '24px' }}
+                            />
+                            <div style={{ textAlign: 'right' }}>
+                                <Button onClick={prevDeleteStep} style={{ marginRight: '8px' }}>
+                                    Back
+                                </Button>
+                                <Button type="primary" danger onClick={nextDeleteStep}>
+                                    Acknowledge & Continue
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {deleteStep === 2 && (
+                        <div className="step-fade-in">
+                            <Paragraph>
+                                To confirm deletion, please type <Text strong code>DELETE</Text> in the field below:
+                            </Paragraph>
+                            <Input
+                                placeholder="Type DELETE to confirm"
+                                value={confirmText}
+                                onChange={(e) => setConfirmText(e.target.value)}
+                                status={confirmText && confirmText !== 'DELETE' ? 'error' : ''}
+                                style={{ marginBottom: '24px' }}
+                            />
+                            <Form.Item label="Reason for leaving (Optional)">
+                                <Input.TextArea placeholder="Help us improve..." rows={2} />
+                            </Form.Item>
+                            <div style={{ textAlign: 'right', marginTop: '12px' }}>
+                                <Button onClick={prevDeleteStep} style={{ marginRight: '8px' }}>
+                                    Back
+                                </Button>
+                                <Button
+                                    type="primary"
+                                    danger
+                                    loading={isDeleting}
+                                    disabled={confirmText !== 'DELETE'}
+                                    onClick={handleDeleteFinal}
+                                >
+                                    Permanently Delete Account
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </Modal>
+
         </div>
     );
 };

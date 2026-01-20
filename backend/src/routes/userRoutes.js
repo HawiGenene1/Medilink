@@ -39,6 +39,7 @@ router.use(protect); // Protect all routes
 
 router.get('/profile', getUserProfile);
 router.put('/profile', updateUserProfile);
+router.delete('/profile', deleteUserProfile);
 router.post('/profile-image', upload.single('image'), uploadProfileImage);
 
 module.exports = router;
