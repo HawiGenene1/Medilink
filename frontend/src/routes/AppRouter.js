@@ -22,6 +22,7 @@ import CustomerCart from '../pages/customer/Cart';
 import CustomerCheckout from '../pages/customer/Checkout';
 import OrderCheckout from '../pages/customer/OrderCheckout'; // Real Chapa Payment
 import PaymentStatus from '../pages/customer/PaymentStatus'; // Payment Verification
+import InvoicePage from '../pages/customer/InvoicePage'; // Invoice View
 import CustomerOrders from '../pages/customer/Orders';
 import CustomerOrderTracking from '../pages/customer/Orders/OrderTracking';
 import CustomerPrescriptions from '../pages/customer/Prescriptions';
@@ -75,6 +76,7 @@ const AppRouter = () => {
           <Route path="/customer/checkout" element={<CustomerCheckout />} />
           <Route path="/customer/orders/:orderId/checkout" element={<OrderCheckout />} />
           <Route path="/customer/orders/:orderId/payment-status" element={<PaymentStatus />} />
+          <Route path="/customer/orders/:orderId/invoice" element={<InvoicePage />} />
           <Route path="/customer/prescriptions" element={<CustomerPrescriptions />} />
           <Route path="/customer/orders" element={<CustomerOrders />} />
           <Route path="/customer/orders/track/:id" element={<CustomerOrderTracking />} />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Badge, Result, Tag, Alert } from 'antd';
 import {
     EnvironmentOutlined,
@@ -12,6 +12,8 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
+import { ordersAPI } from '../../../services/api/orders';
+import { message, Spin } from 'antd';
 import './Checkout.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -20,6 +22,7 @@ const Checkout = () => {
     const navigate = useNavigate();
     const { cartItems, subtotal, clearCart } = useCart();
     const [currentStep, setCurrentStep] = useState(0);
+    const [loading, setLoading] = useState(false);
 
     // Mock Data
     const addresses = [
@@ -28,7 +31,7 @@ const Checkout = () => {
     ];
 
     const [selectedAddress, setSelectedAddress] = useState('addr-1');
-    const [paymentMethod, setPaymentMethod] = useState('telebirr');
+    const [paymentMethod, setPaymentMethod] = useState('chapa');
 
     const steps = [
         { title: 'Address', icon: <EnvironmentOutlined /> },
@@ -40,14 +43,135 @@ const Checkout = () => {
     const handleNext = () => setCurrentStep(prev => prev + 1);
     const handlePrev = () => setCurrentStep(prev => prev - 1);
 
-    const handlePlaceOrder = () => {
-        // Here you would integrate with backend
-        clearCart();
-        setCurrentStep(4);
+    const [showChapa, setShowChapa] = useState(false);
+
+    // Load Chapa Inline Script
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = "https://js.chapa.co/v1/inline.js";
+        script.crossOrigin = "anonymous"; // Enable error details for cross-origin scripts
+        script.async = true;
+        document.body.appendChild(script);
+        return () => {
+            if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
+        };
+    }, []);
+
+    const handlePlaceOrder = async () => {
+        try {
+            setLoading(true);
+            const address = addresses.find(a => a.id === selectedAddress);
+
+            // 1. Create Order
+            const orderPayload = {
+                items: cartItems.map(item => ({
+                    medicineId: item.id || item._id, // Handle both id formats
+                    quantity: item.quantity,
+                    price: item.priceValue
+                })),
+                shippingAddress: address.fullAddress,
+                paymentMethod: 'chapa', // Force Chapa as generic provider
+                deliveryFee: 50
+            };
+
+            const orderRes = await ordersAPI.createOrder(orderPayload);
+            const order = orderRes.data.data || orderRes.data; // Adjust based on API response structure
+            const orderId = order._id || order.id || order.orderId;
+
+            if (!orderId) throw new Error('Failed to create order');
+
+            // 2. Initialize Chapa Payment (To create DB record & get keys)
+            const paymentPayload = {
+                orderId: orderId,
+                amount: subtotal + 50,
+                paymentMethod: paymentMethod, // Selected specific provider (telebirr, etc)
+                returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
+                phoneNumber: '0911234567' // TODO: Get from user profile
+            };
+
+            const paymentRes = await ordersAPI.initializeChapaPayment(paymentPayload);
+
+            if (paymentRes.data.success) {
+                // 3. Initialize Chapa Inline
+                clearCart();
+                setShowChapa(true); // Hide our button, show Chapa container
+                setLoading(false);
+
+                // Debug logging
+                console.log('Chapa Initialization Response:', paymentRes.data);
+
+                if (window.ChapaCheckout) {
+                    try {
+                        if (!paymentRes.data.publicKey) {
+                            throw new Error('Chapa Public Key is missing from backend response');
+                        }
+
+                        const chapa = new window.ChapaCheckout({
+                            publicKey: paymentRes.data.publicKey,
+                            amount: (subtotal + 50).toString(),
+                            currency: 'ETB',
+                            tx_ref: paymentRes.data.txRef, // Link to backend payment
+                            email: "israel@negade.et", // TODO: Get from user profile
+                            first_name: "Israel",
+                            last_name: "Goytom",
+                            title: "Medilink Payment",
+                            description: `Payment for Order ${order.orderNumber}`,
+                            callbackUrl: "https://example.com/callbackurl", // Optional
+                            returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
+                            customizations: {
+                                buttonText: 'Pay Now',
+                                styles: `
+                                    .chapa-pay-button { 
+                                        background-color: #1890ff; 
+                                        color: white;
+                                        width: 100%;
+                                        padding: 10px;
+                                        border-radius: 4px;
+                                        font-weight: bold;
+                                        cursor: pointer;
+                                    }
+                                    .chapa-pay-button:hover {
+                                        background-color: #40a9ff;
+                                    }
+                                `
+                            }
+                        });
+
+                        console.log('Initializing Chapa form...');
+                        chapa.initialize('chapa-inline-form');
+                    } catch (chapaError) {
+                        console.error('Chapa Constructor Error:', chapaError);
+                        message.error(`Payment System Error: ${chapaError.message}`);
+                        setShowChapa(false); // Re-enable Pay button
+                    }
+                } else {
+                    message.error("Payment gateway script not loaded. Please refresh.");
+                    setShowChapa(false);
+                }
+
+            } else {
+                throw new Error('Payment initialization failed');
+            }
+
+        } catch (error) {
+            console.error('Checkout Error:', error);
+            const errorMsg = error.response?.data?.message || error.message || 'Failed to place order. Please try again.';
+            if (error.response?.data?.errors) {
+                message.error(error.response.data.errors.map(e => e.msg).join(', '));
+            } else {
+                message.error(errorMsg);
+            }
+            setLoading(false);
+        }
     };
 
     return (
         <div className="checkout-container">
+            {/* Chapa Inline Container */}
+            <div id="chapa-inline-form" style={{ marginTop: 20 }}></div>
+
             <Button
                 type="text"
                 icon={<ArrowLeftOutlined />}
@@ -165,9 +289,16 @@ const Checkout = () => {
                                 >
                                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
                                         {[
-                                            { id: 'telebirr', name: 'Telebirr', desc: 'Secure mobile payment by Ethio Telecom' },
-                                            { id: 'cbe', name: 'CBE Birr', desc: 'Quick payment via Commercial Bank of Ethiopia' },
-                                            { id: 'cash', name: 'Cash on Delivery', desc: 'Pay when your medicine arrives' },
+                                            {
+                                                id: 'chapa',
+                                                name: 'Secure Online Payment (Chapa)',
+                                                desc: 'Pay via Telebirr, CBE Birr, Amole, Awash, or Card'
+                                            },
+                                            {
+                                                id: 'cash',
+                                                name: 'Cash on Delivery',
+                                                desc: 'Pay when your medicine arrives'
+                                            },
                                         ].map(pm => (
                                             <Card
                                                 key={pm.id}
@@ -184,7 +315,12 @@ const Checkout = () => {
                                                         <Text type="secondary" style={{ fontSize: '12px' }}>{pm.desc}</Text>
                                                     </Col>
                                                     <Col>
-                                                        <div className="payment-icon-placeholder" />
+                                                        <div className="payment-icon-placeholder" style={{
+                                                            backgroundImage: pm.id === 'chapa' ? 'url(https://chapa.co/assets/img/chapa-logo.png)' : 'none',
+                                                            backgroundSize: 'contain',
+                                                            backgroundRepeat: 'no-repeat',
+                                                            backgroundPosition: 'center'
+                                                        }} />
                                                     </Col>
                                                 </Row>
                                             </Card>
@@ -235,8 +371,8 @@ const Checkout = () => {
                                     Continue
                                 </Button>
                             ) : (
-                                <Button type="primary" size="large" onClick={handlePlaceOrder} block className="place-order-btn">
-                                    Place Order
+                                <Button type="primary" size="large" onClick={handlePlaceOrder} block className="place-order-btn" loading={loading} disabled={showChapa}>
+                                    Pay & Place Order
                                 </Button>
                             )}
                         </div>

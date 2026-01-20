@@ -41,9 +41,9 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
 
     if (token) {
-      api.get('/auth/current-user')
+      api.get('/auth/me')
         .then(response => {
-          setUser(response.data);
+          setUser(response.data.user); 
           setIsAuthenticated(true);
         })
         .catch(() => {
@@ -55,55 +55,12 @@ export const AuthProvider = ({ children }) => {
           setLoading(false);
         });
     } else {
-      // Auto-login in development mode
-      if (process.env.NODE_ENV === 'development') {
-        const mockUser = {
-          _id: 'cashier123',
-          firstName: 'Test',
-          lastName: 'Cashier',
-          email: 'cashier@test.com',
-          role: 'cashier',
-          pharmacyId: '12345'
-        };
-        const mockToken = 'mock-jwt-token-for-cashier';
-
-        console.log('🔓 Auto-logging in as Cashier (Dev Mode)');
-        setUser(mockUser);
-        setIsAuthenticated(true);
-        localStorage.setItem('token', mockToken);
-      }
       setLoading(false);
     }
   }, []);
 
   // Login function
   const login = async (email, password) => {
-    // In development, return mock user based on email
-    if (process.env.NODE_ENV === 'development') {
-      let role = 'customer';
-      if (email.includes('admin')) role = 'admin';
-      if (email.includes('pharmacy')) role = 'pharmacy_admin';
-      if (email.includes('staff')) role = 'pharmacy_staff';
-      if (email.includes('cashier')) role = 'cashier';
-      if (email.includes('delivery')) role = 'delivery';
-
-      const mockUser = {
-        _id: 'mock-user-' + role,
-        email,
-        firstName: role.toUpperCase(),
-        lastName: 'User',
-        role: role
-      };
-
-      // Create a dummy JWT with the role encoded
-      const mockToken = `header.${btoa(JSON.stringify({ email, role }))}.signature`;
-
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      localStorage.setItem('token', mockToken);
-      return { success: true, user: mockUser };
-    }
-
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
@@ -113,7 +70,8 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user }; // Return user for redirect logic
     } catch (error) {
       console.error('Login failed:', error);
-      return { success: false, message: error.response?.data?.message || 'Login failed' };
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+      return { success: false, message: errorMessage };
     }
   };
 

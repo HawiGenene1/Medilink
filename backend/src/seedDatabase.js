@@ -8,6 +8,7 @@ const Pharmacy = require('./models/Pharmacy');
 const Category = require('./models/Category');
 const Medicine = require('./models/Medicine');
 const Order = require('./models/Order');
+const Role = require('./models/Role');
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/medilink';
 
@@ -15,10 +16,7 @@ const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/medilink
 const seedData = async () => {
   try {
     console.log('🔌 Connecting to MongoDB...');
-    await mongoose.connect(MONGO_URI, { 
-      useNewUrlParser: true, 
-      useUnifiedTopology: true 
-    });
+    await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB\n');
 
     // Clear existing data
@@ -28,20 +26,30 @@ const seedData = async () => {
     await Category.deleteMany({});
     await Medicine.deleteMany({});
     await Order.deleteMany({});
+    await Role.deleteMany({});
     console.log('✅ Existing data cleared\n');
+
+    // Create Roles
+    console.log('🏷️ Creating roles...');
+    const adminRole = await Role.create({ name: 'admin', permissions: ['all'] });
+    const customerRole = await Role.create({ name: 'customer', permissions: ['view_medicines', 'create_orders'] });
+    const pharmacyStaffRole = await Role.create({ name: 'pharmacy_staff', permissions: ['manage_medicines', 'view_orders'] });
+    const pharmacyAdminRole = await Role.create({ name: 'pharmacy_admin', permissions: ['manage_pharmacy', 'view_orders', 'manage_staff'] });
+    const deliveryRole = await Role.create({ name: 'delivery', permissions: ['view_deliveries', 'update_delivery_status'] });
+    const cashierRole = await Role.create({ name: 'cashier', permissions: ['view_orders', 'verify_payments', 'process_refunds', 'generate_invoices'] });
+    console.log('✅ Roles created\n');
 
     // Create Users
     console.log('👥 Creating users...');
-    const adminPassword = await bcrypt.hash('Admin123', 10);
-    const userPassword = await bcrypt.hash('Test123', 10);
-
+    
     const admin = await User.create({
       firstName: 'Admin',
       lastName: 'User',
       email: 'admin@medilink.com',
-      password: adminPassword,
+      password: 'Admin123', // Will be hashed by pre-save hook
+      username: 'admin',
       phone: '+251911111111',
-      role: 'admin',
+      role: adminRole._id,
       isActive: true,
       isEmailVerified: true
     });
@@ -51,9 +59,10 @@ const seedData = async () => {
       firstName: 'John',
       lastName: 'Pharmacy',
       email: 'pharmacy@medilink.com',
-      password: userPassword,
+      password: 'Test123', // Will be hashed by pre-save hook
+      username: 'pharmacy_owner',
       phone: '+251922222222',
-      role: 'customer', // Temporary role, will update after pharmacy is created
+      role: customerRole._id, // Temporary role, will update after pharmacy is created
       isActive: true,
       address: {
         street: '123 Main St',
@@ -68,9 +77,10 @@ const seedData = async () => {
       firstName: 'Jane',
       lastName: 'Customer',
       email: 'customer@medilink.com',
-      password: userPassword,
+      password: 'Test123', // Will be hashed by pre-save hook
+      username: 'customer',
       phone: '+251933333333',
-      role: 'customer',
+      role: customerRole._id,
       isActive: true,
       address: {
         street: '456 Customer Ave',
@@ -85,9 +95,10 @@ const seedData = async () => {
       firstName: 'Mike',
       lastName: 'Delivery',
       email: 'delivery@medilink.com',
-      password: userPassword,
+      password: 'Test123', // Will be hashed by pre-save hook
+      username: 'delivery',
       phone: '+251944444444',
-      role: 'delivery',
+      role: deliveryRole._id,
       isActive: true,
       vehicleInfo: {
         type: 'motorcycle',
@@ -95,7 +106,19 @@ const seedData = async () => {
       }
     });
 
-    console.log(`✅ Created ${4} users\n`);
+    // Create cashier user
+    const cashier = await User.create({
+      firstName: 'Cashier',
+      lastName: 'User',
+      email: 'cashier@medilink.com',
+      password: 'Cashier123', // Will be hashed by pre-save hook
+      username: 'cashier',
+      role: cashierRole._id,
+      isActive: true,
+      isEmailVerified: true
+    });
+
+    console.log(`✅ Created ${5} users including cashier\n`);
 
     // Create Pharmacy
     console.log('🏥 Creating pharmacies...');

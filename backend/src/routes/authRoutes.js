@@ -21,14 +21,14 @@ const validateRegistration = [
   // Password is required only for non-customer roles
   (req, res, next) => {
     const { role = 'customer' } = req.body;
-    
+
     if (role !== 'customer' && !req.body.password) {
       return res.status(400).json({
         success: false,
         message: 'Password is required for this user role',
       });
     }
-    
+
     // For customer, password is auto-generated
     // For other roles, validate password if provided
     if (req.body.password) {
@@ -36,7 +36,7 @@ const validateRegistration = [
         .isLength({ min: 6 })
         .run(req);
     }
-    
+
     next();
   }
 ];
@@ -62,6 +62,24 @@ router.post(
 // @route   GET /api/auth/me
 // @access  Private
 router.get('/me', authenticate, getCurrentUser);
+
+// DEBUG ROUTE (Delete later)
+router.get('/debug-user/:email', async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findOne({ email: req.params.email }).select('+password').populate('role');
+    if (!user) return res.json({ found: false });
+    return res.json({
+      found: true,
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      passwordHash: user.password
+    });
+  } catch (e) {
+    return res.status(500).json({ error: e.toString() });
+  }
+});
 
 // @desc    Request password reset
 // @route   POST /api/auth/request-reset

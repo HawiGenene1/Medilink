@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Input, Avatar, Badge, Dropdown, Button, Drawer, Space, Typography } from 'antd';
+import { useCart } from '../contexts/CartContext';
 import {
     MenuUnfoldOutlined,
     MenuFoldOutlined,
@@ -7,7 +8,8 @@ import {
     BellOutlined,
     UserOutlined,
     LogoutOutlined,
-    SettingOutlined
+    SettingOutlined,
+    ShoppingCartOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,6 +27,15 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Safety check for useCart
+    let cartCount = 0;
+    try {
+        const cart = useCart();
+        cartCount = cart?.cartItems?.length || 0;
+    } catch (e) {
+        // useCart might throw if context not provided, ignore
+    }
 
     const toggle = () => {
         setCollapsed(!collapsed);
@@ -144,12 +155,25 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
 
                     <div className="header-right">
                         {role === 'customer' && (
-                            <div className="header-location" onClick={() => setLocationModalOpen(true)}>
-                                <span className="label-text">📍 {currentLocation}</span>
-                            </div>
+                            <>
+                                <div className="header-location" onClick={() => setLocationModalOpen(true)}>
+                                    <span className="label-text">📍 {currentLocation}</span>
+                                </div>
+
+                                <Badge count={cartCount} offset={[-2, 2]} size="small" style={{ backgroundColor: '#FF4D4F' }}>
+                                    <Button
+                                        type="text"
+                                        shape="circle"
+                                        icon={<ShoppingCartOutlined />}
+                                        size="large"
+                                        onClick={() => navigate('/customer/cart')}
+                                    />
+                                </Badge>
+                            </>
                         )}
 
                         <Badge count={2} offset={[-2, 2]} size="small">
+
                             <Button
                                 type="text"
                                 shape="circle"

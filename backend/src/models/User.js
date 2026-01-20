@@ -119,18 +119,16 @@ userSchema.index({ role: 1 });
 userSchema.index({ pharmacyId: 1 });
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
+// Hash password before saving
+userSchema.pre('save', async function () {
+  // Only hash the password if it has been modified (or is new)
   if (!this.isModified('password')) {
-    return next();
+    return;
   }
 
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  // Hash password with cost of 12
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Method to compare passwords

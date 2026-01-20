@@ -1,8 +1,11 @@
-// TODO: Implement Cashier API calls
-// Functions: walk-in orders, POS transactions, payment processing
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import api from '../api';
 
 export const cashierAPI = {
-  // TODO: Implement cashier functions
+  getStats: () => api.get('/cashier/stats'),
+  getOrders: (params) => api.get('/cashier/orders', { params }),
+  verifyPayment: (orderId) => api.post(`/cashier/verify/${orderId}`),
+  generateInvoice: (orderId) => api.post(`/cashier/generate-invoice/${orderId}`),
+  initiateRefund: (paymentId, data) => api.post(`/cashier/refund/${paymentId}`, data),
+  getFinancialReport: (params) => api.get('/cashier/financial-report', { params }),
+  exportReportPDF: (data) => api.post('/cashier/export-report', data),
 };

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Role = require('../models/Role');
 const { generateToken } = require('../config/jwt');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
@@ -61,7 +62,7 @@ const register = async (req, res) => {
 
     // Hash password and save user
     await user.save();
-    
+
     // If this is a customer, send welcome email with generated password
     if (role === 'customer') {
       try {
@@ -121,24 +122,37 @@ const login = async (req, res) => {
     }
 
     const { email, password } = req.body;
+    console.log('LOGIN DEBUG: Attempting login for:', email);
+    console.log('LOGIN DEBUG: Password received length:', password ? password.length : 0);
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email }).select('+password').populate('role');
+
     if (!user) {
+      console.log('LOGIN DEBUG: User not found in DB');
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
       });
     }
 
+    console.log('LOGIN DEBUG: User found. Role:', user.role ? user.role.name : 'No Role');
+    console.log('LOGIN DEBUG: Comparing password...');
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('LOGIN DEBUG: Password match result:', isMatch);
+
     if (!isMatch) {
+      console.log('LOGIN DEBUG: Password mismatch!');
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
       });
     }
 
-    const token = generateToken({ id: user._id, role: user.role });
+    const token = generateToken({
+      userId: user._id,
+      email: user.email,
+      role: user.role
+    });
 
     const { password: _pwd, ...safeUser } = user.toObject();
 
@@ -150,7 +164,7 @@ const login = async (req, res) => {
         firstName: safeUser.firstName,
         lastName: safeUser.lastName,
         email: safeUser.email,
-        role: safeUser.role,
+        role: safeUser.role.name,
         phone: safeUser.phone,
       },
     });
@@ -171,7 +185,7 @@ const login = async (req, res) => {
  */
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password');
+    const user = await User.findById(req.user.userId).select('-password').populate('role');
 
     if (!user) {
       return res.status(404).json({
@@ -187,7 +201,7 @@ const getCurrentUser = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role,
+        role: user.role.name,
         phone: user.phone,
       },
     });

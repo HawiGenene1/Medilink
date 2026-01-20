@@ -1,0 +1,47 @@
+.invoice-container {
+    background-color: white;
+    min-height: 100vh;
+    padding: 40px;
+}
+
+.invoice-paper {
+    background: white;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 20mm;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .invoice-container,
+    .invoice-container * {
+        visibility: visible;
+        background-color: white;
+    }
+
+    .invoice-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        min-height: 100%;
+    }
+
+    .invoice-paper {
+        box-shadow: none;
+        margin: 0;
+        width: 100%;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+}

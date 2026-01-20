@@ -1,0 +1,412 @@
+/* Cashier Dashboard Styles - Customer UI Inspired */
+
+.customer-dashboard-full {
+    min-height: 100vh;
+    padding: 0;
+    background: linear-gradient(135deg, #f8f9fa 0%, #eef2ff 100%);
+    font-family: 'Inter', sans-serif;
+    overflow: visible;
+    width: 100%;
+}
+
+.welcome-section {
+    margin-bottom: 24px;
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+}
+
+/* Stats Banner */
+.stats-banner-mini {
+    padding: 20px;
+    box-shadow: 0 8px 16px rgba(30, 136, 229, 0.15);
+}
+
+.banner-divider {
+    width: 1px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Quick Action Cards Refined */
+.quick-action-card-refined {
+    border-radius: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    overflow: hidden;
+}
+
+.quick-action-card-refined .ant-card-body {
+    padding: 20px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.quick-action-card-refined:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary-color) !important;
+}
+
+.action-icon-refined {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+}
+
+.quick-action-card-refined:hover .action-icon-refined {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.action-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.action-title {
+    font-size: 14px;
+    color: var(--text-main);
+}
+
+.action-arrow {
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+    color: var(--primary-color);
+    font-size: 12px;
+}
+
+.quick-action-card-refined:hover .action-arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+    border-radius: 16px !important;
+    box-shadow: var(--card-shadow) !important;
+    border: 1px solid var(--border-color) !important;
+    overflow: visible;
+}
+
+/* Order List Items */
+.order-list-item {
+    padding: 16px 0;
+}
+
+/* Layout Styles */
+.dashboard-layout {
+    display: flex;
+    height: 100vh;
+    gap: 0;
+    width: 100%;
+    overflow: auto;
+}
+
+.dashboard-sidebar {
+    width: 260px;
+    background: #ffffff;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.dashboard-main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    margin-left: 260px;
+    height: 100vh;
+    padding: 24px;
+    width: calc(100% - 260px);
+    box-sizing: border-box;
+}
+
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+}
+
+.logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(45deg, #4361ee, #4cc9f0);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    margin-right: 12px;
+}
+
+.logo-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.sidebar-menu {
+    flex: 1;
+    padding: 20px 0;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+    gap: 12px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.sidebar-item:hover {
+    background: #f8fafc;
+    color: #1e88e5;
+}
+
+.sidebar-item.active {
+    background: #eef2ff;
+    color: #4361ee;
+    border-left-color: #4361ee;
+    font-weight: 600;
+}
+
+.dashboard-main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* Header Styles */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding: 0;
+}
+
+.dashboard-title {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #2c3e50;
+    margin: 0 !important;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Original Cashier Dashboard Styles */
+
+.dashboard-container {
+    min-height: 100vh;
+    padding: 24px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #eef2ff 100%);
+    font-family: 'Inter', sans-serif;
+}
+
+.dashboard-title {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #2c3e50;
+    margin-bottom: 0 !important;
+    background: linear-gradient(45deg, #4361ee, #4cc9f0);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Statistics Cards */
+.stat-card {
+    border: none !important;
+    border-radius: 20px !important;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: #ffffff !important;
+    box-shadow: 0 10px 20px rgba(67, 97, 238, 0.05) !important;
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(67, 97, 238, 0.15) !important;
+}
+
+.stat-icon-wrapper {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 16px;
+}
+
+.stat-icon-blue {
+    background: rgba(67, 97, 238, 0.1);
+    color: #4361ee;
+}
+
+.stat-icon-green {
+    background: rgba(63, 134, 0, 0.1);
+    color: #3f8600;
+}
+
+.stat-icon-orange {
+    background: rgba(250, 173, 20, 0.1);
+    color: #faad14;
+}
+
+.stat-icon-red {
+    background: rgba(207, 19, 34, 0.1);
+    color: #cf1322;
+}
+
+.stat-value {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    color: #2b3445;
+}
+
+.stat-label {
+    color: #7d879c;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Main Content Card */
+.main-card {
+    border-radius: 24px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+    border: none !important;
+    overflow: hidden;
+}
+
+/* Tabs Styling */
+.ant-tabs-nav {
+    margin-bottom: 24px !important;
+}
+
+.ant-tabs-tab {
+    padding: 12px 24px !important;
+    font-size: 16px !important;
+    border-radius: 12px 12px 0 0 !important;
+}
+
+.ant-tabs-tab-active {
+    background: #fff !important;
+    border-bottom-color: #fff !important;
+}
+
+.ant-tabs-ink-bar {
+    background: #4361ee !important;
+    height: 3px !important;
+}
+
+/* Table Styling */
+.ant-table-thead>tr>th {
+    background: #f8f9fa !important;
+    color: #7d879c !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    font-size: 12px;
+    border-bottom: 2px solid #eef2ff !important;
+}
+
+.ant-table-tbody>tr>td {
+    padding: 16px 16px !important;
+    font-weight: 500;
+}
+
+.ant-table-row:hover>td {
+    background: #f8faff !important;
+}
+
+/* Buttons */
+.btn-primary-gradient {
+    background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);
+    border: none !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+    height: 40px;
+    font-weight: 600;
+}
+
+.btn-primary-gradient:hover {
+    background: linear-gradient(135deg, #4cc9f0 0%, #4361ee 100%) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(67, 97, 238, 0.4);
+}
+
+.btn-action {
+    border-radius: 8px !important;
+    font-weight: 500;
+}
+
+/* Tags */
+.ant-tag {
+    border-radius: 6px !important;
+    padding: 2px 10px !important;
+    font-weight: 600;
+    border: none !important;
+}
+
+.ant-tag-success {
+    background: rgba(63, 134, 0, 0.1) !important;
+    color: #3f8600 !important;
+}
+
+.ant-tag-warning {
+    background: rgba(250, 173, 20, 0.1) !important;
+    color: #faad14 !important;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+    color: #3f8600;
+}
