@@ -1,0 +1,66 @@
+.inventory-alerts-container {
+    padding: 0;
+}
+
+.alerts-summary {
+    margin-bottom: 24px;
+}
+
+.summary-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-right: 12px;
+}
+
+.icon-box.red {
+    background-color: #fff1f0;
+    color: #f5222d;
+}
+
+.icon-box.orange {
+    background-color: #fff7e6;
+    color: #fa8c16;
+}
+
+.icon-box.green {
+    background-color: #f6ffed;
+    color: #52c41a;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #262626;
+    line-height: 1.2;
+}
+
+.stat-label {
+    color: #8c8c8c;
+    font-size: 14px;
+}
+
+.alerts-table-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Adjust Tab Styles */
+.ant-tabs-tab {
+    padding: 12px 0 !important;
+    margin: 0 24px 0 0 !important;
+    font-size: 15px;
+}
+
+.ant-tabs-tab-active {
+    font-weight: 600;
+}

@@ -1,0 +1,226 @@
+/* Common Dashboard Layout Styling - Modern Clinical Theme */
+:root {
+    --primary-color: #1E88E5;
+    --primary-light: #E3F2FD;
+    --secondary-color: #43A047;
+    --text-main: #2D3748;
+    --text-secondary: #718096;
+    --bg-main: #F7FAFC;
+    --border-color: #E2E8F0;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-layout {
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.desktop-sider {
+    box-shadow: 1px 0 0 0 var(--border-color);
+    z-index: 10;
+    background: #ffffff !important;
+}
+
+.sidebar-logo {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
+}
+
+.logo-icon-box {
+    width: 32px;
+    height: 32px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-main);
+    font-family: 'Montserrat', sans-serif;
+}
+
+.sidebar-menu {
+    border-right: none !important;
+    padding-top: 16px;
+    background: transparent !important;
+}
+
+.sidebar-menu .ant-menu-item {
+    width: calc(100% - 32px) !important;
+    margin: 4px 16px !important;
+    border-radius: 8px !important;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.sidebar-menu .ant-menu-item-selected {
+    background-color: var(--primary-light) !important;
+    color: var(--primary-color) !important;
+    font-weight: 600;
+}
+
+.sidebar-menu .ant-menu-item-selected::after {
+    display: none !important;
+}
+
+.sidebar-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.dashboard-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid var(--border-color);
+    height: 80px;
+    position: sticky;
+    top: 0;
+    z-index: 1001;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex: 1;
+}
+
+.trigger {
+    font-size: 20px;
+    cursor: pointer;
+    transition: color 0.3s;
+    color: var(--text-secondary);
+}
+
+.trigger:hover {
+    color: var(--primary-color);
+}
+
+.header-search {
+    flex: 1;
+    max-width: 450px;
+}
+
+.search-input {
+    background: var(--bg-main) !important;
+    border-radius: 12px !important;
+    padding: 8px 16px !important;
+    transition: all 0.3s ease !important;
+}
+
+.search-input:hover,
+.search-input:focus {
+    background: #ffffff !important;
+    box-shadow: 0 0 0 2px var(--primary-light) !important;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.header-location {
+    padding: 8px 16px;
+    background: var(--bg-main);
+    border-radius: 20px;
+    display: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 13px;
+    border: 1px solid transparent;
+}
+
+.header-location:hover {
+    background: #ffffff;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.1);
+}
+
+@media(min-width: 768px) {
+    .header-location {
+        display: block;
+    }
+}
+
+.user-profile-trigger {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 12px;
+    transition: background 0.3s;
+}
+
+.user-profile-trigger:hover {
+    background: var(--bg-main);
+}
+
+.username {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+}
+
+/* Content Area */
+.dashboard-content {
+    margin: 32px;
+    min-height: 280px;
+}
+
+/* Mobile Responsive */
+.mobile-trigger {
+    display: none;
+}
+
+@media (max-width: 992px) {
+    .desktop-sider {
+        display: none !important;
+    }
+
+    .desktop-trigger {
+        display: none !important;
+    }
+
+    .mobile-trigger {
+        display: block;
+    }
+
+    .dashboard-content {
+        margin: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .dashboard-header {
+        padding: 0 16px;
+    }
+
+    .hidden-mobile {
+        display: none;
+    }
+
+    .header-search {
+        display: none;
+    }
+}

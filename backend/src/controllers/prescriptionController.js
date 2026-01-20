@@ -119,6 +119,29 @@ const getPendingPrescriptions = async (req, res) => {
     });
   }
 };
+
+// Get customer's prescriptions
+const getCustomerPrescriptions = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    
+    const prescriptions = await Prescription.find({ user: userId })
+      .populate('user', 'firstName lastName email')
+      .sort({ createdAt: -1 });
+    
+    return res.json({
+      success: true,
+      count: prescriptions.length,
+      prescriptions: prescriptions
+    });
+  } catch (error) {
+    console.error('Error fetching customer prescriptions:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching prescriptions'
+    });
+  }
+};
 // Update prescription status
 const updatePrescriptionStatus = async (req, res) => {
   try {
@@ -170,5 +193,6 @@ module.exports = {
   upload,
   uploadPrescription,
   getPendingPrescriptions,
+  getCustomerPrescriptions,
   updatePrescriptionStatus
 };

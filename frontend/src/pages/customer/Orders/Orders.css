@@ -1,0 +1,75 @@
+/* Customer Orders Styles */
+.orders-page-container {
+    padding-bottom: 40px;
+}
+
+.orders-header {
+    margin-bottom: 32px;
+}
+
+.tab-pane-content {
+    margin-top: 24px;
+}
+
+.clinical-order-card {
+    border-radius: 16px !important;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color) !important;
+    transition: all 0.3s ease !important;
+}
+
+.clinical-order-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.status-tag {
+    font-weight: 600 !important;
+    border-radius: 4px !important;
+    text-transform: uppercase;
+    font-size: 10px !important;
+    letter-spacing: 0.5px;
+}
+
+.order-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 4px 0 12px 0;
+}
+
+.bullet-sep {
+    color: #cbd5e1;
+}
+
+.order-items-preview {
+    background: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+.order-price-section {
+    margin-bottom: 8px;
+}
+
+/* History Styles */
+.history-order-card {
+    border-radius: 12px !important;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color) !important;
+}
+
+.orders-help-banner {
+    margin-top: 40px;
+    padding: 20px;
+    background: #f0f7ff;
+    border-radius: 16px;
+    border: 1px solid #e0efff;
+}
+
+@media (max-width: 576px) {
+    .order-price-section {
+        text-align: left;
+        margin-top: 16px;
+    }
+}

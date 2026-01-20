@@ -1,0 +1,62 @@
+/* Order Tracking Styles */
+.tracking-container {
+    padding-bottom: 60px;
+}
+
+.map-card-modern {
+    border-radius: 20px !important;
+    border: 1px solid var(--border-color) !important;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08) !important;
+}
+
+.map-card-modern .ant-card-body {
+    padding: 0 !important;
+}
+
+.map-overlay-info {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
+    right: 24px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.status-timeline-card {
+    border-radius: 20px !important;
+    border: 1px solid var(--border-color) !important;
+    min-height: 500px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+.clinical-tracking-steps .ant-steps-item-title {
+    font-weight: 700 !important;
+    font-size: 15px !important;
+}
+
+.clinical-tracking-steps .ant-steps-item-description {
+    font-size: 13px !important;
+    margin-bottom: 12px;
+}
+
+.tracking-summary-footer {
+    margin-top: 24px;
+}
+
+/* Fix Leaflet Z-index vs Ant Design */
+.leaflet-container {
+    z-index: 1;
+}
+
+@media (max-width: 992px) {
+    .map-card-modern {
+        margin-bottom: 24px;
+    }
+}

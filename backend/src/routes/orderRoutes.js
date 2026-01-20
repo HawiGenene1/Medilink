@@ -1,88 +1,63 @@
 const express = require('express');
+const router = express.Router();
+const { authenticate, authorize } = require('../middleware/authMiddleware');
 const {
   createOrder,
-  getOrders,
-  getOrder,
-  updateOrderStatus,
-  uploadPrescription,
-  verifyPrescription,
-  updateDeliveryStatus,
+  getMyOrders,
+  getOrderDetails,
   cancelOrder,
-  getOrdersByPharmacy,
-  getOrderStats
+  getOrderTracking,
+  getPharmacyOrders,
+  updateOrderStatus
 } = require('../controllers/orderController');
-const { protect, authorize } = require('../middleware/auth');
+const { checkSubscription } = require('../middleware/subscriptionMiddleware');
 
-const router = express.Router();
+// Development bypass middleware
+const devAuth = (req, res, next) => {
+  if (process.env.NODE_ENV === 'development') {
+    req.user = {
+      userId: 'dev-user-123',
+      email: 'dev@example.com',
+      role: 'customer'
+    };
+    return next();
+  }
+  return authenticate(req, res, next);
+};
 
-// Middleware to check if user is authenticated
-router.use(protect);
+// Public route for creating orders
+router.post('/', devAuth, createOrder);
 
-// Public routes (require authentication)
-router
-  .route('/')
-  .post(
-    createOrder
-  )
-  .get(
-    getOrders
-  );
+// Protected route for customers to get their orders
+router.get('/', devAuth, getMyOrders);
 
-router
-  .route('/:id')
-  .get(
-    getOrder
-  );
+// Pharmacy orders route
+router.get(
+  '/pharmacy/:pharmacyId',
+  authenticate,
+  authorize('pharmacy_staff', 'pharmacy_admin', 'admin'),
+  checkSubscription,
+  getPharmacyOrders
+);
 
-// Customer routes
-router
-  .route('/:id/prescription')
-  .put(
-    uploadPrescription
-  );
+// Protected route for getting specific order
+router.get('/:id', devAuth, getOrderDetails);
 
-router
-  .route('/:id/cancel')
-  .put(
-    cancelOrder
-  );
+// Protected route for canceling order
+router.patch('/:id/cancel', devAuth, cancelOrder);
 
-// Pharmacy staff routes
-router
-  .route('/:id/status')
-  .put(
-    authorize('pharmacy_staff', 'admin'),
-    updateOrderStatus
-  );
+// Order status update (Pharmacy Staff)
+router.put(
+  '/:orderId/status',
+  authenticate,
+  authorize('pharmacy_staff', 'pharmacy_admin', 'admin'),
+  checkSubscription,
+  updateOrderStatus
+);
 
-router
-  .route('/:id/verify-prescription')
-  .put(
-    authorize('pharmacy_staff', 'admin'),
-    verifyPrescription
-  );
+// Live tracking route
+router.get('/:id/tracking', devAuth, getOrderTracking);
 
-// Delivery routes
-router
-  .route('/:id/delivery-status')
-  .put(
-    authorize('driver', 'pharmacy_staff', 'admin'),
-    updateDeliveryStatus
-  );
-
-// Admin/Pharmacy admin routes
-router
-  .route('/pharmacy/:pharmacyId')
-  .get(
-    authorize('pharmacy_staff', 'pharmacy_admin', 'admin'),
-    getOrdersByPharmacy
-  );
-
-router
-  .route('/stats')
-  .get(
-    authorize('pharmacy_staff', 'pharmacy_admin', 'admin'),
-    getOrderStats
-  );
+module.exports = router;
 
 module.exports = router;

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, DatePicker, Upload, message } from 'antd';
-import { 
-  ShopOutlined, 
-  UserOutlined, 
-  MailOutlined, 
-  PhoneOutlined, 
+import {
+  ShopOutlined,
+  UserOutlined,
+  MailOutlined,
+  PhoneOutlined,
   IdcardOutlined,
   UploadOutlined
 } from '@ant-design/icons';
@@ -24,7 +24,7 @@ const PharmacyRegister = () => {
     try {
       // Prepare form data for file uploads
       const formData = new FormData();
-      
+
       // Add form values to formData
       Object.keys(values).forEach(key => {
         if (values[key] !== undefined && values[key] !== null) {
@@ -85,7 +85,7 @@ const PharmacyRegister = () => {
           <h2>Pharmacy Registration</h2>
           <p>Fill in your pharmacy details to register</p>
         </div>
-        
+
         <Form
           form={form}
           name="pharmacyRegister"
@@ -229,7 +229,7 @@ const PharmacyRegister = () => {
           <div className="form-section">
             <h3>Required Documents</h3>
             <p className="document-note">Please upload the following documents (PDF or image, max 5MB each):</p>
-            
+
             <Form.Item
               name="licenseDocument"
               label="Business License"
@@ -270,16 +270,16 @@ const PharmacyRegister = () => {
           </div>
 
           <Form.Item className="form-actions">
-            <Button 
-              type="primary" 
-              htmlType="submit" 
+            <Button
+              type="primary"
+              htmlType="submit"
               loading={loading}
               className="register-button"
             >
               Submit Registration
             </Button>
             <div className="login-link">
-              Already have an account? <Link to="/login">Login here</Link>
+              Already have an account? <Link to="/auth/login">Login here</Link>
             </div>
           </Form.Item>
         </Form>

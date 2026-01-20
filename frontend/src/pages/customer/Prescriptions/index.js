@@ -1,235 +1,189 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Card, 
-  Button, 
-  Typography, 
-  Table, 
-  Tag, 
-  Space, 
-  Upload, 
-  Modal, 
-  Form, 
-  Input, 
-  message, 
-  Empty, 
-  List, 
-  Avatar, 
-  Tooltip, 
-  Popconfirm,
-  Row,
-  Col,
-  Spin
-} from 'antd';
-import { 
-  UploadOutlined, 
-  EyeOutlined, 
-  DeleteOutlined, 
-  PlusOutlined, 
-  FileTextOutlined, 
-  CheckCircleOutlined, 
-  ClockCircleOutlined, 
-  ExclamationCircleOutlined,
-  FilePdfOutlined,
-  FileImageOutlined,
-  CloseCircleOutlined
+import React, { useState } from 'react';
+import { Row, Col, Card, Typography, Button, Upload, List, Tag, Table, Space, Alert, Modal } from 'antd';
+import {
+  InboxOutlined,
+  FileProtectOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  EyeOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
-import { useAuth } from '../../../contexts/AuthContext';
-import { prescriptionsAPI } from '../../../services/api';
-import './styles.css';
+import './Prescriptions.css';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { Dragger } = Upload;
 
-const PrescriptionsPage = () => {
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
-  const [previewTitle, setPreviewTitle] = useState('');
+const Prescriptions = () => {
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
 
-  useEffect(() => {
-    fetchPrescriptions();
-  }, []);
-
-  const fetchPrescriptions = async () => {
-    try {
-      setLoading(true);
-      const response = await prescriptionsAPI.getAll();
-      setPrescriptions(response.data.docs || []);
-    } catch (error) {
-      console.error('Error fetching prescriptions:', error);
-      message.error('Failed to load prescriptions');
-    } finally {
-      setLoading(false);
+  // Mock Data for Prescriptions
+  const prescriptions = [
+    {
+      id: 'RX-8821',
+      fileName: 'amoxicillin_rx_jan.pdf',
+      date: '2026-01-15',
+      status: 'Verified',
+      pharmacy: 'Kenema Pharmacy No. 4',
+      expiryDate: '2026-07-15'
+    },
+    {
+      id: 'RX-8815',
+      fileName: 'chronic_needs_doc.jpg',
+      date: '2026-01-10',
+      status: 'Pending',
+      pharmacy: 'Awaiting Selection',
+      expiryDate: 'N/A'
+    },
+    {
+      id: 'RX-8790',
+      fileName: 'old_prescription.pdf',
+      date: '2025-11-20',
+      status: 'Expired',
+      pharmacy: 'City Central Pharma',
+      expiryDate: '2026-01-05'
     }
-  };
-
-  const handleUpload = async (file) => {
-    const formData = new FormData();
-    formData.append('prescription', file);
-    
-    try {
-      setUploading(true);
-      await prescriptionsAPI.upload(formData);
-      message.success('Prescription uploaded successfully');
-      fetchPrescriptions();
-    } catch (error) {
-      console.error('Upload failed:', error);
-      message.error('Failed to upload prescription');
-    } finally {
-      setUploading(false);
-    }
-    return false; // Prevent default upload
-  };
-
-  const handlePreview = async (file) => {
-    if (!file.url && !file.preview) {
-      file.preview = await getBase64(file.originFileObj);
-    }
-    setPreviewImage(file.url || file.preview);
-    setPreviewTitle(file.name || file.url.substring(file.url.lastIndexOf('/') + 1));
-    setPreviewVisible(true);
-  };
-
-  const getBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = error => reject(error);
-    });
-  };
+  ];
 
   const getStatusTag = (status) => {
-    switch (status.toLowerCase()) {
-      case 'approved':
-        return <Tag icon={<CheckCircleOutlined />} color="success">Approved</Tag>;
-      case 'pending':
-        return <Tag icon={<ClockCircleOutlined />} color="processing">Pending</Tag>;
-      case 'rejected':
-        return <Tag icon={<CloseCircleOutlined />} color="error">Rejected</Tag>;
-      default:
-        return <Tag>{status}</Tag>;
+    switch (status) {
+      case 'Verified': return <Tag color="success" icon={<CheckCircleOutlined />} style={{ borderRadius: '6px', marginRight: '16px' }}>Verified</Tag>;
+      case 'Pending': return <Tag color="processing" icon={<ClockCircleOutlined />} style={{ borderRadius: '6px', fontWeight: 500, marginRight: '16px' }}>Pending Review</Tag>;
+      case 'Expired': return <Tag color="default" style={{ borderRadius: '6px', marginRight: '16px' }}>Expired</Tag>;
+      case 'Rejected': return <Tag color="error" icon={<CloseCircleOutlined />} style={{ borderRadius: '6px', marginRight: '16px' }}>Rejected</Tag>;
+      default: return <Tag>{status}</Tag>;
     }
   };
 
   const columns = [
     {
-      title: 'Prescription',
+      title: 'Prescription ID',
+      dataIndex: 'id',
+      key: 'id',
+      render: (text) => <Text strong>{text}</Text>
+    },
+    {
+      title: 'File Name',
       dataIndex: 'fileName',
       key: 'fileName',
-      render: (text, record) => (
+      width: 250,
+      ellipsis: true,
+      render: (text) => (
         <Space>
-          {record.fileType === 'application/pdf' ? (
-            <FilePdfOutlined style={{ fontSize: '24px', color: '#ff4d4f' }} />
-          ) : (
-            <FileImageOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
-          )}
-          <span>{text}</span>
+          <FileProtectOutlined style={{ color: '#1E88E5' }} />
+          <Text title={text}>{text}</Text>
         </Space>
-      ),
+      )
     },
     {
       title: 'Uploaded On',
-      dataIndex: 'uploadedAt',
-      key: 'uploadedAt',
-      render: (date) => new Date(date).toLocaleDateString(),
+      dataIndex: 'date',
+      key: 'date',
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => getStatusTag(status),
+      width: 180,
+      render: (status) => getStatusTag(status)
     },
     {
-      title: 'Notes',
-      dataIndex: 'notes',
-      key: 'notes',
-      render: (notes) => notes || '—',
+      title: 'Pharmacy',
+      dataIndex: 'pharmacy',
+      key: 'pharmacy',
+      width: 200,
     },
     {
-      title: 'Actions',
-      key: 'actions',
-      render: (_, record) => (
-        <Space size="middle">
-          <Button 
-            type="link" 
-            onClick={() => window.open(record.fileUrl, '_blank')}
-          >
-            View
-          </Button>
+      title: 'Action',
+      key: 'action',
+      width: 100,
+      render: () => (
+        <Space>
+          <Button size="small" icon={<EyeOutlined />} type="text" />
+          <Button size="small" icon={<DownloadOutlined />} type="text" />
         </Space>
-      ),
-    },
+      )
+    }
   ];
 
   return (
-    <div className="prescriptions-page">
-      <div className="page-header">
-        <Title level={2}>My Prescriptions</Title>
-        <Text type="secondary">Upload and manage your medical prescriptions</Text>
+    <div className="prescriptions-page fade-in">
+      <div className="page-header" style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <Title level={2}>My Prescriptions</Title>
+          <Text type="secondary">Manage your medical documents and clinical authorizations.</Text>
+        </div>
+        <Button type="primary" size="large" icon={<InboxOutlined />} onClick={() => setUploadModalVisible(true)}>
+          Upload New Rx
+        </Button>
       </div>
 
-      <Row gutter={[16, 16]} className="upload-section">
-        <Col span={24}>
-          <Card title="Upload New Prescription" className="upload-card">
-            <Dragger
-              name="prescription"
-              multiple={false}
-              beforeUpload={handleUpload}
-              onPreview={handlePreview}
-              accept=".pdf,.jpg,.jpeg,.png"
-              showUploadList={false}
-            >
-              <div className="upload-area">
-                <p className="ant-upload-drag-icon">
-                  <PlusOutlined style={{ fontSize: '32px', color: '#1890ff' }} />
-                </p>
-                <p className="ant-upload-text">
-                  Click or drag file to upload
-                </p>
-                <p className="ant-upload-hint">
-                  Supports PDF, JPG, JPEG, PNG (Max: 5MB)
-                </p>
-              </div>
-            </Dragger>
-            {uploading && (
-              <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                <Spin />
-                <div>Uploading...</div>
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]} className="prescriptions-list">
-        <Col span={24}>
-          <Card title="My Prescriptions" className="prescriptions-card">
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={18}>
+          <Card bordered={false} className="clinical-card">
             <Table
               columns={columns}
               dataSource={prescriptions}
-              rowKey="_id"
-              loading={loading}
+              rowKey="id"
               pagination={{ pageSize: 5 }}
+              scroll={{ x: 1000 }}
+              tableLayout="fixed"
             />
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={6}>
+          <Card title="Why verify?" className="safety-card">
+            <Paragraph style={{ fontSize: '13px' }}>
+              Medicines in Ethiopia classified as "Prescription Only" require a clinical authorization signed by a certified practitioner.
+            </Paragraph>
+            <Alert
+              message="Digital Security"
+              description="Your documents are encrypted and only accessible by licensed pharmacists."
+              type="info"
+              showIcon
+            />
+            <div style={{ marginTop: '24px' }}>
+              <Title level={5}>Accepted Formats</Title>
+              <Text type="secondary" style={{ fontSize: '12px' }}>PDF, JPG, PNG (Max 5MB)</Text>
+            </div>
           </Card>
         </Col>
       </Row>
 
       <Modal
-        visible={previewVisible}
-        title={previewTitle}
+        title="Upload Prescription"
+        visible={uploadModalVisible}
+        onCancel={() => setUploadModalVisible(false)}
         footer={null}
-        onCancel={() => setPreviewVisible(false)}
-        width={800}
+        width={600}
       >
-        <img alt="Preview" style={{ width: '100%' }} src={previewImage} />
+        <div className="upload-modal-content">
+          <Dragger
+            multiple={false}
+            action="/api/upload" // Placeholder
+            className="rx-dragger"
+          >
+            <p className="ant-upload-drag-icon">
+              <InboxOutlined />
+            </p>
+            <p className="ant-upload-text">Click or drag prescription to this area to upload</p>
+            <p className="ant-upload-hint">
+              Support for a single scan per upload. Please ensure the doctor's stamp and signature are clearly visible.
+            </p>
+          </Dragger>
+          <div style={{ marginTop: '24px', textAlign: 'right' }}>
+            <Button style={{ marginRight: '8px' }} onClick={() => setUploadModalVisible(false)}>
+              Cancel
+            </Button>
+            <Button type="primary" onClick={() => setUploadModalVisible(false)}>
+              Submit for Review
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
 };
 
-export default PrescriptionsPage;
+export default Prescriptions;

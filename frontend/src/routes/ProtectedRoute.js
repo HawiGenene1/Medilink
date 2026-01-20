@@ -1,12 +1,12 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Spin } from 'antd';
 
 /**
  * Protected Route Component
  * Restricts access to authenticated users with specific roles
- * @param {ReactNode} children - Child components to render
+ * @param {ReactNode} children - Child components to render (optional)
  * @param {Array|String} allowedRoles - Role(s) allowed to access this route
  */
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -15,20 +15,25 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   // Show loading spinner while checking authentication
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
       }}>
         <Spin size="large" tip="Loading..." />
       </div>
     );
   }
 
+  // In development mode, bypass authentication checks
+  if (process.env.NODE_ENV === 'development') {
+    return children ? children : <Outlet />;
+  }
+
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth/login" replace />;
   }
 
   // Check if user has required role
@@ -40,7 +45,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     }
   }
 
-  return children;
+  return children ? children : <Outlet />;
 };
 
 export default ProtectedRoute;

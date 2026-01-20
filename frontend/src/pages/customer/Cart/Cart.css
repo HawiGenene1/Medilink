@@ -1,0 +1,136 @@
+/* Customer Cart Styles */
+.cart-container {
+    padding-bottom: 60px;
+}
+
+.cart-items-wrapper {
+    margin-bottom: 24px;
+}
+
+.cart-item-card {
+    border-radius: 16px !important;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color) !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.cart-item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+.cart-item-card .ant-card-body {
+    padding: 16px 24px !important;
+}
+
+.cart-item-avatar {
+    background: #f8fafc;
+    border-radius: 12px !important;
+}
+
+.item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.prescription-status-tag {
+    margin-top: 8px;
+}
+
+.clinical-tag-mini {
+    font-size: 11px !important;
+    border-radius: 4px !important;
+    margin: 0 !important;
+}
+
+.item-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.clinical-input-number {
+    border-radius: 8px !important;
+    width: 80px;
+}
+
+.item-price-calc {
+    text-align: center;
+}
+
+.item-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.delete-item-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Prescription Check Card */
+.prescription-check-card {
+    border-radius: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    background: #fefce8 !important;
+    /* Extremely soft yellow tint */
+}
+
+/* Order Summary */
+.order-summary-card {
+    border-radius: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    position: sticky;
+    top: 88px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.checkout-btn {
+    height: 52px !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+}
+
+.cart-guarantee {
+    margin-top: 24px;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+}
+
+.empty-cart-card {
+    border-radius: 20px !important;
+    border: 1px dashed var(--border-color) !important;
+    background: transparent !important;
+}
+
+@media (max-width: 768px) {
+    .item-controls {
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+        margin-top: 16px;
+    }
+
+    .item-actions {
+        justify-content: flex-start;
+        margin-top: 8px;
+    }
+}
