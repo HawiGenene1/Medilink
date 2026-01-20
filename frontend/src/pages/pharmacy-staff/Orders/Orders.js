@@ -1,96 +1,83 @@
-import React, { useState } from 'react';
-import { Card, Table, Tag, Button, Space, Input, DatePicker, Select, Modal, Descriptions, Divider, List, Avatar, Row, Col } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Table, Tag, Button, Space, Input, DatePicker, Select, Modal, Descriptions, Divider, List, Avatar, Row, Col, message } from 'antd';
 import { EyeOutlined, SearchOutlined, FilterOutlined, ShoppingOutlined, UserOutlined, ClockCircleOutlined, MedicineBoxOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { ordersAPI } from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
 import './Orders.css';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const PharmacyStaffOrders = () => {
+    const { user } = useAuth();
     const [searchText, setSearchText] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [pagination, setPagination] = useState({ current: 1, pageSize: 8, total: 0 });
 
-    // Mock Data
-    const orders = [
-        {
-            key: '1',
-            id: 'ORD-2024-001',
-            customer: 'Abebe Kebede',
-            customerPhone: '+251 911 234 567',
-            date: '2024-01-19 14:30',
-            total: 125.00,
-            status: 'Pending',
-            paymentMethod: 'Cash on Delivery',
-            items: [
-                { id: 1, name: 'Amoxicillin 500mg', quantity: 1, price: 125.00 }
-            ]
-        },
-        {
-            key: '2',
-            id: 'ORD-2024-002',
-            customer: 'Sara Tesfaye',
-            customerPhone: '+251 922 345 678',
-            date: '2024-01-19 13:15',
-            total: 45.50,
-            status: 'Processing',
-            paymentMethod: 'Telebirr',
-            items: [
-                { id: 1, name: 'Paracetamol 500mg', quantity: 2, price: 10.00 },
-                { id: 2, name: 'Vitamin C', quantity: 1, price: 25.50 }
-            ]
-        },
-        {
-            key: '3',
-            id: 'ORD-2024-003',
-            customer: 'Dawit Alemu',
-            customerPhone: '+251 933 456 789',
-            date: '2024-01-19 12:00',
-            total: 320.00,
-            status: 'Ready',
-            paymentMethod: 'CBE Birr',
-            items: [
-                { id: 1, name: 'Omeprazole 20mg', quantity: 3, price: 300.00 },
-                { id: 2, name: 'Surgical Mask', quantity: 1, price: 20.00 }
-            ]
-        },
-        {
-            key: '4',
-            id: 'ORD-2024-004',
-            customer: 'Marta Hailu',
-            customerPhone: '+251 944 567 890',
-            date: '2024-01-18 16:45',
-            total: 85.00,
-            status: 'Completed',
-            paymentMethod: 'Cash',
-            items: [
-                { id: 1, name: 'Ibuprofen 400mg', quantity: 1, price: 85.00 }
-            ]
-        },
-        {
-            key: '5',
-            id: 'ORD-2024-005',
-            customer: 'Yonas Tadesse',
-            customerPhone: '+251 955 678 901',
-            date: '2024-01-18 10:20',
-            total: 15.00,
-            status: 'Cancelled',
-            paymentMethod: 'Cash',
-            items: [
-                { id: 1, name: 'Bandage', quantity: 3, price: 5.00 }
-            ]
+    useEffect(() => {
+        if (user?.pharmacyId) {
+            fetchOrders();
         }
-    ];
+    }, [user, statusFilter, pagination.current]);
+
+    const fetchOrders = async () => {
+        try {
+            setLoading(true);
+            const params = {
+                page: pagination.current,
+                limit: pagination.pageSize,
+            };
+
+            if (statusFilter !== 'All') {
+                params.status = statusFilter.toLowerCase();
+            }
+
+            const response = await ordersAPI.getPharmacyOrders(user.pharmacyId, params);
+            if (response.data.success) {
+                const formattedOrders = response.data.data.orders.map(order => ({
+                    key: order._id,
+                    id: order.orderNumber || order._id,
+                    customer: `${order.customer?.firstName} ${order.customer?.lastName}`,
+                    customerPhone: order.customer?.phone,
+                    date: order.createdAt,
+                    total: order.finalAmount || order.totalAmount,
+                    status: order.status,
+                    paymentMethod: order.paymentMethod,
+                    items: order.items.map(item => ({
+                        id: item._id,
+                        name: item.name || (item.medicine?.name),
+                        quantity: item.quantity,
+                        price: item.price
+                    }))
+                }));
+                setOrders(formattedOrders);
+                setPagination(prev => ({ ...prev, total: response.data.data.pagination.total }));
+            }
+        } catch (error) {
+            console.error('Failed to fetch orders:', error);
+            message.error('Failed to load orders from server');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const getStatusColor = (status) => {
-        switch (status) {
-            case 'Pending': return 'gold';
-            case 'Processing': return 'blue';
-            case 'Ready': return 'cyan';
-            case 'Completed': return 'green';
-            case 'Cancelled': return 'red';
+        switch (status?.toLowerCase()) {
+            case 'pending': return 'gold';
+            case 'verified': return 'blue';
+            case 'confirmed': return 'blue';
+            case 'processing': return 'cyan';
+            case 'prepared': return 'cyan';
+            case 'ready': return 'purple';
+            case 'out_for_delivery': return 'orange';
+            case 'completed': return 'green';
+            case 'delivered': return 'green';
+            case 'cancelled': return 'red';
             default: return 'default';
         }
     };
@@ -105,12 +92,11 @@ const PharmacyStaffOrders = () => {
         setSelectedOrder(null);
     };
 
-    // Filter Logic
+    // Filter Logic (Client side search for now, status is server side)
     const filteredOrders = orders.filter(order => {
-        const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
         const matchesSearch = order.customer.toLowerCase().includes(searchText.toLowerCase()) ||
             order.id.toLowerCase().includes(searchText.toLowerCase());
-        return matchesStatus && matchesSearch;
+        return matchesSearch;
     });
 
     const columns = [
@@ -206,7 +192,13 @@ const PharmacyStaffOrders = () => {
                 <Table
                     columns={columns}
                     dataSource={filteredOrders}
-                    pagination={{ pageSize: 8 }}
+                    loading={loading}
+                    pagination={{
+                        current: pagination.current,
+                        pageSize: pagination.pageSize,
+                        total: pagination.total,
+                        onChange: (page) => setPagination(prev => ({ ...prev, current: page }))
+                    }}
                     className="orders-table"
                 />
             </Card>
