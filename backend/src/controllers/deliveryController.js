@@ -23,24 +23,23 @@ exports.getDeliveries = async (req, res) => {
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
 
-    const totalCount = await Delivery.countDocuments(query);
+    const total = await Delivery.countDocuments(query);
 
     res.status(200).json({
       success: true,
       data: {
         deliveries,
         pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(totalCount / parseInt(limit)),
-          totalDeliveries: totalCount,
-          hasNext: parseInt(page) < Math.ceil(totalCount / parseInt(limit)),
-          hasPrev: parseInt(page) > 1
+          current: parseInt(page),
+          pageSize: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
         }
       }
     });
 
   } catch (error) {
-    console.error('Error getting deliveries:', error);
+    console.error('Error fetching deliveries:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching deliveries',
@@ -54,7 +53,7 @@ exports.getDeliveries = async (req, res) => {
 // @access   Private (delivery)
 exports.updateDeliveryStatus = async (req, res) => {
   try {
-    const { status, location, coordinates, note, issues } = req.body;
+    const { status, note, location, coordinates, issues } = req.body;
     const deliveryId = req.params.id;
 
     const delivery = await Delivery.findById(deliveryId);
@@ -449,12 +448,3 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c; // Distance in km
 }
-
-module.exports = {
-  getDeliveries,
-  updateDeliveryStatus,
-  updateLocation,
-  getTrackingInfo,
-  getDeliveryStats,
-  addDeliveryNote
-};

@@ -60,7 +60,7 @@ const favoriteRoutes = require('./routes/favoriteRoutes'); // Added
 // const adminRoutes = require('./routes/adminRoutes');
 // const cashierRoutes = require('./routes/cashierRoutes');
 // const customerRoutes = require('./routes/customerRoutes');
-// const deliveryRoutes = require('./routes/deliveryRoutes');
+const deliveryRoutes = require('./routes/deliveryRoutes');
 // const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
 // const pharmacyRoutes = require('./routes/pharmacyRoutes');
 
@@ -98,7 +98,7 @@ try {
 // app.use('/api/admin', authenticate, authorize('admin'), adminRoutes);
 // app.use('/api/cashier', authenticate, authorize('cashier'), cashierRoutes);
 // app.use('/api/customer', authenticate, authorize('customer'), customerRoutes);
-// app.use('/api/delivery', authenticate, authorize('delivery'), deliveryRoutes);
+app.use('/api/delivery', deliveryRoutes);
 // app.use('/api/pharmacy-admin', authenticate, authorize('pharmacy_admin'), pharmacyAdminRoutes);
 // app.use('/api/pharmacy', authenticate, authorize('pharmacy_staff', 'pharmacy_admin'), pharmacyRoutes);
 
