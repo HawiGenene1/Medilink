@@ -1,0 +1,61 @@
+.favorites-container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.empty-favorites-card {
+    border-radius: 12px;
+    text-align: center;
+    padding: 60px 0;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.favorite-medicine-card {
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
+}
+
+.favorite-medicine-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+.fav-card-cover {
+    height: 160px;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+}
+
+.fav-toggle-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.favorite-medicine-card .ant-card-actions {
+    background: #fafafa;
+    border-top: 1px solid #f0f0f0;
+}
+
+.favorite-medicine-card .ant-card-actions li:not(:last-child) {
+    border-inline-end: 1px solid #f0f0f0;
+}
+
+.favorite-medicine-card .ant-card-meta-title {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.favorite-medicine-card .ant-card-meta-title:hover {
+    color: #1E88E5;
+}

@@ -1,118 +1,229 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingOutlined, MedicineBoxOutlined, SafetyOutlined, UserAddOutlined, ShopOutlined } from '@ant-design/icons';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  SearchOutlined,
+  ShoppingOutlined,
+  CarOutlined,
+  ShopOutlined,
+  BarChartOutlined,
+  MedicineBoxOutlined,
+  UserAddOutlined,
+  ArrowRightOutlined
+} from '@ant-design/icons';
+import { Button, Row, Col, Typography, Card, Space, Tag } from 'antd';
 import './Home.css';
+import './Home_Animations.css';
+
+const { Title, Text, Paragraph } = Typography;
 
 const Home = () => {
+  const navigate = useNavigate();
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
-    <div className="home-page">
+    <div className="home-page fade-in">
       {/* Hero Section */}
       <section className="hero-section">
-        <div className="hero-content">
-          <div className="hero-text">
-            <h1 className="hero-title">
-              Your Health, <span className="highlight">Our Priority</span>
-            </h1>
-            <p className="hero-subtitle">
-              Ethiopia's Leading Online Pharmacy & Healthcare Platform
-            </p>
-            <p className="hero-description">
-              Get authentic medicines, expert consultations, and fast delivery - all from the comfort of your home. 
-              Join thousands of satisfied customers who trust us with their healthcare needs.
-            </p>
-            <div className="cta-buttons" style={{ marginBottom: '2rem', textAlign: 'center' }}>
-              <Link to="/medicines" className="btn btn-primary" style={{ minWidth: '220px' }}>
-                <MedicineBoxOutlined /> Browse All Medicines
-              </Link>
-            </div>
-            <div className="auth-options">
-              <div className="auth-option">
-                <h3>For Customers</h3>
-                <div className="auth-buttons">
-                  <Link to="/register?role=customer" className="btn btn-primary">
-                    <UserAddOutlined /> Sign Up as Customer
-                  </Link>
-                  <Link to="/login?role=customer" className="btn btn-outline">
-                    Sign In as Customer
-                  </Link>
+        <div className="container">
+          <Row gutter={[48, 48]} align="middle">
+            <Col xs={24} lg={12}>
+              <div className="hero-content">
+                <Tag color="blue" className="hero-tag">#1 Healthcare Platform in Ethiopia</Tag>
+                <Title level={1} className="hero-title">
+                  All-in-One <br />
+                  <span className="text-gradient">Pharmacy Platform</span>
+                </Title>
+                <Paragraph className="hero-subtitle">
+                  Bridging the gap between patients and pharmacies. Order authentic medicines online or manage your pharmacy inventory with ease.
+                </Paragraph>
+                <Space size="middle" wrap className="hero-actions">
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<ShoppingOutlined />}
+                    onClick={() => navigate('/auth/register?role=customer')}
+                    className="btn-hero-primary"
+                  >
+                    Start Shopping
+                  </Button>
+                  <Button
+                    size="large"
+                    icon={<ShopOutlined />}
+                    onClick={() => navigate('/auth/register?role=pharmacy')}
+                    className="btn-hero-secondary"
+                  >
+                    For Pharmacies
+                  </Button>
+                </Space>
+
+                <div className="hero-stats">
+                  <div>
+                    <Title level={3} style={{ marginBottom: 0 }}>500+</Title>
+                    <Text type="secondary">Pharmacies</Text>
+                  </div>
+                  <div className="divider-vertical"></div>
+                  <div>
+                    <Title level={3} style={{ marginBottom: 0 }}>10k+</Title>
+                    <Text type="secondary">Medicines</Text>
+                  </div>
+                  <div className="divider-vertical"></div>
+                  <div>
+                    <Title level={3} style={{ marginBottom: 0 }}>24/7</Title>
+                    <Text type="secondary">Support</Text>
+                  </div>
                 </div>
               </div>
-              
-              <div className="divider">
-                <span>OR</span>
-              </div>
-              
-              <div className="auth-option">
-                <h3>For Pharmacies</h3>
-                <div className="auth-buttons">
-                  <Link to="/register?role=pharmacy" className="btn btn-primary">
-                    <ShopOutlined /> Register Your Pharmacy
-                  </Link>
-                  <Link to="/login?role=pharmacy" className="btn btn-outline">
-                    Pharmacy Sign In
-                  </Link>
+            </Col>
+            <Col xs={24} lg={12}>
+              {/* 3D Medical Illustration with Floating Animation */}
+              <div className="hero-image-wrapper">
+                <div className="blob-bg"></div>
+                <img
+                  src={require('../../assets/hero-pharmacy-3d.png')}
+                  alt="Digital Pharmacy Platform"
+                  className="hero-image floating-animate"
+                />
+
+                {/* Floating Elements for "Live" Effect */}
+                <div className="floating-badge badge-top-right">
+                  <MedicineBoxOutlined style={{ fontSize: '20px', color: '#4361ee' }} />
+                  <Text strong>Fast Delivery</Text>
+                </div>
+
+                <div className="floating-badge badge-bottom-left">
+                  <BarChartOutlined style={{ fontSize: '20px', color: '#56AB2F' }} />
+                  <Text strong>Seamless Tracking</Text>
                 </div>
               </div>
-            </div>
-            <div className="hero-trust">
-              <div className="trust-item">
-                <SafetyOutlined className="trust-icon" />
-                <span>100% Genuine Medicines</span>
-              </div>
-              <div className="trust-item">
-                <MedicineBoxOutlined className="trust-icon" />
-                <span>Free Delivery</span>
-              </div>
-              <div className="trust-item">
-                <ShoppingOutlined className="trust-icon" />
-                <span>Easy Returns</span>
-              </div>
-            </div>
+            </Col>
+          </Row>
+        </div>
+      </section>
+
+      {/* For Patients Section */}
+      <section className="segment-section bg-white">
+        <div className="container">
+          <div className="section-header text-center">
+            <Tag color="#56AB2F" style={{ marginBottom: '16px' }}>FOR PATIENTS</Tag>
+            <Title level={2}>Your Health, Simplified</Title>
+            <Paragraph className="section-desc">
+              Get your prescriptions delivered to your doorstep in 3 simple steps.
+            </Paragraph>
           </div>
-          <div className="hero-image">
-            <div className="floating-card">
-              <MedicineBoxOutlined className="hero-icon" />
-            </div>
+
+          <Row gutter={[32, 32]}>
+            <Col xs={24} md={8}>
+              <Card className="feature-card" hoverable>
+                <div className="icon-circle text-blue">
+                  <SearchOutlined />
+                </div>
+                <Title level={4}>1. Find Medicines</Title>
+                <Text type="secondary">
+                  Search for prescription and OTC medicines from verified pharmacies near you.
+                </Text>
+              </Card>
+            </Col>
+            <Col xs={24} md={8}>
+              <Card className="feature-card" hoverable>
+                <div className="icon-circle text-blue">
+                  <ShoppingOutlined />
+                </div>
+                <Title level={4}>2. Place Order</Title>
+                <Text type="secondary">
+                  Upload your prescription securely and checkout with preferred payment options.
+                </Text>
+              </Card>
+            </Col>
+            <Col xs={24} md={8}>
+              <Card className="feature-card" hoverable>
+                <div className="icon-circle text-blue">
+                  <CarOutlined />
+                </div>
+                <Title level={4}>3. Fast Delivery</Title>
+                <Text type="secondary">
+                  Track your delivery in real-time and get it safely delivered to your home.
+                </Text>
+              </Card>
+            </Col>
+          </Row>
+
+          <div style={{ textAlign: 'center', marginTop: '48px' }}>
+            <Button type="primary" size="large" onClick={() => navigate('/auth/register?role=customer')}>
+              Join as a Patient <ArrowRightOutlined />
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="features-section">
+      {/* For Pharmacies Section */}
+      <section className="segment-section bg-gray">
         <div className="container">
-          <h2 className="section-title">Why Choose MediLink?</h2>
-          <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon">
-                <ShoppingOutlined />
+          <Row gutter={[48, 48]} align="middle" className="reverse-mobile">
+            <Col xs={24} lg={12}>
+              <div className="image-stack">
+                <img
+                  src={require('../../assets/pharmacy-dashboard-3d.png')}
+                  alt="Pharmacist Dashboard"
+                  className="rounded-image shadow-lg hover-scale"
+                />
               </div>
-              <h3>Easy Online Ordering</h3>
-              <p>Browse and order medicines from verified pharmacies with just a few clicks</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon">
-                <MedicineBoxOutlined />
-              </div>
-              <h3>Verified Medicines</h3>
-              <p>All medicines are sourced from licensed pharmacies and verified suppliers</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon">
-                <SafetyOutlined />
-              </div>
-              <h3>Secure & Safe</h3>
-              <p>Your health data and transactions are protected with industry-standard security</p>
-            </div>
-            
-            <div className="feature-card">
-              <div className="feature-icon">
-                <ShoppingOutlined />
-              </div>
-              <h3>Fast Delivery</h3>
-              <p>Quick and reliable delivery service to get your medicines when you need them</p>
-            </div>
+            </Col>
+
+            <Col xs={24} lg={12}>
+              <Tag color="#4361ee" style={{ marginBottom: '16px' }}>FOR PHARMACIES</Tag>
+              <Title level={2}>Grow Your Business Digitaly</Title>
+              <Paragraph className="section-desc" style={{ textAlign: 'left', marginBottom: '32px' }}>
+                Medilink provides a powerful dashboard to manage your entire pharmacy operation.
+              </Paragraph>
+
+              <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                <div className="feature-row">
+                  <ShopOutlined className="feature-icon-small" />
+                  <div>
+                    <Title level={5}>Inventory Management</Title>
+                    <Text type="secondary">Track stock levels, expiration dates, and get low-stock alerts.</Text>
+                  </div>
+                </div>
+                <div className="feature-row">
+                  <BarChartOutlined className="feature-icon-small" />
+                  <div>
+                    <Title level={5}>Sales Analytics</Title>
+                    <Text type="secondary">Visual reports on daily sales, top products, and revenue growth.</Text>
+                  </div>
+                </div>
+                <div className="feature-row">
+                  <UserAddOutlined className="feature-icon-small" />
+                  <div>
+                    <Title level={5}>Expand Reach</Title>
+                    <Text type="secondary">Connect with thousands of new customers online.</Text>
+                  </div>
+                </div>
+              </Space>
+
+              <Button type="primary" size="large" style={{ marginTop: '40px' }} onClick={() => navigate('/auth/register?role=pharmacy')}>
+                Get Your Pharmacy Online
+              </Button>
+            </Col>
+          </Row>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="cta-section">
+        <div className="container">
+          <div className="cta-box">
+            <Title level={2} style={{ color: 'white' }}>Ready to get started?</Title>
+            <Paragraph style={{ color: 'white', opacity: 0.9, fontSize: '18px', maxWidth: '600px', margin: '0 auto 32px' }}>
+              Join the fastest growing healthcare network in Ethiopia today.
+            </Paragraph>
+            <Space size="middle">
+              <Button size="large" className="btn-white" onClick={() => navigate('/auth/register')}>Create Free Account</Button>
+              <Button size="large" type="text" style={{ color: 'white', border: '1px solid white' }} onClick={() => navigate('/contact')}>Contact Sales</Button>
+            </Space>
           </div>
         </div>
       </section>

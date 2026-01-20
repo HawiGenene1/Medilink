@@ -1,7 +1,8 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import authAPI from '../services/api/auth';
+// frontend/src/contexts/AuthContext.js
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
-// Create Auth Context
 const AuthContext = createContext(null);
 
 // Custom hook to use auth context
@@ -13,118 +14,125 @@ export const useAuth = () => {
   return context;
 };
 
+// Development-only mock user
+const devUser = {
+  _id: 'dev-user-123',
+  email: 'dev@example.com',
+  firstName: 'Dev',
+  lastName: 'User',
+  role: 'customer',
+  isEmailVerified: true
+};
+
+// Development-only mock token
+const devToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkZXYtdXNlci0xMjMiLCJlbWFpbCI6ImRldkBleGFtcGxlLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTYzNTc5MDQwMCwiZXhwIjoxNjM1ODc2ODAwfQ.mock-token-for-development';
+
 // Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
 
-  // Initialize auth state from localStorage
+  // Check if user is logged in on initial load
+  // Check if user is logged in on initial load
+  // Check if user is logged in on initial load
   useEffect(() => {
-    const initializeAuth = () => {
-      const storedUser = authAPI.getUser();
-      const token = authAPI.getToken();
+    const token = localStorage.getItem('token');
 
-      if (storedUser && token) {
-        setUser(storedUser);
-        setIsAuthenticated(true);
-      }
+    if (token) {
+      api.get('/auth/current-user')
+        .then(response => {
+          setUser(response.data);
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          setUser(null);
+          setIsAuthenticated(false);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
       setLoading(false);
-    };
-
-    initializeAuth();
+    }
   }, []);
 
-  /**
-   * Register new user
-   */
-  const register = async (userData) => {
-    try {
-      const response = await authAPI.register(userData);
-      
-      if (response.success) {
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-        return { success: true, user: response.data.user };
-      }
-      
-      return { success: false, message: response.message };
-    } catch (error) {
-      return { 
-        success: false, 
-        message: error.message || 'Registration failed',
-        errors: error.errors 
+  // Login function
+  const login = async (email, password) => {
+    // In development, return mock user based on email
+    if (process.env.NODE_ENV === 'development') {
+      let role = 'customer';
+      if (email.includes('admin')) role = 'admin';
+      if (email.includes('pharmacy')) role = 'pharmacy_admin';
+      if (email.includes('staff')) role = 'pharmacy_staff';
+      if (email.includes('cashier')) role = 'cashier';
+      if (email.includes('delivery')) role = 'delivery';
+
+      const mockUser = {
+        _id: 'mock-user-' + role,
+        email,
+        firstName: role.toUpperCase(),
+        lastName: 'User',
+        role: role
       };
+
+      // Create a dummy JWT with the role encoded
+      const mockToken = `header.${btoa(JSON.stringify({ email, role }))}.signature`;
+
+      setUser(mockUser);
+      setIsAuthenticated(true);
+      localStorage.setItem('token', mockToken);
+      return { success: true, user: mockUser };
+    }
+
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true, user }; // Return user for redirect logic
+    } catch (error) {
+      console.error('Login failed:', error);
+      return { success: false, message: error.response?.data?.message || 'Login failed' };
     }
   };
 
-  /**
-   * Login user
-   */
-  const login = async (credentials) => {
-    try {
-      const response = await authAPI.login(credentials);
-      
-      if (response.success) {
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-        return { success: true, user: response.data.user };
-      }
-      
-      return { success: false, message: response.message };
-    } catch (error) {
-      return { 
-        success: false, 
-        message: error.message || 'Login failed',
-        errors: error.errors 
-      };
-    }
-  };
-
-  /**
-   * Logout user
-   */
+  // Logout function
   const logout = () => {
-    authAPI.logout();
+    localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
+    navigate('/'); // Redirect to home on logout
   };
 
-  /**
-   * Update user data
-   */
-  const updateUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
-
-  /**
-   * Check if user has specific role
-   */
-  const hasRole = (roles) => {
+  // Check if user has required role
+  const hasRole = (requiredRole) => {
     if (!user) return false;
-    if (Array.isArray(roles)) {
-      return roles.includes(user.role);
-    }
-    return user.role === roles;
+    if (user.role === 'admin') return true;
+    return user.role === requiredRole;
+  };
+
+  // Check if user has any of the required roles
+  const hasAnyRole = (roles) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return roles.includes(user.role);
   };
 
   const value = {
     user,
     isAuthenticated,
     loading,
-    register,
     login,
     logout,
-    updateUser,
-    hasRole
+    hasRole,
+    hasAnyRole
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;

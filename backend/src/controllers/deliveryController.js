@@ -1,6 +1,7 @@
 const Delivery = require('../models/Delivery');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 // @desc    Get delivery assignments for delivery person
 // @route   GET /api/delivery/assignments
@@ -9,7 +10,7 @@ exports.getDeliveries = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
     
-    let query = { deliveryPerson: req.user._id };
+    let query = { deliveryPerson: req.user.userId };
     if (status) {
       query.status = status;
     }
@@ -66,7 +67,7 @@ exports.updateDeliveryStatus = async (req, res) => {
     }
 
     // Check if this delivery belongs to the current user
-    if (delivery.deliveryPerson.toString() !== req.user._id.toString()) {
+    if (delivery.deliveryPerson.toString() !== req.user.userId.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this delivery'
@@ -118,7 +119,7 @@ exports.updateDeliveryStatus = async (req, res) => {
       location: location || '',
       coordinates: coordinates || [],
       note: note || '',
-      updatedBy: req.user._id
+      updatedBy: req.user.userId
     });
 
     // Update current location if provided
@@ -142,6 +143,16 @@ exports.updateDeliveryStatus = async (req, res) => {
     }
 
     await delivery.save();
+
+    // Create notification for customer
+    await Notification.create({
+      user: delivery.customer,
+      type: 'delivery_update',
+      title: `Delivery ${status.replace('_', ' ')}`,
+      message: `Your delivery #${delivery.order} has been ${status.replace('_', ' ')}`,
+      relatedId: delivery._id,
+      relatedModel: 'Delivery'
+    });
 
     // Update order status if delivery is completed
     if (status === 'delivered') {
@@ -193,7 +204,7 @@ exports.updateLocation = async (req, res) => {
     }
 
     // Check authorization
-    if (delivery.deliveryPerson.toString() !== req.user._id.toString()) {
+    if (delivery.deliveryPerson.toString() !== req.user.userId.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this delivery'
@@ -270,8 +281,8 @@ exports.getTrackingInfo = async (req, res) => {
     }
 
     // Check authorization
-    const isCustomer = delivery.customer._id.toString() === req.user._id.toString();
-    const isDeliveryPerson = delivery.deliveryPerson._id.toString() === req.user._id.toString();
+    const isCustomer = delivery.customer._id.toString() === req.user.userId.toString();
+    const isDeliveryPerson = delivery.deliveryPerson._id.toString() === req.user.userId.toString();
     const isAdmin = ['admin', 'pharmacy_admin'].includes(req.user.role);
 
     if (!isCustomer && !isDeliveryPerson && !isAdmin) {
@@ -309,7 +320,7 @@ exports.getTrackingInfo = async (req, res) => {
 // @access   Private (delivery)
 exports.getDeliveryStats = async (req, res) => {
   try {
-    const deliveryPersonId = req.user._id;
+    const deliveryPersonId = req.user.userId;
     
     const stats = await Delivery.aggregate([
       { $match: { deliveryPerson: deliveryPersonId } },
@@ -392,7 +403,7 @@ exports.addDeliveryNote = async (req, res) => {
     }
 
     // Check authorization
-    if (delivery.deliveryPerson.toString() !== req.user._id.toString()) {
+    if (delivery.deliveryPerson.toString() !== req.user.userId.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to add notes to this delivery'
@@ -401,7 +412,7 @@ exports.addDeliveryNote = async (req, res) => {
 
     delivery.deliveryNotes.push({
       note,
-      addedBy: req.user._id,
+      addedBy: req.user.userId,
       addedAt: new Date(),
       location: location || '',
       coordinates: coordinates || [],

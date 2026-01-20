@@ -38,26 +38,26 @@ const userSchema = new mongoose.Schema({
   // },
 
   password: {
-  type: String,
-  required: true,
-  select: false
-},
-username: {
-  type: String,
-  required: true,
-  unique: true
-},
-role: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "Role",
-  required: true
-},
+    type: String,
+    required: true,
+    select: false
+  },
+  username: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  role: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Role",
+    required: true
+  },
 
   // For staff members - link to their pharmacy
   pharmacyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Pharmacy',
-    required: function() {
+    required: function () {
       return ['pharmacy_staff', 'pharmacy_admin', 'cashier'].includes(this.role);
     }
   },
@@ -69,6 +69,10 @@ role: {
     zipCode: String,
     country: String
   },
+  avatar: {
+    type: String,
+    default: ''
+  },
   // For delivery personnel
   vehicleInfo: {
     type: {
@@ -76,6 +80,14 @@ role: {
       enum: ['motorcycle', 'car', 'bicycle', 'scooter']
     },
     licensePlate: String
+  },
+  currentLocation: {
+    latitude: Number,
+    longitude: Number,
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
   },
   isActive: {
     type: Boolean,
@@ -96,8 +108,8 @@ role: {
     type: Date,
     default: Date.now
   },
-  resetToken: {type: String, default:null},
-  resetTokenExpire:{type: Date, default:null},
+  resetToken: { type: String, default: null },
+  resetTokenExpire: { type: Date, default: null },
 }, {
   timestamps: true
 });
@@ -107,11 +119,11 @@ userSchema.index({ role: 1 });
 userSchema.index({ pharmacyId: 1 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
   }
-  
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -122,7 +134,7 @@ userSchema.pre('save', async function(next) {
 });
 
 // Method to compare passwords
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
@@ -131,7 +143,7 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Method to get user without sensitive data
-userSchema.methods.toJSON = function() {
+userSchema.methods.toJSON = function () {
   const user = this.toObject();
   delete user.password;
   delete user.__v;
