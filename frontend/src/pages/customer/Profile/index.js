@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App } from 'antd';
+import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App, Divider } from 'antd';
 import {
   UserOutlined,
   MailOutlined,
@@ -7,7 +7,8 @@ import {
   EnvironmentOutlined,
   UploadOutlined,
   SafetyCertificateOutlined,
-  EditOutlined
+  EditOutlined,
+  CameraOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
