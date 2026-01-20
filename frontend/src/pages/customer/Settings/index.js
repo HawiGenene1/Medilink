@@ -22,67 +22,7 @@ const Settings = () => {
     const { user } = useAuth();
     const { message } = App.useApp();
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('profile');
-
-    const onFinish = async (values) => {
-        setLoading(true);
-        try {
-            await api.put('/users/profile', values);
-            message.success('Profile updated successfully');
-        } catch (error) {
-            console.error('Update failed:', error);
-            message.error('Failed to update profile');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const ProfileSettings = () => (
-        <div className="settings-section fade-in">
-            <div className="avatar-upload-wrapper">
-                <CustomBadge count={<Button size="small" shape="circle" icon={<CameraOutlined />} className="cam-btn" />} offset={[-10, 110]}>
-                    <Avatar size={120} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} className="profile-avatar-large" />
-                </CustomBadge>
-                <div className="avatar-info">
-                    <Title level={4} style={{ margin: 0 }}>{user?.firstName} {user?.lastName}</Title>
-                    <Text type="secondary">Customer</Text>
-                </div>
-            </div>
-
-            <Divider />
-
-            <Form
-                layout="vertical"
-                onFinish={onFinish}
-                initialValues={{
-                    firstName: user?.firstName || '',
-                    lastName: user?.lastName || '',
-                    email: user?.email || '',
-                    phone: user?.phone || ''
-                }}
-            >
-                <Row gutter={16}>
-                    <Col span={12}>
-                        <Form.Item label="First Name" name="firstName">
-                            <Input />
-                        </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                        <Form.Item label="Last Name" name="lastName">
-                            <Input />
-                        </Form.Item>
-                    </Col>
-                </Row>
-                <Form.Item label="Email Address" name="email">
-                    <Input disabled />
-                </Form.Item>
-                <Form.Item label="Phone Number" name="phone">
-                    <Input />
-                </Form.Item>
-                <Button type="primary" htmlType="submit" loading={loading}>Save Profile Changes</Button>
-            </Form>
-        </div>
-    );
+    const [activeTab, setActiveTab] = useState('security'); // Changed default active tab
 
     const SecuritySettings = () => (
         <div className="settings-section fade-in">
@@ -107,38 +47,6 @@ const Settings = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text>Secure your account with SMS verification for all clinical orders.</Text>
                 <Switch defaultChecked />
-            </div>
-        </div>
-    );
-
-    const ClinicalSettings = () => (
-        <div className="settings-section fade-in">
-            <Alert
-                message="Pharmacist Information"
-                description="These preferences help pharmacists provide better counseling for your specific needs."
-                type="info"
-                showIcon
-                style={{ marginBottom: '24px' }}
-            />
-            <Title level={4}>Primary Pharmacy</Title>
-            <Paragraph type="secondary">Set a default pharmacy for faster checkout.</Paragraph>
-            <Card className="option-card-mini">
-                <Space>
-                    <EnvironmentOutlined style={{ color: '#1E88E5' }} />
-                    <Text strong>Kenema Pharmacy No. 4 (Bole)</Text>
-                    <Button type="link" size="small">Change</Button>
-                </Space>
-            </Card>
-
-            <Divider style={{ margin: '32px 0' }} />
-
-            <Title level={4}>Digital Prescriptions</Title>
-            <div className="pref-row">
-                <div>
-                    <Text strong>Auto-share prescriptions</Text><br />
-                    <Text type="secondary" style={{ fontSize: '13px' }}>Allow pharmacies to access your verified Rx history.</Text>
-                </div>
-                <Switch />
             </div>
         </div>
     );
@@ -169,11 +77,78 @@ const Settings = () => {
         </div>
     );
 
+    const PrivacySettings = () => (
+        <div className="settings-section fade-in">
+            <Title level={4}>Privacy Preferences</Title>
+            <Paragraph type="secondary">Manage how your medical data and activity is shared.</Paragraph>
+            <div className="pref-row">
+                <Text>Share interaction data with pharmacists</Text>
+                <Switch defaultChecked />
+            </div>
+            <div className="pref-row">
+                <Text>Digital Prescriptions: Auto-share with pharmacies</Text>
+                <Switch defaultChecked />
+            </div>
+            <Divider />
+            <Title level={4} style={{ color: '#ff4d4f' }}>Data Management</Title>
+            <Button danger>Download My Data (JSON)</Button>
+        </div>
+    );
+
+    const PreferencesSettings = () => (
+        <div className="settings-section fade-in">
+            <Title level={4}>App Preferences</Title>
+            <div className="pref-row">
+                <Text>Theme</Text>
+                <Switch
+                    checkedChildren="Dark"
+                    unCheckedChildren="Light"
+                    defaultChecked={false}
+                />
+            </div>
+            <Divider />
+            <Title level={4}>Clinical Preferences</Title>
+            <Paragraph type="secondary">Set your default healthcare providers.</Paragraph>
+            <Card className="option-card-mini" style={{ marginBottom: '16px' }}>
+                <Space>
+                    <EnvironmentOutlined style={{ color: '#1E88E5' }} />
+                    <Text strong>Kenema Pharmacy No. 4 (Bole)</Text>
+                    <Button type="link" size="small">Change Default</Button>
+                </Space>
+            </Card>
+        </div>
+    );
+
+    const SupportSettings = () => (
+        <div className="settings-section fade-in">
+            <Title level={4}>Support & Legal</Title>
+            <List
+                itemLayout="horizontal"
+                dataSource={[
+                    { title: 'Help Center', description: 'FAQs and support guides' },
+                    { title: 'Terms of Service', description: 'Legal agreement for using MediLink' },
+                    { title: 'Privacy Policy', description: 'How we handle your data' },
+                ]}
+                renderItem={(item) => (
+                    <List.Item actions={[<Button type="link" key="view">View</Button>]}>
+                        <List.Item.Meta
+                            title={item.title}
+                            description={item.description}
+                        />
+                    </List.Item>
+                )}
+            />
+            <Divider />
+            <Button danger block>Delete Account</Button>
+        </div>
+    );
+
     const tabItems = [
-        { key: 'profile', label: <span><UserOutlined /> Account</span>, children: <ProfileSettings /> },
         { key: 'security', label: <span><LockOutlined /> Security</span>, children: <SecuritySettings /> },
-        { key: 'clinical', label: <span><SafetyCertificateOutlined /> Clinical</span>, children: <ClinicalSettings /> },
-        { key: 'notifications', label: <span><BellOutlined /> Privacy</span>, children: <NotificationSettings /> },
+        { key: 'notifications', label: <span><BellOutlined /> Notifications</span>, children: <NotificationSettings /> },
+        { key: 'privacy', label: <span><SafetyCertificateOutlined /> Privacy</span>, children: <PrivacySettings /> },
+        { key: 'preferences', label: <span><EditOutlined /> Preferences</span>, children: <PreferencesSettings /> },
+        { key: 'support', label: <span><MailOutlined /> Support</span>, children: <SupportSettings /> },
     ];
 
     return (

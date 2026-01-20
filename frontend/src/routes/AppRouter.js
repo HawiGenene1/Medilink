@@ -12,6 +12,7 @@ import ProtectedRoute from './ProtectedRoute';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import PharmacyRegister from '../pages/auth/PharmacyRegister';
+import VerifyEmail from '../pages/auth/VerifyEmail';
 
 // Pages
 import Home from '../pages/Home';
@@ -58,6 +59,7 @@ const AppRouter = () => {
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/pharmacy/register" element={<PharmacyRegister />} />
+        <Route path="/auth/verify" element={<VerifyEmail />} />
       </Route>
 
       {/* Protected Routes - Customer */}

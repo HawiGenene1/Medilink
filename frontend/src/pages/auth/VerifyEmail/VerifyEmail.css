@@ -1,0 +1,21 @@
+.verify-email-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    padding: 20px;
+}
+
+.verify-status {
+    text-align: center;
+    padding: 40px;
+}
+
+.ant-result {
+    background: white;
+    padding: 48px 32px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    max-width: 600px;
+    width: 100%;
+}
