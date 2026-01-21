@@ -8,11 +8,11 @@ const {
   searchMedicines
 } = require('../controllers/customerController');
 const { protect } = require('../middleware/authMiddleware');
-const { roleMiddleware } = require('../middleware/roleMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 
 // Apply authentication middleware to all customer routes
 router.use(protect);
-router.use(roleMiddleware('customer'));
+router.use(authorize('customer'));
 
 // Medicine routes
 router.get('/medicines', getMedicines);
