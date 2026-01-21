@@ -81,21 +81,7 @@ const seedData = async () => {
       }
     });
 
-    const deliveryPerson = await User.create({
-      firstName: 'Mike',
-      lastName: 'Delivery',
-      email: 'delivery@medilink.com',
-      password: userPassword,
-      phone: '+251944444444',
-      role: 'delivery',
-      isActive: true,
-      vehicleInfo: {
-        type: 'motorcycle',
-        licensePlate: 'AA-123-456'
-      }
-    });
-
-    console.log(`✅ Created ${4} users\n`);
+    console.log(`✅ Created ${3} users\n`);
 
     // Create Pharmacy
     console.log('🏥 Creating pharmacies...');

@@ -36,8 +36,8 @@ const validateCreateAdminUser = [
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
   
   body('role')
-    .isIn(['admin', 'pharmacy_admin', 'cashier', 'delivery', 'customer'])
-    .withMessage('Invalid role. Must be one of: admin, pharmacy_admin, cashier, delivery, customer'),
+    .isIn(['admin', 'pharmacy_admin', 'cashier', 'customer'])
+    .withMessage('Invalid role. Must be one of: admin, pharmacy_admin, cashier, customer'),
   
   body('phone')
     .trim()
@@ -50,8 +50,8 @@ const validateCreateAdminUser = [
 // Validation for updating user role
 const validateUpdateUserRole = [
   body('role')
-    .isIn(['admin', 'pharmacy_admin', 'cashier', 'delivery', 'customer'])
-    .withMessage('Invalid role. Must be one of: admin, pharmacy_admin, cashier, delivery, customer'),
+    .isIn(['admin', 'pharmacy_admin', 'cashier', 'customer'])
+    .withMessage('Invalid role. Must be one of: admin, pharmacy_admin, cashier, customer'),
   
   body('reason')
     .optional()
@@ -104,7 +104,7 @@ const validateBulkCreateUsers = [
     .withMessage('Password must be at least 6 characters long'),
   
   body('users.*.role')
-    .isIn(['admin', 'pharmacy_admin', 'cashier', 'delivery', 'customer'])
+    .isIn(['admin', 'pharmacy_admin', 'cashier', 'customer'])
     .withMessage('Invalid role'),
   
   body('users.*.phone')
@@ -143,7 +143,7 @@ const validateBulkUpdateUsers = [
   
   body('updates.*.role')
     .optional()
-    .isIn(['admin', 'pharmacy_admin', 'cashier', 'delivery', 'customer'])
+    .isIn(['admin', 'pharmacy_admin', 'cashier', 'customer'])
     .withMessage('Invalid role')
 ];
 

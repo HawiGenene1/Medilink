@@ -68,7 +68,6 @@ export const AuthProvider = ({ children }) => {
       if (email.includes('pharmacy')) role = 'pharmacy_admin';
       if (email.includes('staff')) role = 'pharmacy_staff';
       if (email.includes('cashier')) role = 'cashier';
-      if (email.includes('delivery')) role = 'delivery';
 
       const mockUser = {
         _id: 'mock-user-' + role,

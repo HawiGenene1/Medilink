@@ -353,7 +353,7 @@ const createAdminUser = async (req, res) => {
     }
 
     // Validate role
-    const allowedRoles = ['admin', 'pharmacy_admin', 'cashier', 'delivery'];
+    const allowedRoles = ['admin', 'pharmacy_admin', 'cashier'];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ 
         success: false, 
@@ -585,7 +585,7 @@ const updateUserRole = async (req, res) => {
     }
 
     // Validate role
-    const allowedRoles = ['admin', 'pharmacy_admin', 'cashier', 'delivery', 'customer'];
+    const allowedRoles = ['admin', 'pharmacy_admin', 'cashier', 'customer'];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ 
         success: false, 
