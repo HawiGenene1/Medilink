@@ -347,7 +347,7 @@ const seedData = async () => {
         }
       ],
       totalAmount: 195,
-      deliveryFee: 20,
+      serviceFee: 20,
       tax: 9.75,
       discount: 0,
       finalAmount: 224.75,
@@ -358,23 +358,22 @@ const seedData = async () => {
         transactionId: 'TXN-2024-001',
         paidAt: new Date('2024-11-10')
       },
-      deliveryAddress: {
+      address: {
         street: '456 Customer Ave',
         city: 'Addis Ababa',
         state: 'Addis Ababa',
         zipCode: '1001',
         country: 'Ethiopia'
       },
-      deliveryPerson: deliveryPerson._id,
       statusHistory: [
         { status: 'pending', timestamp: new Date('2024-11-10T08:00:00'), note: 'Order placed' },
         { status: 'confirmed', timestamp: new Date('2024-11-10T08:15:00'), note: 'Order confirmed by pharmacy' },
         { status: 'preparing', timestamp: new Date('2024-11-10T08:30:00'), note: 'Preparing order' },
-        { status: 'out_for_delivery', timestamp: new Date('2024-11-10T10:00:00'), note: 'Out for delivery' },
+        { status: 'in_transit', timestamp: new Date('2024-11-10T10:00:00'), note: 'In transit' },
         { status: 'delivered', timestamp: new Date('2024-11-10T11:30:00'), note: 'Delivered successfully' }
       ],
-      estimatedDeliveryTime: new Date('2024-11-10T12:00:00'),
-      actualDeliveryTime: new Date('2024-11-10T11:30:00'),
+      estimatedArrivalTime: new Date('2024-11-10T12:00:00'),
+      actualArrivalTime: new Date('2024-11-10T11:30:00'),
       rating: 5,
       review: 'Great service, fast delivery!'
     });
@@ -393,38 +392,37 @@ const seedData = async () => {
         }
       ],
       totalAmount: 240,
-      deliveryFee: 20,
+      serviceFee: 20,
       tax: 12,
       discount: 25,
       finalAmount: 247,
-      status: 'out_for_delivery',
+      status: 'in_transit',
       paymentStatus: 'paid',
       paymentMethod: 'mobile_money',
       paymentDetails: {
         transactionId: 'TXN-2024-002',
         paidAt: new Date()
       },
-      deliveryAddress: {
+      address: {
         street: '456 Customer Ave',
         city: 'Addis Ababa',
         state: 'Addis Ababa',
         zipCode: '1001',
         country: 'Ethiopia'
       },
-      deliveryPerson: deliveryPerson._id,
       statusHistory: [
         { status: 'pending', timestamp: new Date(), note: 'Order placed' },
         { status: 'confirmed', timestamp: new Date(), note: 'Order confirmed' },
-        { status: 'out_for_delivery', timestamp: new Date(), note: 'Out for delivery' }
+        { status: 'in_transit', timestamp: new Date(), note: 'In transit' }
       ],
-      estimatedDeliveryTime: new Date(Date.now() + 2 * 60 * 60 * 1000) // 2 hours from now
+      estimatedArrivalTime: new Date(Date.now() + 2 * 60 * 60 * 1000) // 2 hours from now
     });
 
     console.log(`✅ Created ${2} orders\n`);
 
     console.log('🎉 Database seeding completed successfully!');
     console.log('\n📊 Summary:');
-    console.log(`   - Users: 4 (1 admin, 1 pharmacy owner, 1 customer, 1 delivery)`);
+    console.log(`   - Users: 3 (1 admin, 1 pharmacy owner, 1 customer)`);
     console.log(`   - Pharmacies: 2`);
     console.log(`   - Categories: 4`);
     console.log(`   - Medicines: 5`);

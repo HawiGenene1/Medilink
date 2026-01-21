@@ -42,7 +42,7 @@ const orderSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
-  deliveryFee: {
+  serviceFee: {
     type: Number,
     default: 0
   },
@@ -60,7 +60,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled', 'refunded'],
+    enum: ['pending', 'confirmed', 'preparing', 'ready', 'in_transit', 'delivered', 'cancelled', 'refunded'],
     default: 'pending'
   },
   paymentStatus: {
@@ -77,7 +77,7 @@ const orderSchema = new mongoose.Schema({
     transactionId: String,
     paidAt: Date
   },
-  deliveryAddress: {
+  address: {
     street: {
       type: String,
       required: true
@@ -97,11 +97,11 @@ const orderSchema = new mongoose.Schema({
       longitude: Number
     }
   },
-  deliveryPerson: {
+  courier: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  deliveryInstructions: {
+  instructions: {
     type: String,
     trim: true
   },
@@ -124,10 +124,10 @@ const orderSchema = new mongoose.Schema({
     },
     note: String
   }],
-  estimatedDeliveryTime: {
+  estimatedArrivalTime: {
     type: Date
   },
-  actualDeliveryTime: {
+  actualArrivalTime: {
     type: Date
   },
   cancelledAt: {
@@ -168,7 +168,7 @@ orderSchema.pre('save', async function(next) {
 
 // Calculate final amount before saving
 orderSchema.pre('save', function(next) {
-  this.finalAmount = this.totalAmount + this.deliveryFee + this.tax - this.discount;
+  this.finalAmount = this.totalAmount + this.serviceFee + this.tax - this.discount;
   next();
 });
 
@@ -178,8 +178,8 @@ orderSchema.index({ customer: 1, createdAt: -1 });
 // Index for pharmacy orders
 orderSchema.index({ pharmacy: 1, createdAt: -1 });
 
-// Index for delivery person
-orderSchema.index({ deliveryPerson: 1, status: 1 });
+// Index for courier
+orderSchema.index({ courier: 1, status: 1 });
 
 const Order = mongoose.model('Order', orderSchema);
 

@@ -47,10 +47,10 @@ const OrderTracking = () => {
             if (response.data?.success) {
                 const tracking = response.data.data;
                 setOrderData(tracking);
-                if (tracking.deliveryPerson?.location) {
+                if (tracking.courier?.location) {
                     const newPos = [
-                        tracking.deliveryPerson.location.latitude,
-                        tracking.deliveryPerson.location.longitude
+                        tracking.courier.location.latitude,
+                        tracking.courier.location.longitude
                     ];
                     setDriverPos(newPos);
 
@@ -98,7 +98,7 @@ const OrderTracking = () => {
     }, [id]);
 
     const getStatusIcon = (status, isCurrent) => {
-        if (status === 'out_for_delivery') return <LoadingOutlined style={{ color: '#1E88E5', fontSize: '16px' }} />;
+        if (status === 'in_transit') return <LoadingOutlined style={{ color: '#1E88E5', fontSize: '16px' }} />;
         if (isCurrent) return <ClockCircleOutlined style={{ color: '#1E88E5', fontSize: '16px' }} />;
         return <CheckCircleFilled style={{ color: '#43A047', fontSize: '16px' }} />;
     };
@@ -167,7 +167,7 @@ const OrderTracking = () => {
                             </Col>
                             <Col flex="auto">
                                 <Text strong style={{ fontSize: '16px' }}>Samuel Girma</Text>
-                                <br /><Text type="secondary">MediLink Delivery Partner</Text>
+                                <br /><Text type="secondary">MediLink Courier Partner</Text>
                             </Col>
                         </Row>
                         <Divider style={{ margin: '16px 0' }} />
@@ -183,7 +183,7 @@ const OrderTracking = () => {
 
                     <Card style={{ marginTop: '24px' }}>
                         <Title level={5}>Need Help?</Title>
-                        <Text type="secondary" style={{ fontSize: '13px' }}>If you have issues with your clinical delivery, contact our 24/7 support.</Text>
+                        <Text type="secondary" style={{ fontSize: '13px' }}>If you have issues with your order, contact our 24/7 support.</Text>
                         <Button block type="dashed" style={{ marginTop: '16px' }}>Support Chat</Button>
                     </Card>
                 </Col>

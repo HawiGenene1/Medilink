@@ -14,7 +14,7 @@ const ORDER_STATUS = {
   CONFIRMED: 'confirmed',
   PREPARING: 'preparing',
   READY: 'ready',
-  OUT_FOR_DELIVERY: 'out_for_delivery',
+  IN_TRANSIT: 'in_transit',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled',
   REFUNDED: 'refunded'
@@ -36,21 +36,10 @@ const PAYMENT_METHODS = {
   BANK_TRANSFER: 'bank_transfer'
 };
 
-// Delivery Status
-const DELIVERY_STATUS = {
-  PENDING: 'pending',
-  ASSIGNED: 'assigned',
-  PICKED_UP: 'picked_up',
-  IN_TRANSIT: 'in_transit',
-  DELIVERED: 'delivered',
-  FAILED: 'failed'
-};
-
 // Notification Types
 const NOTIFICATION_TYPES = {
   ORDER_STATUS: 'order_status',
   PRESCRIPTION_UPLOADED: 'prescription_uploaded',
-  DELIVERY_UPDATE: 'delivery_update',
   NEW_ORDER: 'new_order',
   PAYMENT_CONFIRMATION: 'payment_confirmation',
   LOW_STOCK: 'low_stock',
@@ -131,7 +120,6 @@ module.exports = {
   ORDER_STATUS,
   PAYMENT_STATUS,
   PAYMENT_METHODS,
-  DELIVERY_STATUS,
   NOTIFICATION_TYPES,
   NOTIFICATION_CHANNELS,
   DEFAULT_PAGE_SIZE,

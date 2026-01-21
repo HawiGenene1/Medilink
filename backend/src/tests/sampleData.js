@@ -115,7 +115,7 @@ const sampleOrders = [
     status: 'delivered',
     paymentStatus: 'paid',
     paymentMethod: 'card',
-    deliveryAddress: {
+    address: {
       street: '123 Main St',
       city: 'Addis Ababa',
       country: 'Ethiopia'
@@ -139,7 +139,7 @@ const sampleOrders = [
     status: 'pending',
     paymentStatus: 'pending',
     paymentMethod: 'cash',
-    deliveryAddress: {
+    address: {
       street: '456 Oak Ave',
       city: 'Addis Ababa',
       country: 'Ethiopia'
@@ -163,7 +163,7 @@ const sampleOrders = [
     status: 'confirmed',
     paymentStatus: 'paid',
     paymentMethod: 'mobile_money',
-    deliveryAddress: {
+    address: {
       street: '123 Main St',
       city: 'Addis Ababa',
       country: 'Ethiopia'

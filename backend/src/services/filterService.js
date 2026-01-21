@@ -303,7 +303,7 @@ class FilterService {
       ]);
 
       return {
-        statuses: ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled', 'refunded'],
+        statuses: ['pending', 'confirmed', 'preparing', 'ready', 'in_transit', 'delivered', 'cancelled', 'refunded'],
         paymentStatuses: ['pending', 'paid', 'failed', 'refunded'],
         paymentMethods: paymentMethods.filter(Boolean).sort(),
         dateRange: dateRange[0] || {

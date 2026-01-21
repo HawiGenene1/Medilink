@@ -66,7 +66,7 @@ const getOrderById = async (req, res) => {
     const order = await Order.findById(id)
       .populate('customer', 'name email phone')
       .populate('pharmacy', 'name email phone address')
-      .populate('deliveryPerson', 'name email phone')
+      .populate('courier', 'name email phone')
       .populate('items.medicine', 'name price imageUrl')
       .exec();
     
@@ -78,10 +78,10 @@ const getOrderById = async (req, res) => {
     if (req.user) {
       const isCustomer = req.user._id.toString() === order.customer._id.toString();
       const isPharmacy = req.user.pharmacyId && req.user.pharmacyId.toString() === order.pharmacy._id.toString();
-      const isDeliveryPerson = req.user._id.toString() === order.deliveryPerson?._id.toString();
+      const isCourier = req.user._id.toString() === order.courier?._id.toString();
       const isAdmin = req.user.role === 'admin';
       
-      if (!isCustomer && !isPharmacy && !isDeliveryPerson && !isAdmin) {
+      if (!isCustomer && !isPharmacy && !isCourier && !isAdmin) {
         return res.status(403).json({ success: false, message: 'Access denied' });
       }
     }
