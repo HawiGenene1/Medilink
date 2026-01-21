@@ -8,7 +8,7 @@ const protect = async (req, res, next) => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -18,13 +18,35 @@ const protect = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
+    // Development bypass for mock tokens
+    if (process.env.NODE_ENV === 'development' && token.startsWith('header.')) {
+      try {
+        const payloadBase64 = token.split('.')[1];
+        const payloadJson = Buffer.from(payloadBase64, 'base64').toString();
+        const decoded = JSON.parse(payloadJson);
+
+        const user = await User.findOne({ email: decoded.email });
+        if (user) {
+          req.user = {
+            userId: user._id,
+            email: user.email,
+            role: user.role,
+            pharmacyId: user.pharmacyId
+          };
+          return next();
+        }
+      } catch (e) {
+        console.error('Mock token parsing failed:', e);
+      }
+    }
+
     try {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+
       // Find user by ID from token
       const user = await User.findById(decoded.userId).select('-password');
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,

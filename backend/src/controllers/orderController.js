@@ -440,32 +440,15 @@ const getPharmacyOrders = async (req, res) => {
 
     // Valid statuses for pharmacy view usually
     if (status) {
-      // Support multiple statuses separated by comma or array if passed
-      // e.g. ?status=pending,processing
       if (typeof status === 'string' && status.includes(',')) {
         query.status = { $in: status.split(',') };
       } else {
         query.status = status;
       }
-    } else {
-      // Default logic if no status provided? 
-      // Requirement says "The endpoint should return only orders with status Pending or Verified."
-      // Assuming 'Verified' means 'confirmed' or similar in our schema, or literal 'verified'.
-      // We'll stick to what is passed via query or default to Pending/Verified if requested.
-      // However, implementation should be flexible. Let's strictly follow the prompt's implied logic
-      // that getting *relevant* orders is key.
-      // Prompt: "The endpoint should return only orders with status Pending or Verified."
-      // This implies hardcoding or default filtering if not specified.
-      // I will filter for 'pending' and 'verified' (or confirmed) if no status is explicitly requested.
-      // Assuming 'Verified' maps to 'confirmed' based on typical flow, or we introduce 'verified'.
-      // I'll assume exact string match for custom requirements.
-
-      query.status = { $in: ['pending', 'verified', 'confirmed', 'processing', 'ready'] };
-      // Broadened default to show active orders, but can be narrowed by query param. 
     }
 
     // Check authorization: User must belong to this pharmacy or be admin
-    if (req.user.role !== 'admin' && req.user.pharmacyId !== pharmacyId) {
+    if (req.user.role !== 'admin' && String(req.user.pharmacyId) !== String(pharmacyId)) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to view orders for this pharmacy'
@@ -518,11 +501,11 @@ const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['verified', 'prepared', 'out_for_delivery', 'completed'];
+    const validStatuses = ['verified', 'confirmed', 'prepared', 'processing', 'ready_for_pickup', 'out_for_delivery', 'delivered', 'completed', 'cancelled'];
     if (!validStatuses.includes(status)) {
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ success: false, message: 'Invalid status' });
+      return res.status(400).json({ success: false, message: `Invalid status: ${status}` });
     }
 
     const order = await Order.findById(orderId).session(session);

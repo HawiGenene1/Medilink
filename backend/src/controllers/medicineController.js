@@ -6,8 +6,12 @@ const Medicine = require('../models/Medicine');
  */
 const getMedicines = async (req, res) => {
   try {
-    const { search, category, minPrice, maxPrice, sort } = req.query;
+    const { search, category, minPrice, maxPrice, sort, pharmacyId } = req.query;
     const filter = {};
+
+    if (pharmacyId) {
+      filter.availableAt = pharmacyId;
+    }
 
     if (search) {
       // simple text search on name and description
@@ -21,15 +25,34 @@ const getMedicines = async (req, res) => {
     if (minPrice) filter.price = { ...(filter.price || {}), $gte: Number(minPrice) };
     if (maxPrice) filter.price = { ...(filter.price || {}), $lte: Number(maxPrice) };
 
-    let query = Medicine.find(filter);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    if (sort) {
-      const sortField = sort === 'price' ? 'price' : 'name';
-      query = query.sort(sortField);
-    }
+    const query = Medicine.find(filter)
+      .sort(sort === 'price' ? { 'price.basePrice': 1 } : { createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    const medicines = await query.exec();
-    return res.json(medicines);
+    const [medicines, total] = await Promise.all([
+      query.exec(),
+      Medicine.countDocuments(filter)
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        medicines,
+        pagination: {
+          total,
+          page,
+          pages: Math.ceil(total / limit),
+          limit
+        }
+      },
+      // For compatibility with inconsistent frontend components
+      medicines
+    });
   } catch (error) {
     console.error('getMedicines error:', error);
     return res.status(500).json({ success: false, message: 'Server error fetching medicines' });
@@ -41,7 +64,10 @@ const getMedicineById = async (req, res) => {
     const { id } = req.params;
     const medicine = await Medicine.findById(id).exec();
     if (!medicine) return res.status(404).json({ success: false, message: 'Medicine not found' });
-    return res.json(medicine);
+    return res.json({
+      success: true,
+      data: medicine
+    });
   } catch (error) {
     console.error('getMedicineById error:', error);
     return res.status(500).json({ success: false, message: 'Server error fetching medicine' });
@@ -57,30 +83,47 @@ const addMedicine = async (req, res) => {
   try {
     const {
       name,
-      manufacturer,
+      brand, // From frontend
+      manufacturer, // From frontend or backend
       category,
       dosageForm,
       strength,
       packSize,
       price,
-      stockQuantity,
+      quantity, // From frontend
+      stockQuantity, // From backend/model
       description,
       requiresPrescription,
-      expiryDate
+      expiryDate,
+      minStockLevel
     } = req.body;
 
+    // Map brand to manufacturer if manufacturer is missing
+    const finalManufacturer = manufacturer || brand;
+
     // Basic validation
-    if (!name || !manufacturer || !category || !dosageForm || !strength || !packSize || !price || stockQuantity === undefined) {
+    const missingFields = [];
+    if (!name) missingFields.push('name');
+    if (!finalManufacturer) missingFields.push('manufacturer/brand');
+    if (!category) missingFields.push('category');
+    if (!dosageForm) missingFields.push('dosageForm');
+    if (!strength) missingFields.push('strength');
+    if (!packSize) missingFields.push('packSize');
+    if (price === undefined || price === null) missingFields.push('price');
+
+    if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields'
+        message: `Missing required fields: ${missingFields.join(', ')}`,
+        missingFields
       });
     }
 
     // Create new medicine
     const medicine = new Medicine({
       name,
-      manufacturer,
+      brand: brand || name,
+      manufacturer: finalManufacturer,
       category,
       dosageForm,
       strength,
@@ -89,29 +132,26 @@ const addMedicine = async (req, res) => {
         basePrice: price,
         currency: 'ETB'
       },
-      stockQuantity,
+      stockQuantity: stockQuantity !== undefined ? stockQuantity : (quantity || 0),
+      minStockLevel: minStockLevel || 10,
       description,
       requiresPrescription: requiresPrescription === 'true' || requiresPrescription === true,
       addedBy: req.user.userId,
-      availableAt: [req.user.pharmacyId], // Link to the staff's pharmacy
-      isActive: true
-      // Note: In a real app we might handle Inventory model separately depending on architecture
+      availableAt: [req.user.pharmacyId],
+      expiryDate: expiryDate ? new Date(expiryDate) : null
     });
 
     await medicine.save();
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
-      message: 'Medicine added successfully',
       data: medicine
     });
-
   } catch (error) {
     console.error('addMedicine error:', error);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: 'Server error adding medicine',
-      error: error.message
+      message: error.message || 'Server error adding medicine'
     });
   }
 };
@@ -270,11 +310,48 @@ const updateStock = async (req, res) => {
   }
 };
 
+/**
+ * @route   GET /api/medicines/alerts
+ * @desc    Get inventory alerts (low stock, near expiry) for the user's pharmacy
+ * @access  Private (Pharmacy Staff/Admin)
+ */
+const getInventoryAlerts = async (req, res) => {
+  try {
+    const pharmacyId = req.user.pharmacyId;
+    if (!pharmacyId) {
+      return res.status(400).json({ success: false, message: 'Pharmacy ID not found for user' });
+    }
+
+    const { days = 90 } = req.query; // Default to 90 days for expiry
+    const expiryThreshold = new Date();
+    expiryThreshold.setDate(expiryThreshold.getDate() + parseInt(days));
+
+    // Find medicines available at this pharmacy that are either low on stock or near expiry
+    const alerts = await Medicine.find({
+      availableAt: pharmacyId,
+      $or: [
+        { $expr: { $lte: ['$stockQuantity', '$minStockLevel'] } },
+        { expiryDate: { $lte: expiryThreshold, $gt: new Date() } }
+      ]
+    }).lean();
+
+    return res.json({
+      success: true,
+      count: alerts.length,
+      data: alerts
+    });
+  } catch (error) {
+    console.error('getInventoryAlerts error:', error);
+    return res.status(500).json({ success: false, message: 'Server error fetching inventory alerts' });
+  }
+};
+
 module.exports = {
   getMedicines,
   getMedicineById,
   addMedicine,
   updateMedicine,
   deleteMedicine,
-  updateStock
+  updateStock,
+  getInventoryAlerts
 };

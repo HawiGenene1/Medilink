@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, Button, Space, Input, DatePicker, Select, Modal, Descriptions, Divider, List, Avatar, Row, Col, message } from 'antd';
+import { Card, Table, Tag, Button, Space, Input, DatePicker, Select, Modal, Descriptions, Divider, List, Avatar, Row, Col, message, Spin } from 'antd';
 import { EyeOutlined, SearchOutlined, FilterOutlined, ShoppingOutlined, UserOutlined, ClockCircleOutlined, MedicineBoxOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ordersAPI } from '../../../services/api';
@@ -10,7 +10,7 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const PharmacyStaffOrders = () => {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [searchText, setSearchText] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -19,13 +19,8 @@ const PharmacyStaffOrders = () => {
     const [loading, setLoading] = useState(false);
     const [pagination, setPagination] = useState({ current: 1, pageSize: 8, total: 0 });
 
-    useEffect(() => {
-        if (user?.pharmacyId) {
-            fetchOrders();
-        }
-    }, [user, statusFilter, pagination.current]);
-
-    const fetchOrders = async () => {
+    const fetchOrders = React.useCallback(async () => {
+        if (!user?.pharmacyId) return;
         try {
             setLoading(true);
             const params = {
@@ -64,20 +59,36 @@ const PharmacyStaffOrders = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, statusFilter, pagination.current, pagination.pageSize]);
+
+    useEffect(() => {
+        if (user?.pharmacyId) {
+            fetchOrders();
+        }
+    }, [user, fetchOrders]);
+
+    // Filter Logic (Client side search for now, status is server side)
+    const filteredOrders = orders.filter(order => {
+        const matchesSearch = order.customer.toLowerCase().includes(searchText.toLowerCase()) ||
+            order.id.toLowerCase().includes(searchText.toLowerCase());
+        return matchesSearch;
+    });
 
     const getStatusColor = (status) => {
         switch (status?.toLowerCase()) {
             case 'pending': return 'gold';
-            case 'verified': return 'blue';
             case 'confirmed': return 'blue';
+            case 'verified': return 'blue';
             case 'processing': return 'cyan';
             case 'prepared': return 'cyan';
             case 'ready': return 'purple';
+            case 'ready_for_pickup': return 'purple';
             case 'out_for_delivery': return 'orange';
             case 'completed': return 'green';
             case 'delivered': return 'green';
             case 'cancelled': return 'red';
+            case 'refunded': return 'magenta';
+            case 'on_hold': return 'volcano';
             default: return 'default';
         }
     };
@@ -161,6 +172,10 @@ const PharmacyStaffOrders = () => {
         },
     ];
 
+    if (authLoading) {
+        return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" tip="Loading Orders..." /></div>;
+    }
+
     return (
         <div className="orders-container">
             <Card className="orders-card" title="Incoming Orders" bordered={false}>
@@ -231,18 +246,23 @@ const PharmacyStaffOrders = () => {
                         Close
                     </Button>,
                     selectedOrder?.status === 'pending' && (
-                        <Button key="process" type="primary" onClick={() => handleUpdateStatus('verified')}>
-                            Verify Order
+                        <Button key="process" type="primary" onClick={() => handleUpdateStatus('confirmed')}>
+                            Accept Order
                         </Button>
                     ),
-                    selectedOrder?.status === 'verified' && (
+                    selectedOrder?.status === 'confirmed' && (
                         <Button key="ready" type="primary" style={{ backgroundColor: '#13c2c2' }} onClick={() => handleUpdateStatus('prepared')}>
-                            Mark Prepared (Deduct Stock)
+                            Prepare Order (Deduct Stock)
                         </Button>
                     ),
-                    ['prepared', 'processing'].includes(selectedOrder?.status) && (
+                    selectedOrder?.status === 'prepared' && (
                         <Button key="out" type="primary" onClick={() => handleUpdateStatus('out_for_delivery')}>
-                            Out for Delivery
+                            Dispatch for Delivery
+                        </Button>
+                    ),
+                    selectedOrder?.status === 'out_for_delivery' && (
+                        <Button key="complete" type="primary" style={{ backgroundColor: '#52c41a' }} onClick={() => handleUpdateStatus('completed')}>
+                            Mark Completed
                         </Button>
                     )
                 ]}

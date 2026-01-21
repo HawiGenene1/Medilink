@@ -25,7 +25,7 @@ const Login = () => {
             navigate('/customer/home');
             break;
           case 'pharmacy_staff':
-            navigate('/pharmacy-staff/inventory');
+            navigate('/pharmacy-staff/dashboard');
             break;
           case 'pharmacy_admin':
             navigate('/pharmacy-admin/dashboard');

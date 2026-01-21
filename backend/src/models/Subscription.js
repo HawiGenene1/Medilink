@@ -16,7 +16,17 @@ const subscriptionSchema = new mongoose.Schema({
     default: Date.now
   },
   endDate: {
-    type: Date
+    type: Date,
+    required: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'expired'],
+    default: 'active'
   }
 });
 

@@ -8,6 +8,15 @@ const { checkSubscription } = require('../middleware/subscriptionMiddleware');
 
 // Public routes
 router.get('/', medicineController.getMedicines);
+
+// Inventory alerts - Protected
+router.get(
+    '/alerts',
+    authenticate,
+    authorize('pharmacy_staff', 'pharmacy_admin', 'admin'),
+    medicineController.getInventoryAlerts
+);
+
 router.get('/:id', medicineController.getMedicineById);
 
 // Protected routes (Pharmacy Staff & Admin)

@@ -1,7 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Input, Space, Tag, Modal, Form, InputNumber, Select, message, Popconfirm, Tooltip, Row, Col, Card } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Table, Button, Input, Space, Tag, Modal, Form, InputNumber, Select, message, Popconfirm, Tooltip, Row, Col, Card, Spin } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { medicinesAPI } from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -13,26 +15,41 @@ const Inventory = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState('');
+  const { user, loading: authLoading } = useAuth();
 
-  // Mock Data Fetch
-  const fetchData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const mockData = [
-        { key: '1', id: '1', name: 'Paracetamol', brand: 'Panadol', category: 'Pain Relief', stock: 150, price: 50, expiry: '2025-12-01', status: 'In Stock' },
-        { key: '2', id: '2', name: 'Amoxicillin', brand: 'Amoxil', category: 'Antibiotics', stock: 20, price: 120, expiry: '2024-05-15', status: 'Low Stock' },
-        { key: '3', id: '3', name: 'Ibuprofen', brand: 'Advil', category: 'Pain Relief', stock: 0, price: 85, expiry: '2025-01-20', status: 'Out of Stock' },
-        { key: '4', id: '4', name: 'Vitamin C', brand: 'CeeVit', category: 'Supplements', stock: 200, price: 15, expiry: '2026-03-10', status: 'In Stock' },
-      ];
-      setData(mockData);
+  const fetchMedicines = useCallback(async () => {
+    if (!user?.pharmacyId) return;
+    try {
+      setLoading(true);
+      const response = await medicinesAPI.getAll({ pharmacyId: user.pharmacyId });
+      if (response.data.success) {
+        const formattedData = response.data.data.map(med => ({
+          key: med._id,
+          id: med._id,
+          name: med.name,
+          brand: med.brand || 'N/A',
+          category: med.category,
+          stock: med.quantity,
+          price: med.price,
+          expiry: med.expiryDate ? dayjs(med.expiryDate).format('YYYY-MM-DD') : 'N/A',
+          status: med.quantity === 0 ? 'Out of Stock' : (med.quantity < 20 ? 'Low Stock' : 'In Stock'),
+          description: med.description
+        }));
+        setData(formattedData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch medicines:', error);
+      message.error('Failed to load inventory');
+    } finally {
       setLoading(false);
-    }, 800);
-  };
+    }
+  }, [user?.pharmacyId]);
 
   useEffect(() => {
-    console.log("Inventory Component Mounted!");
-    fetchData();
-  }, []);
+    if (user?.pharmacyId) {
+      fetchMedicines();
+    }
+  }, [user, fetchMedicines]);
 
   // Handle Add/Edit
   const handleAddStart = () => {
@@ -43,39 +60,62 @@ const Inventory = () => {
 
   const handleEditStart = (record) => {
     setEditingItem(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({
+      ...record,
+      expiry: record.expiry !== 'N/A' ? record.expiry : null
+    });
     setIsModalVisible(true);
   };
 
-  const handleDelete = (id) => {
-    message.success('Item deleted successfully (Mock)');
-    setData(data.filter(item => item.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      setLoading(true);
+      const response = await medicinesAPI.delete(id);
+      if (response.data.success) {
+        message.success('Medicine deleted successfully');
+        fetchMedicines();
+      }
+    } catch (error) {
+      console.error('Failed to delete medicine:', error);
+      message.error('Failed to delete medicine');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleModalOk = () => {
-    form.validateFields().then(values => {
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
       setLoading(true);
-      setTimeout(() => {
-        if (editingItem) {
-          // Edit logic
-          const newData = data.map(item => item.id === editingItem.id ? { ...item, ...values } : item);
-          setData(newData);
+
+      const payload = {
+        ...values,
+        price: values.price,
+        stockQuantity: values.stock,
+        expiryDate: values.expiry,
+        pharmacy: user.pharmacyId
+      };
+
+      if (editingItem) {
+        const response = await medicinesAPI.update(editingItem.id, payload);
+        if (response.data.success) {
           message.success('Medicine updated successfully!');
-        } else {
-          // Add logic
-          const newItem = {
-            key: Date.now().toString(),
-            id: Date.now().toString(),
-            ...values,
-            status: values.stock > 10 ? 'In Stock' : (values.stock > 0 ? 'Low Stock' : 'Out of Stock') // Simple logic
-          };
-          setData([...data, newItem]);
+        }
+      } else {
+        const response = await medicinesAPI.add(payload);
+        if (response.data.success) {
           message.success('Medicine added successfully!');
         }
-        setIsModalVisible(false);
-        setLoading(false);
-      }, 500);
-    });
+      }
+      setIsModalVisible(false);
+      fetchMedicines();
+    } catch (error) {
+      console.error('Failed to save medicine:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to save medicine';
+      message.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Columns
@@ -150,6 +190,17 @@ const Inventory = () => {
     },
   ];
 
+  // Filter Logic
+  const filteredData = data.filter(item =>
+    item.name.toLowerCase().includes(searchText.toLowerCase()) ||
+    item.brand.toLowerCase().includes(searchText.toLowerCase()) ||
+    item.category.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  if (authLoading) {
+    return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" tip="Loading Inventory..." /></div>;
+  }
+
   return (
     <div className="inventory-page">
       <Row gutter={[16, 16]} justify="space-between" align="middle" style={{ marginBottom: '16px' }}>
@@ -158,7 +209,7 @@ const Inventory = () => {
         </Col>
         <Col>
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={fetchData}>Refresh</Button>
+            <Button icon={<ReloadOutlined />} onClick={fetchMedicines} loading={loading}>Refresh</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAddStart}>Add Medicine</Button>
           </Space>
         </Col>
@@ -176,7 +227,7 @@ const Inventory = () => {
 
       <Table
         columns={columns}
-        dataSource={data}
+        dataSource={filteredData}
         loading={loading}
         pagination={{ pageSize: 10 }}
         scroll={{ x: 800 }}
@@ -212,28 +263,71 @@ const Inventory = () => {
             <Col span={12}>
               <Form.Item name="category" label="Category" rules={[{ required: true, message: 'Required' }]}>
                 <Select placeholder="Select Category">
-                  <Option value="Pain Relief">Pain Relief</Option>
-                  <Option value="Antibiotics">Antibiotics</Option>
-                  <Option value="Supplements">Supplements</Option>
-                  <Option value="Chronic Care">Chronic Care</Option>
+                  <Option value="otc">Over-the-Counter (OTC)</Option>
+                  <Option value="prescription">Prescription</Option>
+                  <Option value="supplement">Supplement</Option>
+                  <Option value="herbal">Herbal</Option>
+                  <Option value="medical_device">Medical Device</Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="expiry" label="Expiry Date" rules={[{ required: true, message: 'Required' }]}>
-                {/* Simplified as Input for now, should be DatePicker */}
-                <Input type="date" />
+              <Form.Item name="dosageForm" label="Physical Form" rules={[{ required: true, message: 'Required' }]}>
+                <Select placeholder="Select Form">
+                  <Option value="tablet">Tablet</Option>
+                  <Option value="capsule">Capsule</Option>
+                  <Option value="syrup">Syrup</Option>
+                  <Option value="injection">Injection</Option>
+                  <Option value="cream">Cream</Option>
+                  <Option value="ointment">Ointment</Option>
+                  <Option value="drops">Drops</Option>
+                  <Option value="inhaler">Inhaler</Option>
+                </Select>
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
+              <Form.Item name="strength" label="Strength" rules={[{ required: true, message: 'Required' }]}>
+                <Input placeholder="e.g. 500mg, 10mg/ml" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="packSize" label="Pack Size" rules={[{ required: true, message: 'Required' }]}>
+                <Input placeholder="e.g. Box of 30, 200ml Bottle" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="expiry" label="Expiry Date" rules={[{ required: true, message: 'Required' }]}>
+                <Input type="date" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="requiresPrescription" label="Prescription Required?" initialValue={false}>
+                <Select>
+                  <Option value={true}>Yes</Option>
+                  <Option value={false}>No</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={8}>
               <Form.Item name="stock" label="Stock Quantity" rules={[{ required: true, message: 'Required' }]}>
                 <InputNumber min={0} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={8}>
+              <Form.Item name="minStockLevel" label="Min Level" initialValue={10} rules={[{ required: true, message: 'Required' }]}>
+                <InputNumber min={0} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
               <Form.Item name="price" label="Price (ETB)" rules={[{ required: true, message: 'Required' }]}>
                 <InputNumber min={0} prefix="ETB" style={{ width: '100%' }} />
               </Form.Item>

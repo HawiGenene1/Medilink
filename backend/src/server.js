@@ -94,32 +94,14 @@ const favoriteRoutes = require('./routes/favoriteRoutes'); // Added
 // const { authenticate } = require('./middleware/authMiddleware');
 // const { authorize } = require('./middleware/roleMiddleware');
 
-// API Routes (only use what exists)
+// API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes); // Added
-app.use('/api/medicines', medicineRoutes); // Added
-app.use('/api/prescriptions', prescriptionRoutes); // Added
-app.use('/api/orders', orderRoutes); // Added
-app.use('/api/delivery', deliveryRoutes); // Added
-app.use('/api/favorites', favoriteRoutes); // Added
-
-// Medicines API
-try {
-  app.use('/api/medicines', require('./routes/medicineRoutes'));
-} catch (e) {
-  console.warn('Medicine routes not mounted:', e.message);
-}
-try {
-  app.use('/api/orders', require('./routes/orderRoutes'));
-} catch (e) {
-  console.warn('Order routes not mounted:', e.message);
-}
-
-try {
-  app.use('/api/delivery', require('./routes/deliveryRoutes'));
-} catch (e) {
-  console.warn('Delivery routes not mounted:', e.message);
-}
+app.use('/api/users', userRoutes);
+app.use('/api/medicines', medicineRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/favorites', favoriteRoutes);
 
 // app.use('/api/admin', authenticate, authorize('admin'), adminRoutes);
 // app.use('/api/cashier', authenticate, authorize('cashier'), cashierRoutes);

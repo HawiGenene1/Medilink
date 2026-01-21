@@ -46,9 +46,9 @@ export const authAPI = {
 // Medicines API
 export const medicinesAPI = {
   search: (query, filters = {}, page = 1, limit = 10) =>
-    api.get('/medicines/search', {
+    api.get('/medicines', {
       params: {
-        q: query,
+        search: query,
         page,
         limit,
         ...filters
@@ -57,6 +57,7 @@ export const medicinesAPI = {
   getById: (id) => api.get(`/medicines/${id}`),
   getCategories: () => api.get('/medicines/categories'),
   // Pharmacy management
+  getAll: (params) => api.get('/medicines', { params }),
   add: (data) => api.post('/medicines', data),
   update: (id, data) => api.put(`/medicines/${id}`, data),
   delete: (id) => api.delete(`/medicines/${id}`),

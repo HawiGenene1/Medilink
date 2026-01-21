@@ -75,7 +75,8 @@ export const AuthProvider = ({ children }) => {
         email,
         firstName: role.toUpperCase(),
         lastName: 'User',
-        role: role
+        role: role,
+        pharmacyId: (role === 'pharmacy_admin' || role === 'pharmacy_staff') ? '65a7d5c9f1a2b3c4d5e6f701' : undefined
       };
 
       // Create a dummy JWT with the role encoded

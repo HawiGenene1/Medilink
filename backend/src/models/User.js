@@ -20,39 +20,27 @@ const userSchema = new mongoose.Schema({
     trim: true,
     match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
   },
-  // password: {
-  //   type: String,
-  //   required: [true, 'Password is required'],
-  //   minlength: [6, 'Password must be at least 6 characters'],
-  //   select: false // Don't return password by default in queries
-  // },
-  // phone: {
-  //   type: String,
-  //   required: [true, 'Phone number is required'],
-  //   trim: true
-  // },
-  // role: {
-  //   type: String,
-  //   enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
-  //   default: 'customer'
-  // },
-
   password: {
     type: String,
-    required: true,
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters'],
     select: false
+  },
+  phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    trim: true
+  },
+  role: {
+    type: String,
+    enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
+    default: 'customer'
   },
   username: {
     type: String,
-    required: true,
-    unique: true
+    required: false,
+    sparse: true
   },
-  role: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Role",
-    required: true
-  },
-
   // For staff members - link to their pharmacy
   pharmacyId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -119,18 +107,13 @@ userSchema.index({ role: 1 });
 userSchema.index({ pharmacyId: 1 });
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
-    return next();
+    return;
   }
 
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Method to compare passwords

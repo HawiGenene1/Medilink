@@ -1,37 +1,48 @@
-import React, { useState } from 'react';
-import { Card, Table, Button, Form, Input, InputNumber, DatePicker, Row, Col, Space, Popconfirm, Tag, message, Modal } from 'antd';
-import { EditOutlined, DeleteOutlined, PlusOutlined, MedicineBoxOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Spin, Card, Table, Button, Form, Input, InputNumber, DatePicker, Row, Col, Space, Popconfirm, Tag, message, Modal, Select } from 'antd';
+import { EditOutlined, DeleteOutlined, PlusOutlined, MedicineBoxOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { medicinesAPI } from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
 import './Medicines.css';
 
 const PharmacyStaffMedicines = () => {
     const [form] = Form.useForm();
     const [editingKey, setEditingKey] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [medicines, setMedicines] = useState([]);
+    const [searchText, setSearchText] = useState('');
+    const { user, loading: authLoading } = useAuth();
 
-    // Mock Data State
-    const [medicines, setMedicines] = useState([
-        {
-            key: '1',
-            id: 'MED001',
-            name: 'Amoxicillin 500mg',
-            category: 'Antibiotics',
-            price: 150.00,
-            quantity: 12,
-            expiryDate: '2024-12-31',
-            description: 'Broad-spectrum antibiotic used to treat bacterial infections.'
-        },
-        {
-            key: '2',
-            id: 'MED002',
-            name: 'Paracetamol 500mg',
-            category: 'Pain Relief',
-            price: 5.00,
-            quantity: 500,
-            expiryDate: '2025-06-30',
-            description: 'Common pain reliever and fever reducer.'
-        },
-    ]);
+    const fetchMedicines = useCallback(async () => {
+        if (!user?.pharmacyId) return;
+        try {
+            setLoading(true);
+            const response = await medicinesAPI.getAll({ pharmacyId: user.pharmacyId });
+            if (response.data.success) {
+                const medicinesList = response.data.data.medicines || [];
+                const formattedData = medicinesList.map(med => ({
+                    key: med._id,
+                    ...med,
+                    price: med.price?.basePrice || 0,
+                    expiryDate: med.expiryDate ? dayjs(med.expiryDate).format('YYYY-MM-DD') : 'N/A'
+                }));
+                setMedicines(formattedData);
+            }
+        } catch (error) {
+            console.error('Failed to fetch medicines:', error);
+            message.error('Failed to load medicines');
+        } finally {
+            setLoading(false);
+        }
+    }, [user?.pharmacyId]);
+
+    useEffect(() => {
+        if (user?.pharmacyId) {
+            fetchMedicines();
+        }
+    }, [user, fetchMedicines]);
 
     const isEditing = !!editingKey;
 
@@ -47,51 +58,71 @@ const PharmacyStaffMedicines = () => {
         form.resetFields();
     };
 
-    const onFinish = (values) => {
-        if (editingKey) {
-            // Update logic
-            const newData = [...medicines];
-            const index = newData.findIndex((item) => item.key === editingKey);
-            if (index > -1) {
-                const item = newData[index];
-                newData.splice(index, 1, {
-                    ...item,
-                    ...values,
-                    expiryDate: values.expiryDate.format('YYYY-MM-DD'),
-                });
-                setMedicines(newData);
-                message.success('Medicine updated successfully');
-            }
-        } else {
-            // Add logic
-            const newMedicine = {
-                key: Date.now().toString(),
-                id: `MED${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+    const onFinish = async (values) => {
+        try {
+            setLoading(true);
+            const data = {
                 ...values,
-                expiryDate: values.expiryDate.format('YYYY-MM-DD'),
+                manufacturer: values.brand || values.name,
+                stockQuantity: values.quantity,
+                expiryDate: values.expiryDate.toISOString(),
+                pharmacy: user.pharmacyId
             };
-            setMedicines([...medicines, newMedicine]);
-            message.success('Medicine added successfully');
+
+            if (editingKey) {
+                const response = await medicinesAPI.update(editingKey, data);
+                if (response.data.success) {
+                    message.success('Medicine updated successfully');
+                }
+            } else {
+                const response = await medicinesAPI.add(data);
+                if (response.data.success) {
+                    message.success('Medicine added successfully');
+                }
+            }
+            setIsModalOpen(false);
+            setEditingKey('');
+            form.resetFields();
+            fetchMedicines();
+        } catch (error) {
+            console.error('Failed to save medicine:', error);
+            const errorMsg = error.response?.data?.message || 'Failed to save medicine';
+            message.error(errorMsg);
+        } finally {
+            setLoading(false);
         }
-        setIsModalOpen(false);
-        setEditingKey('');
-        form.resetFields();
     };
 
     const edit = (record) => {
         form.setFieldsValue({
             ...record,
-            expiryDate: dayjs(record.expiryDate),
+            expiryDate: record.expiryDate !== 'N/A' ? dayjs(record.expiryDate) : null,
         });
         setEditingKey(record.key);
         setIsModalOpen(true);
     };
 
-    const handleDelete = (key) => {
-        const newData = medicines.filter((item) => item.key !== key);
-        setMedicines(newData);
-        message.success('Medicine deleted');
+    const handleDelete = async (key) => {
+        try {
+            setLoading(true);
+            const response = await medicinesAPI.delete(key);
+            if (response.data.success) {
+                message.success('Medicine deleted');
+                fetchMedicines();
+            }
+        } catch (error) {
+            console.error('Failed to delete medicine:', error);
+            message.error('Failed to delete medicine');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    // Filter Logic
+    const filteredMedicines = medicines.filter(med =>
+        med.name.toLowerCase().includes(searchText.toLowerCase()) ||
+        med.category.toLowerCase().includes(searchText.toLowerCase())
+    );
 
     const columns = [
         {
@@ -110,7 +141,7 @@ const PharmacyStaffMedicines = () => {
             title: 'Price',
             dataIndex: 'price',
             key: 'price',
-            render: (val) => `$${val.toFixed(2)}`
+            render: (val) => `$${val?.toFixed(2) || '0.00'}`
         },
         {
             title: 'Qty',
@@ -148,6 +179,10 @@ const PharmacyStaffMedicines = () => {
         },
     ];
 
+    if (authLoading) {
+        return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" tip="Loading..." /></div>;
+    }
+
     return (
         <div className="medicines-container">
             <Card
@@ -155,16 +190,26 @@ const PharmacyStaffMedicines = () => {
                 className="medicine-table-card"
                 bordered={false}
                 extra={
-                    <Button type="primary" icon={<PlusOutlined />} onClick={showAddModal}>
-                        Add Medicine
-                    </Button>
+                    <Space>
+                        <Input
+                            placeholder="Search medicines..."
+                            prefix={<SearchOutlined />}
+                            value={searchText}
+                            onChange={e => setSearchText(e.target.value)}
+                            style={{ width: 250 }}
+                        />
+                        <Button type="primary" icon={<PlusOutlined />} onClick={showAddModal}>
+                            Add Medicine
+                        </Button>
+                    </Space>
                 }
             >
                 <Table
                     columns={columns}
-                    dataSource={medicines}
+                    dataSource={filteredMedicines}
+                    loading={loading}
                     pagination={{ pageSize: 8 }}
-                    scroll={{ x: true }} // Responsive scroll
+                    scroll={{ x: true }}
                 />
             </Card>
 
@@ -174,6 +219,7 @@ const PharmacyStaffMedicines = () => {
                 onCancel={handleCancel}
                 footer={null}
                 destroyOnClose
+                confirmLoading={loading}
             >
                 <Form
                     form={form}
@@ -189,12 +235,80 @@ const PharmacyStaffMedicines = () => {
                     </Form.Item>
 
                     <Form.Item
+                        name="brand"
+                        label="Brand Name"
+                        rules={[{ required: true, message: 'Please enter brand name' }]}
+                    >
+                        <Input placeholder="e.g. Panadol" />
+                    </Form.Item>
+
+                    <Form.Item
                         name="category"
                         label="Category"
-                        rules={[{ required: true, message: 'Please enter category' }]}
+                        rules={[{ required: true, message: 'Please select category' }]}
                     >
-                        <Input placeholder="e.g. Antibiotics" />
+                        <Select placeholder="Select Category">
+                            <Select.Option value="otc">Over-the-Counter (OTC)</Select.Option>
+                            <Select.Option value="prescription">Prescription</Select.Option>
+                            <Select.Option value="supplement">Supplement</Select.Option>
+                            <Select.Option value="herbal">Herbal</Select.Option>
+                            <Select.Option value="medical_device">Medical Device</Select.Option>
+                        </Select>
                     </Form.Item>
+
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="dosageForm"
+                                label="Physical Form"
+                                rules={[{ required: true, message: 'Required' }]}
+                            >
+                                <Select placeholder="Select Form">
+                                    <Select.Option value="tablet">Tablet</Select.Option>
+                                    <Select.Option value="capsule">Capsule</Select.Option>
+                                    <Select.Option value="syrup">Syrup</Select.Option>
+                                    <Select.Option value="injection">Injection</Select.Option>
+                                    <Select.Option value="cream">Cream</Select.Option>
+                                    <Select.Option value="ointment">Ointment</Select.Option>
+                                    <Select.Option value="drops">Drops</Select.Option>
+                                    <Select.Option value="inhaler">Inhaler</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="requiresPrescription"
+                                label="Prescription Required?"
+                                initialValue={false}
+                            >
+                                <Select>
+                                    <Select.Option value={true}>Yes</Select.Option>
+                                    <Select.Option value={false}>No</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="strength"
+                                label="Strength"
+                                rules={[{ required: true, message: 'Required' }]}
+                            >
+                                <Input placeholder="e.g. 500mg" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="packSize"
+                                label="Pack Size"
+                                rules={[{ required: true, message: 'Required' }]}
+                            >
+                                <Input placeholder="e.g. Box of 30" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
                     <Row gutter={16}>
                         <Col span={12}>
@@ -237,7 +351,7 @@ const PharmacyStaffMedicines = () => {
                             <Button onClick={handleCancel}>
                                 Cancel
                             </Button>
-                            <Button type="primary" htmlType="submit">
+                            <Button type="primary" htmlType="submit" loading={loading}>
                                 {isEditing ? 'Update Medicine' : 'Add Medicine'}
                             </Button>
                         </Space>

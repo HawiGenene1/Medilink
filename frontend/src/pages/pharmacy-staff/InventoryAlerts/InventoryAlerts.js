@@ -1,70 +1,58 @@
-import React, { useState } from 'react';
-import { Card, Table, Tag, Button, Space, Tabs, Row, Col, Progress, Badge } from 'antd';
-import { AlertOutlined, MedicineBoxOutlined, WarningOutlined, ThunderboltOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Table, Tag, Button, Space, Tabs, Row, Col, Progress, Badge, message, Spin } from 'antd';
+import { AlertOutlined, WarningOutlined, ThunderboltOutlined, CheckCircleOutlined, ClockCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { medicinesAPI } from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
 import './InventoryAlerts.css';
 
 const { TabPane } = Tabs;
 
 const InventoryAlerts = () => {
     const [activeTab, setActiveTab] = useState('1');
+    const [loading, setLoading] = useState(false);
+    const [medicines, setMedicines] = useState([]);
+    const { user, loading: authLoading } = useAuth();
 
-    // Mock Data
-    const alertsData = [
-        {
-            key: '1',
-            name: 'Amoxicillin 500mg',
-            category: 'Antibiotics',
-            quantity: 12,
-            minLevel: 20,
-            expiryDate: '2024-12-31',
-            type: 'Low Stock',
-            status: 'Critical'
-        },
-        {
-            key: '2',
-            name: 'Insulin Glargine',
-            category: 'Diabetes',
-            quantity: 45,
-            minLevel: 10,
-            expiryDate: '2024-02-15',
-            type: 'Expiring Soon',
-            status: 'Warning'
-        },
-        {
-            key: '3',
-            name: 'Cetirizine 10mg',
-            category: 'Antihistamine',
-            quantity: 5,
-            minLevel: 25,
-            expiryDate: '2025-06-30',
-            type: 'Low Stock',
-            status: 'Critical'
-        },
-        {
-            key: '4',
-            name: 'Aspirin 81mg',
-            category: 'Pain Relief',
-            quantity: 120,
-            minLevel: 50,
-            expiryDate: '2024-01-25',
-            type: 'Expiring Soon',
-            status: 'Urgent'
-        },
-        {
-            key: '5',
-            name: 'Metformin 500mg',
-            category: 'Diabetes',
-            quantity: 8,
-            minLevel: 30,
-            expiryDate: '2025-01-01',
-            type: 'Low Stock',
-            status: 'Critical'
+    const fetchAlerts = useCallback(async () => {
+        if (!user?.pharmacyId) return;
+        try {
+            setLoading(true);
+            const response = await medicinesAPI.getAll({ pharmacyId: user.pharmacyId });
+            if (response.data.success) {
+                const medicinesList = response.data.data.medicines || [];
+                const formattedData = medicinesList.map(med => ({
+                    key: med._id,
+                    name: med.name,
+                    category: med.category,
+                    quantity: med.stockQuantity,
+                    minLevel: med.minStockLevel || 10,
+                    expiryDate: med.expiryDate ? dayjs(med.expiryDate).format('YYYY-MM-DD') : 'N/A',
+                }));
+                setMedicines(formattedData);
+            }
+        } catch (error) {
+            console.error('Failed to fetch alerts:', error);
+            message.error('Failed to load inventory alerts');
+        } finally {
+            setLoading(false);
         }
-    ];
+    }, [user?.pharmacyId]);
 
-    const lowStockItems = alertsData.filter(item => item.type === 'Low Stock');
-    const expiringItems = alertsData.filter(item => item.type === 'Expiring Soon');
+    useEffect(() => {
+        if (user?.pharmacyId) {
+            fetchAlerts();
+        }
+    }, [user, fetchAlerts]);
+
+    const lowStockItems = medicines.filter(item => item.quantity < item.minLevel);
+    const expiringItems = medicines.filter(item => {
+        if (item.expiryDate === 'N/A') return false;
+        const daysToExpiry = dayjs(item.expiryDate).diff(dayjs(), 'day');
+        return daysToExpiry >= 0 && daysToExpiry < 30;
+    });
+
+    const allAlerts = [...new Set([...lowStockItems, ...expiringItems])];
 
     const columns = [
         {
@@ -115,29 +103,39 @@ const InventoryAlerts = () => {
         },
         {
             title: 'Alert Type',
-            dataIndex: 'type',
             key: 'type',
-            render: (type) => {
+            render: (_, record) => {
+                const isLowStock = record.quantity < record.minLevel;
+                const isExpiring = record.expiryDate !== 'N/A' && dayjs(record.expiryDate).diff(dayjs(), 'day') < 30;
+
                 let color = 'default';
                 let icon = null;
-                if (type === 'Low Stock') {
+                let label = '';
+
+                if (isLowStock) {
                     color = 'volcano';
                     icon = <ThunderboltOutlined />;
-                } else if (type === 'Expiring Soon') {
+                    label = 'Low Stock';
+                } else if (isExpiring) {
                     color = 'orange';
                     icon = <WarningOutlined />;
+                    label = 'Expiring Soon';
                 }
-                return <Tag color={color} icon={icon}>{type}</Tag>;
+                return <Tag color={color} icon={icon}>{label}</Tag>;
             }
         },
         {
             title: 'Action',
             key: 'action',
-            render: () => (
-                <Button size="small">Restock</Button>
+            render: (record) => (
+                <Button size="small" type="primary" onClick={() => message.info(`Restocking ${record.name}`)}>Restock</Button>
             ),
         }
     ];
+
+    if (authLoading) {
+        return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" tip="Loading Alerts..." /></div>;
+    }
 
     return (
         <div className="inventory-alerts-container">
@@ -169,13 +167,17 @@ const InventoryAlerts = () => {
                         <Space align="start">
                             <div className="icon-box green"><CheckCircleOutlined /></div>
                             <div>
-                                <div className="stat-value">Fresh Stock</div>
-                                <div className="stat-label">Stock Status OK</div>
+                                <div className="stat-value">{medicines.length - allAlerts.length}</div>
+                                <div className="stat-label">Healthy Stock</div>
                             </div>
                         </Space>
                     </Card>
                 </Col>
             </Row>
+
+            <div style={{ marginBottom: 16, textAlign: 'right' }}>
+                <Button icon={<ReloadOutlined />} onClick={fetchAlerts} loading={loading}>Refresh Alerts</Button>
+            </div>
 
             <Card className="alerts-table-card" bordered={false}>
                 <Tabs defaultActiveKey="1" onChange={setActiveTab}>
@@ -184,24 +186,24 @@ const InventoryAlerts = () => {
                             <span>
                                 <AlertOutlined />
                                 All Alerts
-                                <Badge count={alertsData.length} style={{ marginLeft: 8, backgroundColor: '#f5222d' }} />
+                                <Badge count={allAlerts.length} style={{ marginLeft: 8, backgroundColor: '#f5222d' }} />
                             </span>
                         }
                         key="1"
                     >
-                        <Table columns={columns} dataSource={alertsData} pagination={{ pageSize: 8 }} />
+                        <Table columns={columns} dataSource={allAlerts} loading={loading} pagination={{ pageSize: 8 }} />
                     </TabPane>
                     <TabPane
                         tab={<span><ThunderboltOutlined /> Low Stock</span>}
                         key="2"
                     >
-                        <Table columns={columns} dataSource={lowStockItems} pagination={{ pageSize: 8 }} />
+                        <Table columns={columns} dataSource={lowStockItems} loading={loading} pagination={{ pageSize: 8 }} />
                     </TabPane>
                     <TabPane
                         tab={<span><WarningOutlined /> Expiring Soon</span>}
                         key="3"
                     >
-                        <Table columns={columns} dataSource={expiringItems} pagination={{ pageSize: 8 }} />
+                        <Table columns={columns} dataSource={expiringItems} loading={loading} pagination={{ pageSize: 8 }} />
                     </TabPane>
                 </Tabs>
             </Card>
