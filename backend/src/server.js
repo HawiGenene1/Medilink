@@ -23,8 +23,10 @@ const adminRoutes = require('./routes/adminRoutes');
 const { protectAdmin } = require('./middleware/authMiddleware');
 
 // API Routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', protectAdmin, adminRoutes);
+app.use('/api/delivery', require('./routes/deliveryRoutes'));
 
 
 // Test route

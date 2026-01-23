@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const { login, getCurrentUser } = require('../controllers/authController');
-const { protectAdmin } = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
 // @desc    Authenticate ADMIN & get token
 // @route   POST /api/auth/login
@@ -19,6 +19,6 @@ router.post(
 // @desc    Get current admin
 // @route   GET /api/auth/me
 // @access  Private
-router.get('/me', protectAdmin, getCurrentUser);
+router.get('/me', protect, authorize('admin'), getCurrentUser);
 
 module.exports = router;

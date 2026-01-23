@@ -12,7 +12,8 @@ import {
     DatabaseOutlined,
     LockOutlined,
     BarChartOutlined,
-    SettingOutlined
+    SettingOutlined,
+    CarOutlined
 } from '@ant-design/icons';
 
 const AdminLayout = () => {
@@ -26,6 +27,11 @@ const AdminLayout = () => {
             key: '/admin/users',
             icon: <TeamOutlined />,
             label: 'Users',
+        },
+        {
+            key: '/admin/delivery-applications',
+            icon: <CarOutlined />,
+            label: 'Delivery Applications',
         },
         {
             key: '/admin/pharmacies',

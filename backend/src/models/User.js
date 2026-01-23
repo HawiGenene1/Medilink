@@ -44,7 +44,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'admin'],
+    enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'admin', 'delivery'],
     default: 'customer'
   },
 
@@ -103,7 +103,7 @@ const userSchema = new mongoose.Schema({
   },
   resetToken: { type: String, default: null },
   resetTokenExpire: { type: Date, default: null },
-  
+
   // Admin management fields
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

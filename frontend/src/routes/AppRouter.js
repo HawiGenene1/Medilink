@@ -53,6 +53,8 @@ import Communication from '../pages/admin/Communication/Communication';
 import DataManagement from '../pages/admin/Data/DataManagement';
 import Analytics from '../pages/admin/Analytics/Analytics';
 import Settings from '../pages/admin/Settings/Settings';
+import DeliveryApplicationList from '../pages/admin/DeliveryApplications/DeliveryApplicationList';
+import DeliveryApplicationDetail from '../pages/admin/DeliveryApplications/DeliveryApplicationDetail';
 
 const AppRouter = () => {
   return (
@@ -115,6 +117,10 @@ const AppRouter = () => {
           {/* User Management */}
           <Route path="/admin/users" element={<UsersList />} />
           <Route path="/admin/users/:id" element={<UserDetails />} />
+
+          {/* Delivery Applications */}
+          <Route path="/admin/delivery-applications" element={<DeliveryApplicationList />} />
+          <Route path="/admin/delivery-applications/:id" element={<DeliveryApplicationDetail />} />
 
           {/* Pharmacy Management */}
           <Route path="/admin/pharmacies" element={<PharmacyList />} />
