@@ -20,12 +20,14 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
 const { protectAdmin } = require('./middleware/authMiddleware');
 
 // API Routes
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', protectAdmin, adminRoutes);
+app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
 app.use('/api/delivery', require('./routes/deliveryRoutes'));
 
 

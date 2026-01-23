@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const pendingPharmacySchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  },
   // Basic pharmacy information
   name: {
     type: String,
@@ -26,7 +31,7 @@ const pendingPharmacySchema = new mongoose.Schema({
     zipCode: { type: String, required: true },
     country: { type: String, default: 'Nigeria' }
   },
-  
+
   // Pharmacy specific details
   licenseNumber: {
     type: String,
@@ -38,7 +43,7 @@ const pendingPharmacySchema = new mongoose.Schema({
     enum: ['retail', 'hospital', 'clinical', 'compounding', 'specialty'],
     default: 'retail'
   },
-  
+
   // Registration details
   registrationDocuments: [{
     documentType: {
@@ -49,7 +54,7 @@ const pendingPharmacySchema = new mongoose.Schema({
     documentName: String,
     uploadedAt: { type: Date, default: Date.now }
   }],
-  
+
   // Contact person details
   contactPerson: {
     name: { type: String, required: true },
@@ -57,14 +62,14 @@ const pendingPharmacySchema = new mongoose.Schema({
     phone: { type: String, required: true },
     position: { type: String, required: true }
   },
-  
+
   // Status and workflow
   status: {
     type: String,
     enum: ['pending', 'under_review', 'approved', 'rejected', 'requires_more_info'],
     default: 'pending'
   },
-  
+
   // Review process
   reviewedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -73,7 +78,7 @@ const pendingPharmacySchema = new mongoose.Schema({
   reviewedAt: Date,
   reviewNotes: String,
   rejectionReason: String,
-  
+
   // Additional information
   operatingHours: {
     monday: { open: String, close: String },
@@ -84,12 +89,12 @@ const pendingPharmacySchema = new mongoose.Schema({
     saturday: { open: String, close: String },
     sunday: { open: String, close: String }
   },
-  
+
   services: [{
     type: String,
     description: String
   }],
-  
+
   // Timestamps
   submittedAt: { type: Date, default: Date.now },
   lastUpdated: { type: Date, default: Date.now }
@@ -106,12 +111,12 @@ pendingPharmacySchema.index({ status: 1 });
 pendingPharmacySchema.index({ submittedAt: -1 });
 
 // Virtual for days pending
-pendingPharmacySchema.virtual('daysPending').get(function() {
+pendingPharmacySchema.virtual('daysPending').get(function () {
   return Math.floor((Date.now() - this.submittedAt) / (1000 * 60 * 60 * 24));
 });
 
 // Pre-save middleware
-pendingPharmacySchema.pre('save', function(next) {
+pendingPharmacySchema.pre('save', function (next) {
   this.lastUpdated = new Date();
   next();
 });

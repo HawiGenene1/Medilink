@@ -45,6 +45,7 @@ import CashierDashboard from '../pages/cashier/Dashboard';
 // Real Admin Components
 import UsersList from '../pages/admin/Users/UsersList';
 import UserDetails from '../pages/admin/Users/UserDetails';
+import PendingRegistrations from '../pages/admin/Users/PendingRegistrations';
 import PharmacyList from '../pages/admin/Pharmacies/PharmacyList';
 import PharmacyDetail from '../pages/admin/Pharmacies/PharmacyDetail';
 import SystemMonitoring from '../pages/admin/Monitoring/SystemMonitoring';
@@ -119,6 +120,7 @@ const AppRouter = () => {
           {/* User Management */}
           <Route path="/admin/users" element={<UsersList />} />
           <Route path="/admin/users/:id" element={<UserDetails />} />
+          <Route path="/admin/registrations/pending" element={<PendingRegistrations />} />
 
           {/* Delivery Applications */}
           <Route path="/admin/delivery-applications" element={<DeliveryApplicationList />} />

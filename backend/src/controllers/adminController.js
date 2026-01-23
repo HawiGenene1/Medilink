@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Pharmacy = require('../models/Pharmacy');
 const PendingPharmacy = require('../models/PendingPharmacy');
+const PendingDeliveryPerson = require('../models/PendingDeliveryPerson');
 const AuditLog = require('../models/AuditLog');
 const bcrypt = require('bcryptjs');
 const { sendEmail } = require('../utils/emailService');
@@ -12,26 +13,40 @@ const { sendEmail } = require('../utils/emailService');
 // @access  Private/Admin
 const getPendingRegistrations = async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
-    
-    const query = {};
-    if (status) {
-      query.status = status;
+    const { role, page = 1, limit = 20 } = req.query;
+
+    const query = { status: 'pending' };
+    if (role) {
+      query.role = role;
     }
 
-    const registrations = await PendingPharmacy.find(query)
+    const pendingUsers = await User.find(query)
+      .select('-password')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const count = await PendingPharmacy.countDocuments(query);
+    const data = await Promise.all(pendingUsers.map(async (user) => {
+      let details = null;
+      if (user.role === 'pharmacy_admin') {
+        details = await PendingPharmacy.findOne({ userId: user._id });
+      } else if (user.role === 'delivery') {
+        details = await PendingDeliveryPerson.findOne({ userId: user._id });
+      }
+      return {
+        ...user.toObject(),
+        applicationDetails: details
+      };
+    }));
+
+    const count = await User.countDocuments(query);
 
     res.json({
       success: true,
       count,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
-      data: registrations
+      data
     });
   } catch (error) {
     console.error('Error fetching registrations:', error);
@@ -45,7 +60,7 @@ const getPendingRegistrations = async (req, res) => {
 const getRegistrationDetails = async (req, res) => {
   try {
     const registration = await PendingPharmacy.findById(req.params.id);
-    
+
     if (!registration) {
       return res.status(404).json({ success: false, message: 'Registration not found' });
     }
@@ -63,67 +78,86 @@ const getRegistrationDetails = async (req, res) => {
 const approveRegistration = async (req, res) => {
   try {
     const { reason } = req.body;
-    const registration = await PendingPharmacy.findById(req.params.id);
-    
-    if (!registration) {
-      return res.status(404).json({ success: false, message: 'Registration not found' });
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (registration.status !== 'pending') {
+    if (user.status !== 'pending') {
       return res.status(400).json({ success: false, message: 'Registration has already been processed' });
     }
 
-    // Create pharmacy from registration
-    const pharmacy = new Pharmacy({
-      name: registration.name,
-      email: registration.email,
-      phone: registration.phone,
-      address: registration.address,
-      location: registration.location,
-      owner: {
-        name: registration.ownerName,
-        email: registration.ownerEmail,
-        phone: registration.ownerPhone
-      },
-      licenseNumber: registration.licenseNumber,
-      documents: registration.documents,
-      isVerified: true,
-      isActive: true,
-      approvedBy: req.user.userId,
-      approvedAt: new Date(),
-      approvalReason: reason || 'Approved after verification'
-    });
+    let result = null;
 
-    await pharmacy.save();
+    if (user.role === 'pharmacy_admin') {
+      const registration = await PendingPharmacy.findOne({ userId: user._id });
+      if (!registration) {
+        return res.status(404).json({ success: false, message: 'Pharmacy registration details not found' });
+      }
 
-    // Update registration status
-    registration.status = 'approved';
-    registration.approvedBy = req.user.userId;
-    registration.approvedAt = new Date();
-    registration.approvalReason = reason || 'Approved after verification';
-    await registration.save();
+      // Create pharmacy from registration
+      const pharmacy = new Pharmacy({
+        name: registration.name,
+        email: registration.email,
+        phone: registration.phone,
+        address: registration.address,
+        owner: user._id,
+        ownerName: `${user.firstName} ${user.lastName}`,
+        licenseNumber: registration.licenseNumber,
+        isVerified: true,
+        isActive: true,
+        status: 'approved'
+      });
+
+      await pharmacy.save();
+
+      registration.status = 'approved';
+      registration.reviewedBy = req.user.userId;
+      registration.reviewedAt = new Date();
+      registration.reviewNotes = reason || 'Approved after verification';
+      await registration.save();
+
+      result = pharmacy;
+    } else if (user.role === 'delivery') {
+      const registration = await PendingDeliveryPerson.findOne({ userId: user._id });
+      if (registration) {
+        registration.status = 'approved';
+        registration.reviewedBy = req.user.userId;
+        registration.reviewedAt = new Date();
+        registration.reviewNotes = reason || 'Approved after verification';
+        await registration.save();
+      }
+    }
+
+    // Update user status
+    user.status = 'active';
+    user.isEmailVerified = true;
+    await user.save();
 
     // Send approval email
     await sendEmail({
-      to: registration.email,
-      subject: 'Pharmacy Registration Approved - MediLink',
-      text: `Dear ${registration.ownerName},\n\nCongratulations! Your pharmacy registration has been approved.\n\nPharmacy Name: ${registration.name}\nYou can now start using the MediLink platform.\n\nBest regards,\nThe MediLink Team`
+      to: user.email,
+      subject: 'Account Approved - MediLink',
+      text: `Dear ${user.firstName},\n\nCongratulations! Your account registration has been approved.\n\nYou can now log in and start using the MediLink platform.\n\nBest regards,\nThe MediLink Team`
     });
 
     // Create audit log
     await AuditLog.create({
-      userId: req.user.userId,
-      action: 'APPROVE_PHARMACY',
-      resourceType: 'PHARMACY',
-      resourceId: pharmacy._id,
-      description: `Approved pharmacy registration: ${registration.name}`,
-      status: 'SUCCESS'
+      user: req.user.userId,
+      userEmail: req.user.email,
+      userRole: req.user.role,
+      action: 'APPROVE',
+      entityType: 'USER',
+      entityId: user._id,
+      description: `Approved ${user.role} registration for ${user.email}`,
+      ipAddress: req.ip
     });
 
-    res.json({ 
-      success: true, 
-      message: 'Pharmacy registration approved successfully', 
-      data: pharmacy 
+    res.json({
+      success: true,
+      message: `${user.role} approved successfully`,
+      data: result || user
     });
   } catch (error) {
     console.error('Error approving registration:', error);
@@ -137,51 +171,71 @@ const approveRegistration = async (req, res) => {
 const rejectRegistration = async (req, res) => {
   try {
     const { reason } = req.body;
-    
+
     if (!reason) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide a reason for rejection' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a reason for rejection'
       });
     }
 
-    const registration = await PendingPharmacy.findById(req.params.id);
-    
-    if (!registration) {
-      return res.status(404).json({ success: false, message: 'Registration not found' });
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    if (registration.status !== 'pending') {
+    if (user.status !== 'pending') {
       return res.status(400).json({ success: false, message: 'Registration has already been processed' });
     }
 
-    // Update registration status
-    registration.status = 'rejected';
-    registration.rejectedBy = req.user.userId;
-    registration.rejectedAt = new Date();
-    registration.rejectionReason = reason;
-    await registration.save();
+    // Update registration details if they exist
+    if (user.role === 'pharmacy_admin') {
+      const registration = await PendingPharmacy.findOne({ userId: user._id });
+      if (registration) {
+        registration.status = 'rejected';
+        registration.reviewedBy = req.user.userId;
+        registration.reviewedAt = new Date();
+        registration.rejectionReason = reason;
+        await registration.save();
+      }
+    } else if (user.role === 'delivery') {
+      const registration = await PendingDeliveryPerson.findOne({ userId: user._id });
+      if (registration) {
+        registration.status = 'rejected';
+        registration.reviewedBy = req.user.userId;
+        registration.reviewedAt = new Date();
+        registration.rejectionReason = reason;
+        await registration.save();
+      }
+    }
+
+    // Update user status
+    user.status = 'rejected';
+    await user.save();
 
     // Send rejection email
     await sendEmail({
-      to: registration.email,
-      subject: 'Pharmacy Registration Rejected - MediLink',
-      text: `Dear ${registration.ownerName},\n\nWe regret to inform you that your pharmacy registration has been rejected.\n\nPharmacy Name: ${registration.name}\nReason: ${reason}\n\nYou may reapply after addressing the issues mentioned.\n\nBest regards,\nThe MediLink Team`
+      to: user.email,
+      subject: 'Account Registration Rejected - MediLink',
+      text: `Dear ${user.firstName},\n\nWe regret to inform you that your account registration has been rejected.\n\nReason: ${reason}\n\nYou may reapply after addressing the issues mentioned.\n\nBest regards,\nThe MediLink Team`
     });
 
     // Create audit log
     await AuditLog.create({
-      userId: req.user.userId,
-      action: 'REJECT_PHARMACY',
-      resourceType: 'PHARMACY',
-      resourceId: registration._id,
-      description: `Rejected pharmacy registration: ${registration.name}`,
-      status: 'SUCCESS'
+      user: req.user.userId,
+      userEmail: req.user.email,
+      userRole: req.user.role,
+      action: 'REJECT',
+      entityType: 'USER',
+      entityId: user._id,
+      description: `Rejected ${user.role} registration for ${user.email}`,
+      ipAddress: req.ip
     });
 
-    res.json({ 
-      success: true, 
-      message: 'Pharmacy registration rejected successfully' 
+    res.json({
+      success: true,
+      message: 'Registration rejected successfully'
     });
   } catch (error) {
     console.error('Error rejecting registration:', error);
@@ -197,7 +251,7 @@ const rejectRegistration = async (req, res) => {
 const getAllSubscriptions = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    
+
     const query = {};
     if (status) {
       query.status = status;
@@ -231,7 +285,7 @@ const activateSubscription = async (req, res) => {
   try {
     const pharmacy = await Pharmacy.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         'subscription.status': 'active',
         'subscription.activatedAt': new Date(),
         'subscription.activatedBy': req.user.userId
@@ -243,10 +297,10 @@ const activateSubscription = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Pharmacy not found' });
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Subscription activated successfully', 
-      data: pharmacy 
+    res.json({
+      success: true,
+      message: 'Subscription activated successfully',
+      data: pharmacy
     });
   } catch (error) {
     console.error('Error activating subscription:', error);
@@ -260,10 +314,10 @@ const activateSubscription = async (req, res) => {
 const deactivateSubscription = async (req, res) => {
   try {
     const { reason } = req.body;
-    
+
     const pharmacy = await Pharmacy.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         'subscription.status': 'inactive',
         'subscription.deactivatedAt': new Date(),
         'subscription.deactivatedBy': req.user.userId,
@@ -276,10 +330,10 @@ const deactivateSubscription = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Pharmacy not found' });
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Subscription deactivated successfully', 
-      data: pharmacy 
+    res.json({
+      success: true,
+      message: 'Subscription deactivated successfully',
+      data: pharmacy
     });
   } catch (error) {
     console.error('Error deactivating subscription:', error);
@@ -293,9 +347,9 @@ const deactivateSubscription = async (req, res) => {
 const renewSubscription = async (req, res) => {
   try {
     const { duration, plan } = req.body;
-    
+
     const pharmacy = await Pharmacy.findById(req.params.id);
-    
+
     if (!pharmacy) {
       return res.status(404).json({ success: false, message: 'Pharmacy not found' });
     }
@@ -316,10 +370,10 @@ const renewSubscription = async (req, res) => {
 
     await pharmacy.save();
 
-    res.json({ 
-      success: true, 
-      message: 'Subscription renewed successfully', 
-      data: pharmacy 
+    res.json({
+      success: true,
+      message: 'Subscription renewed successfully',
+      data: pharmacy
     });
   } catch (error) {
     console.error('Error renewing subscription:', error);
@@ -334,39 +388,39 @@ const renewSubscription = async (req, res) => {
 // @access  Private/Admin
 const createAdminUser = async (req, res) => {
   try {
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      password, 
-      role, 
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      role,
       phone,
-      permissions = [] 
+      permissions = []
     } = req.body;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password || !role) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide all required fields: firstName, lastName, email, password, role' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide all required fields: firstName, lastName, email, password, role'
       });
     }
 
     // Validate role
     const allowedRoles = ['admin', 'pharmacy_admin', 'cashier'];
     if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Invalid role. Allowed roles: ${allowedRoles.join(', ')}` 
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role. Allowed roles: ${allowedRoles.join(', ')}`
       });
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'User with this email already exists' 
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
       });
     }
 
@@ -401,10 +455,10 @@ const createAdminUser = async (req, res) => {
       text: `Dear ${firstName} ${lastName},\n\nYour admin account has been created successfully.\n\nEmail: ${email}\nRole: ${role}\n\nYou can now log in to admin panel.\n\nBest regards,\nThe MediLink Team`
     });
 
-    res.status(201).json({ 
-      success: true, 
-      message: 'Admin user created successfully', 
-      data: userResponse 
+    res.status(201).json({
+      success: true,
+      message: 'Admin user created successfully',
+      data: userResponse
     });
   } catch (error) {
     console.error('Error creating admin user:', error);
@@ -417,27 +471,27 @@ const createAdminUser = async (req, res) => {
 // @access  Private/Admin
 const getAllUsers = async (req, res) => {
   try {
-    const { 
-      role, 
-      status, 
-      page = 1, 
-      limit = 20, 
-      search 
+    const {
+      role,
+      status,
+      page = 1,
+      limit = 20,
+      search
     } = req.query;
 
     // Build query
     const query = {};
-    
+
     if (role) {
       query.role = role;
     }
-    
+
     if (status === 'active') {
       query.isActive = true;
     } else if (status === 'inactive') {
       query.isActive = false;
     }
-    
+
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: 'i' } },
@@ -474,7 +528,7 @@ const getAllUsers = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
-    
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -492,17 +546,17 @@ const getUserById = async (req, res) => {
 const disableUser = async (req, res) => {
   try {
     const { reason } = req.body;
-    
+
     if (!reason) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide a reason for disabling this user' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a reason for disabling this user'
       });
     }
 
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         isActive: false,
         disabledAt: new Date(),
         disabledReason: reason,
@@ -522,10 +576,10 @@ const disableUser = async (req, res) => {
       text: `Dear ${user.firstName} ${user.lastName},\n\nYour account has been disabled for the following reason:\n\n${reason}\n\nIf you believe this is a mistake, please contact our support team.\n\nBest regards,\nThe MediLink Team`
     });
 
-    res.json({ 
-      success: true, 
-      message: 'User disabled successfully', 
-      data: user 
+    res.json({
+      success: true,
+      message: 'User disabled successfully',
+      data: user
     });
   } catch (error) {
     console.error('Error disabling user:', error);
@@ -540,7 +594,7 @@ const enableUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         isActive: true,
         enabledAt: new Date(),
         enabledBy: req.user.userId
@@ -559,10 +613,10 @@ const enableUser = async (req, res) => {
       text: `Dear ${user.firstName} ${user.lastName},\n\nYour account has been re-enabled. You can now log in to your account.\n\nBest regards,\nThe MediLink Team`
     });
 
-    res.json({ 
-      success: true, 
-      message: 'User enabled successfully', 
-      data: user 
+    res.json({
+      success: true,
+      message: 'User enabled successfully',
+      data: user
     });
   } catch (error) {
     console.error('Error enabling user:', error);
@@ -576,26 +630,26 @@ const enableUser = async (req, res) => {
 const updateUserRole = async (req, res) => {
   try {
     const { role, reason } = req.body;
-    
+
     if (!role) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide a new role' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a new role'
       });
     }
 
     // Validate role
     const allowedRoles = ['admin', 'pharmacy_admin', 'cashier', 'customer'];
     if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Invalid role. Allowed roles: ${allowedRoles.join(', ')}` 
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role. Allowed roles: ${allowedRoles.join(', ')}`
       });
     }
 
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         role,
         roleUpdatedAt: new Date(),
         roleUpdatedBy: req.user.userId,
@@ -615,10 +669,10 @@ const updateUserRole = async (req, res) => {
       text: `Dear ${user.firstName} ${user.lastName},\n\nYour role has been updated to: ${role}\n\n${reason ? `Reason: ${reason}` : ''}\n\nYou can now log in with your new permissions.\n\nBest regards,\nThe MediLink Team`
     });
 
-    res.json({ 
-      success: true, 
-      message: 'User role updated successfully', 
-      data: user 
+    res.json({
+      success: true,
+      message: 'User role updated successfully',
+      data: user
     });
   } catch (error) {
     console.error('Error updating user role:', error);
@@ -634,18 +688,18 @@ const updateUserRole = async (req, res) => {
 const bulkCreateUsers = async (req, res) => {
   try {
     const { users } = req.body;
-    
+
     if (!users || !Array.isArray(users) || users.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide an array of users to create' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of users to create'
       });
     }
 
     if (users.length > 100) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cannot create more than 100 users at once' 
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot create more than 100 users at once'
       });
     }
 
@@ -656,10 +710,10 @@ const bulkCreateUsers = async (req, res) => {
     for (let i = 0; i < users.length; i++) {
       try {
         const userData = users[i];
-        
+
         // Hash password
         const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
-        
+
         const user = new User({
           ...userData,
           password: hashedPassword,
@@ -709,11 +763,11 @@ const bulkCreateUsers = async (req, res) => {
 const bulkUpdateUsers = async (req, res) => {
   try {
     const { updates } = req.body;
-    
+
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide an array of user updates' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of user updates'
       });
     }
 
@@ -723,10 +777,10 @@ const bulkUpdateUsers = async (req, res) => {
     for (let i = 0; i < updates.length; i++) {
       try {
         const { id, ...updateData } = updates[i];
-        
+
         const user = await User.findByIdAndUpdate(
           id,
-          { 
+          {
             ...updateData,
             updatedBy: req.user.userId,
             updatedAt: new Date()
@@ -776,11 +830,11 @@ const bulkUpdateUsers = async (req, res) => {
 const bulkDeleteUsers = async (req, res) => {
   try {
     const { userIds } = req.body;
-    
+
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide an array of user IDs to delete' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of user IDs to delete'
       });
     }
 
@@ -790,7 +844,7 @@ const bulkDeleteUsers = async (req, res) => {
     for (let i = 0; i < userIds.length; i++) {
       try {
         const user = await User.findByIdAndDelete(userIds[i]);
-        
+
         if (user) {
           deletedUsers.push({
             index: i,
@@ -833,18 +887,18 @@ const bulkDeleteUsers = async (req, res) => {
 const bulkBlockPharmacies = async (req, res) => {
   try {
     const { pharmacyIds, reason } = req.body;
-    
+
     if (!pharmacyIds || !Array.isArray(pharmacyIds) || pharmacyIds.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide an array of pharmacy IDs to block' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of pharmacy IDs to block'
       });
     }
 
     if (!reason) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide a reason for blocking these pharmacies' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a reason for blocking these pharmacies'
       });
     }
 
@@ -855,7 +909,7 @@ const bulkBlockPharmacies = async (req, res) => {
       try {
         const pharmacy = await Pharmacy.findByIdAndUpdate(
           pharmacyIds[i],
-          { 
+          {
             isBlocked: true,
             blockedAt: new Date(),
             blockedBy: req.user.userId,
@@ -913,11 +967,11 @@ const bulkBlockPharmacies = async (req, res) => {
 const bulkApprovePharmacies = async (req, res) => {
   try {
     const { pharmacyIds, reason } = req.body;
-    
+
     if (!pharmacyIds || !Array.isArray(pharmacyIds) || pharmacyIds.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide an array of pharmacy IDs to approve' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of pharmacy IDs to approve'
       });
     }
 
@@ -928,7 +982,7 @@ const bulkApprovePharmacies = async (req, res) => {
       try {
         const pharmacy = await Pharmacy.findByIdAndUpdate(
           pharmacyIds[i],
-          { 
+          {
             isVerified: true,
             verifiedAt: new Date(),
             verifiedBy: req.user.userId,
@@ -973,13 +1027,72 @@ const bulkApprovePharmacies = async (req, res) => {
   }
 };
 
+// @desc    Create a new delivery person
+// @route   POST /api/admin/delivery-person
+// @access  Private/Admin
+const createDeliveryPerson = async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone, vehicleInfo, address } = req.body;
+
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'User already exists' });
+    }
+
+    const password = generatePassword(12);
+
+    // Create new delivery user
+    // Password hashing is handled by pre-save hook in User model
+    const deliveryPerson = new User({
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      role: 'delivery',
+      status: 'active',
+      isEmailVerified: true,
+      vehicleInfo,
+      address,
+      createdBy: req.user.userId
+    });
+
+    await deliveryPerson.save();
+
+    // Send welcome email
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Delivery Partner Account Created - MediLink',
+        text: `Dear ${firstName},\n\nYour delivery partner account has been created.\n\nLogin Email: ${email}\nPassword: ${password}\n\nPlease login and change your password.\n\nBest regards,\nThe MediLink Team`
+      });
+    } catch (emailError) {
+      console.error('Error sending welcome email to delivery person:', emailError);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Delivery person created successfully',
+      data: {
+        id: deliveryPerson._id,
+        name: `${deliveryPerson.firstName} ${deliveryPerson.lastName}`,
+        email: deliveryPerson.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating delivery person:', error);
+    res.status(500).json({ success: false, message: 'Server error creating delivery person' });
+  }
+};
+
 // @desc    Bulk export data
 // @route   POST /api/admin/export
 // @access  Private/Admin
 const bulkExportData = async (req, res) => {
   try {
     const { type, format = 'json', filters = {} } = req.body;
-    
+
     let data;
     let filename;
 
@@ -1007,9 +1120,9 @@ const bulkExportData = async (req, res) => {
         filename = `audit_logs_export_${new Date().toISOString().split('T')[0]}`;
         break;
       default:
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid export type. Allowed types: users, pharmacies, orders, medicines, audit_logs' 
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid export type. Allowed types: users, pharmacies, orders, medicines, audit_logs'
         });
     }
 
@@ -1042,13 +1155,13 @@ module.exports = {
   getRegistrationDetails,
   approveRegistration,
   rejectRegistration,
-  
+
   // Subscription management
   getAllSubscriptions,
   activateSubscription,
   deactivateSubscription,
   renewSubscription,
-  
+
   // User management
   createAdminUser,
   getAllUsers,
@@ -1056,12 +1169,13 @@ module.exports = {
   disableUser,
   enableUser,
   updateUserRole,
-  
+
   // Bulk operations
   bulkCreateUsers,
   bulkUpdateUsers,
   bulkDeleteUsers,
   bulkBlockPharmacies,
   bulkApprovePharmacies,
-  bulkExportData
+  bulkExportData,
+  createDeliveryPerson
 };

@@ -25,7 +25,7 @@ const validateRegistration = [
 ];
 
 // @route   POST /api/auth/register
-// @desc    Register a new customer
+// @desc    Register a new user (Customer, Pharmacy, or Delivery)
 // @access  Public
 router.post('/register', validateRegistration, register);
 

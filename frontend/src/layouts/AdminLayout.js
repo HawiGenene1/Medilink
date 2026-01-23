@@ -29,9 +29,9 @@ const AdminLayout = () => {
             label: 'Users',
         },
         {
-            key: '/admin/delivery-applications',
-            icon: <CarOutlined />,
-            label: 'Delivery Applications',
+            key: '/admin/registrations/pending',
+            icon: <FileTextOutlined />,
+            label: 'Pending Registrations',
         },
         {
             key: '/admin/pharmacies',

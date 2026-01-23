@@ -9,8 +9,9 @@ const {
   getPendingRegistrations,
   approveRegistration,
   rejectRegistration,
-  bulkExportData
-} = require('../controllers/adminController'); // Fixed path to adminController
+  bulkExportData,
+  createDeliveryPerson
+} = require('../controllers/adminController');
 const { logAdminAction } = require('../middleware/auditMiddleware');
 
 // @desc    Admin Health Check
@@ -34,9 +35,11 @@ router.patch('/users/:id/role', logAdminAction('UPDATE_USER_ROLE', 'User'), upda
 
 // Pharmacy Management
 // router.get('/pharmacies', getAllPharmacies); // TODO: Implement getAllPharmacies
-router.get('/pharmacies/pending', getPendingRegistrations); // Mapped getPendingRequests -> getPendingRegistrations
-router.post('/pharmacies/approve/:id', logAdminAction('APPROVE_PHARMACY', 'Pharmacy'), approveRegistration); // Mapped approvePharmacy -> approveRegistration
-router.post('/pharmacies/reject/:id', logAdminAction('REJECT_PHARMACY', 'Pharmacy'), rejectRegistration); // Mapped rejectPharmacy -> rejectRegistration
+// Registration Management
+router.get('/registrations/pending', getPendingRegistrations);
+router.post('/registrations/approve/:id', logAdminAction('APPROVE', 'USER'), approveRegistration);
+router.post('/registrations/reject/:id', logAdminAction('REJECT', 'USER'), rejectRegistration);
+router.post('/delivery-person', logAdminAction('CREATE_DELIVERY_PERSON', 'User'), createDeliveryPerson);
 
 // Medicine Repository Management (TODO: Implement Medicine Controller)
 // router.get('/medicines', getAllMedicines);
