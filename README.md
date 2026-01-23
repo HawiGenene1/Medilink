@@ -1,1 +1,1 @@
-Online Medicine Store (Inventory/Stock Management)
+MediLink: Integrated Online Medicine Ordering and Inventory Management System                            
