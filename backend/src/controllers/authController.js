@@ -23,7 +23,7 @@ const register = async (req, res) => {
       });
     }
 
-    const { firstName, lastName, email, phone } = req.body;
+    const { firstName, lastName, email, phone, role, vehicleInfo } = req.body;
 
     // Check if user already exists
     let user = await User.findOne({ email });
@@ -33,6 +33,9 @@ const register = async (req, res) => {
         message: 'User already exists',
       });
     }
+
+    // Role safety: only allow customer and delivery to be requested via public registration
+    const targetRole = (role === 'delivery' || role === 'customer') ? role : 'customer';
 
     // Generate a secure password
     const password = generatePassword(12);
@@ -47,11 +50,12 @@ const register = async (req, res) => {
       lastName,
       email,
       phone,
-      role: 'customer',
+      role: targetRole,
       status: 'pending',
       password,
       verificationToken,
-      verificationTokenExpires
+      verificationTokenExpires,
+      vehicleInfo: targetRole === 'delivery' ? vehicleInfo : undefined
     });
 
     // Hash password and save user
@@ -71,17 +75,15 @@ const register = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'User registered successfully. Please check your email for your generated password.',
-      data: {
-        token,
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          status: user.status
-        },
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        status: user.status
       },
     });
   } catch (error) {
@@ -121,7 +123,8 @@ const login = async (req, res) => {
     }
 
     // Check account status
-    if (user.status !== 'active') {
+    // Allow delivery and pharmacy_admin to login even if pending (to complete onboarding)
+    if (user.status !== 'active' && !(user.status === 'pending' && (user.role === 'delivery' || user.role === 'pharmacy_admin'))) {
       let statusMessage = 'Your account is pending approval.';
       if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
       if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';

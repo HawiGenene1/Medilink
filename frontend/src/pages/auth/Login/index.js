@@ -34,7 +34,7 @@ const Login = () => {
             navigate('/cashier/dashboard');
             break;
           case 'delivery':
-            navigate('/delivery/dashboard');
+            navigate('/auth/delivery/onboarding');
             break;
           case 'admin':
             navigate('/admin/dashboard');
@@ -105,11 +105,17 @@ const Login = () => {
           </Form.Item>
 
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-            <Link to="/register">
+            <Link to="/auth/register">
               Don't have an account? Register
             </Link>
           </div>
 
+          <div style={{ textAlign: 'center', padding: '12px', borderTop: '1px solid #f1f5f9' }}>
+            <span style={{ color: '#64748b' }}>Want to earn with MediLink? </span>
+            <Link to="/auth/delivery/register" style={{ fontWeight: 600, color: '#1E88E5' }}>
+              Become a Delivery Partner
+            </Link>
+          </div>
 
         </Form>
       </Card>
