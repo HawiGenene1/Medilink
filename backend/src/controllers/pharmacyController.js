@@ -79,6 +79,39 @@ const registerPharmacy = async (req, res) => {
   }
 };
 
+};
+
+/**
+ * @route   GET /api/pharmacy/:id
+ * @desc    Get public pharmacy details by ID
+ * @access  Public
+ */
+const getPharmacyById = async (req, res) => {
+  try {
+    const pharmacy = await Pharmacy.findById(req.params.id)
+      .select('name address phone location openingHours isVerified rating reviewCount');
+
+    if (!pharmacy) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pharmacy not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: pharmacy
+    });
+  } catch (error) {
+    logger.error('Error fetching pharmacy:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 /**
  * @route   GET /api/pharmacy/status/:id
  * @desc    Check registration status of a pharmacy
@@ -87,9 +120,9 @@ const registerPharmacy = async (req, res) => {
 const checkPharmacyStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const pharmacy = await TempPharmacy.findById(id).select('-__v -updatedAt');
-    
+
     if (!pharmacy) {
       return res.status(404).json({
         success: false,
@@ -102,8 +135,8 @@ const checkPharmacyStatus = async (req, res) => {
       data: {
         status: pharmacy.status,
         ...(pharmacy.status === 'rejected' && { rejectionReason: pharmacy.rejectionReason }),
-        ...(pharmacy.status === 'approved' && { 
-          nextSteps: 'Please check your email for account setup instructions' 
+        ...(pharmacy.status === 'approved' && {
+          nextSteps: 'Please check your email for account setup instructions'
         })
       }
     });
@@ -158,7 +191,7 @@ const getPharmacySubscription = async (req, res) => {
 const requestSubscriptionRenewal = async (req, res) => {
   try {
     const { mode = 'monthly' } = req.body;
-    
+
     // In a real implementation, you would process the renewal request here
     // This is just a placeholder response
     res.status(200).json({
@@ -188,5 +221,6 @@ module.exports = {
   registerPharmacy,
   checkPharmacyStatus,
   getPharmacySubscription,
-  requestSubscriptionRenewal
+  requestSubscriptionRenewal,
+  getPharmacyById
 };
