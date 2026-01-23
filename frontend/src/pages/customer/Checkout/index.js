@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Badge, Result, Tag, Alert } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Result, Tag, Alert, Input } from 'antd';
 import {
     EnvironmentOutlined,
     SafetyCertificateOutlined,
@@ -7,12 +7,23 @@ import {
     CarryOutOutlined,
     CheckCircleFilled,
     MedicineBoxOutlined,
-    PlusOutlined,
-    ArrowLeftOutlined
+    ArrowLeftOutlined,
+    CompassOutlined,
+    MessageOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import './Checkout.css';
+
+// Fix Leaflet icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -20,30 +31,140 @@ const Checkout = () => {
     const navigate = useNavigate();
     const { cartItems, subtotal, clearCart } = useCart();
     const [currentStep, setCurrentStep] = useState(0);
-
-    // Mock Data
-    const addresses = [
-        { id: 'addr-1', label: 'Home', fullAddress: 'Bole, House 456, Addis Ababa', isDefault: true },
-        { id: 'addr-2', label: 'Office', fullAddress: 'Kazanchis, Nani Building 4th Floor, Addis Ababa', isDefault: false },
-    ];
-
-    const [selectedAddress, setSelectedAddress] = useState('addr-1');
     const [paymentMethod, setPaymentMethod] = useState('telebirr');
 
+    // Location State
+    const [mapCenter, setMapCenter] = useState([9.0227, 38.7460]); // Addis Ababa default
+    const [locationLabel, setLocationLabel] = useState('Locating...');
+    const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
+    const [deliveryNotes, setDeliveryNotes] = useState('');
+    const [selectedAddressCoords, setSelectedAddressCoords] = useState(null);
+
+    // Map Refs
+    const mapRef = useRef(null);
+    const mapInstance = useRef(null);
+    const geocodeTimeout = useRef(null);
+
     const steps = [
-        { title: 'Address', icon: <EnvironmentOutlined /> },
+        { title: 'Location', icon: <EnvironmentOutlined /> },
         { title: 'Prescription', icon: <SafetyCertificateOutlined /> },
         { title: 'Payment', icon: <CreditCardOutlined /> },
         { title: 'Review', icon: <CarryOutOutlined /> },
     ];
 
-    const handleNext = () => setCurrentStep(prev => prev + 1);
+    // Reverse Geocoding
+    const reverseGeocode = async (lat, lng) => {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+            const data = await response.json();
+            const address = data.display_name.split(',').slice(0, 2).join(',');
+            setLocationLabel(address || 'Unknown Location');
+        } catch (error) {
+            console.error('Geocoding failed:', error);
+            setLocationLabel(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        }
+    };
+
+    // Initialize Map for Step 0
+    useEffect(() => {
+        if (currentStep === 0 && mapRef.current && !mapInstance.current) {
+            mapInstance.current = L.map(mapRef.current, {
+                zoomControl: false,
+                attributionControl: false
+            }).setView(mapCenter, 16);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
+
+            // Add Soft Blue Theme class to container
+            mapRef.current.classList.add('soft-blue-map');
+
+            // Handle Map Movement
+            mapInstance.current.on('move', () => {
+                const center = mapInstance.current.getCenter();
+                setMapCenter([center.lat, center.lng]);
+                setIsLocationConfirmed(false); // Reset confirmation on move
+
+                // Debounced Geocoding
+                if (geocodeTimeout.current) clearTimeout(geocodeTimeout.current);
+                geocodeTimeout.current = setTimeout(() => {
+                    reverseGeocode(center.lat, center.lng);
+                }, 800);
+            });
+
+            // Initial geocode
+            reverseGeocode(mapCenter[0], mapCenter[1]);
+        }
+
+        return () => {
+            if (mapInstance.current) {
+                mapInstance.current.remove();
+                mapInstance.current = null;
+            }
+        };
+    }, [currentStep]);
+
+    // Load Pharmacy Location
+    useEffect(() => {
+        if (cartItems.length > 0 && cartItems[0].pharmacyId) {
+            const fetchPharmacy = async () => {
+                try {
+                    const response = await fetch(`http://localhost:5000/api/pharmacy/${cartItems[0].pharmacyId}`);
+                    const data = await response.json();
+                    if (data.success && data.data.location?.coordinates) {
+                        const [lng, lat] = data.data.location.coordinates;
+
+                        // Add pharmacy marker to map if map exists
+                        if (mapInstance.current) {
+                            const pharmacyIcon = L.divIcon({
+                                className: 'pharmacy-marker-icon',
+                                html: '🏥',
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 30]
+                            });
+                            L.marker([lat, lng], { icon: pharmacyIcon })
+                                .addTo(mapInstance.current)
+                                .bindPopup(`<b>${data.data.name}</b><br/>Pickup Location`)
+                                .openPopup();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load pharmacy location', error);
+                }
+            };
+            fetchPharmacy();
+        }
+    }, [cartItems, currentStep]);
+
+    const handleNext = () => {
+        if (currentStep === 0 && !isLocationConfirmed) {
+            return; // Safety rule
+        }
+        setCurrentStep(prev => prev + 1);
+    };
+
+    const handleConfirmLocation = () => {
+        setSelectedAddressCoords(mapCenter);
+        setIsLocationConfirmed(true);
+    };
+
+    const handleUseCurrentLocation = () => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                mapInstance.current.flyTo([latitude, longitude], 17);
+            });
+        }
+    };
     const handlePrev = () => setCurrentStep(prev => prev - 1);
 
-    const handlePlaceOrder = () => {
-        // Here you would integrate with backend
-        clearCart();
-        setCurrentStep(4);
+    const handlePlaceOrder = async () => {
+        try {
+            const mockOrderId = `ORD-${Date.now()}`;
+            clearCart();
+            setCurrentStep(4);
+        } catch (error) {
+            console.error('Order failed', error);
+        }
     };
 
     return (
@@ -67,44 +188,73 @@ const Checkout = () => {
                     <Card className="checkout-main-card">
                         {currentStep === 0 && (
                             <div className="checkout-step-content fade-in">
-                                <Title level={4} style={{ marginBottom: '24px' }}>Select Delivery Address</Title>
-                                <Radio.Group
-                                    value={selectedAddress}
-                                    onChange={e => setSelectedAddress(e.target.value)}
-                                    style={{ width: '100%' }}
-                                >
-                                    <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                                        {addresses.map(addr => (
-                                            <Card
-                                                key={addr.id}
-                                                className={`address-option-card ${selectedAddress === addr.id ? 'selected' : ''}`}
-                                                onClick={() => setSelectedAddress(addr.id)}
-                                            >
-                                                <Row align="middle">
-                                                    <Col flex="40px">
-                                                        <Radio value={addr.id} />
-                                                    </Col>
-                                                    <Col flex="auto">
-                                                        <div>
-                                                            <Space>
-                                                                <Text strong style={{ fontSize: '16px' }}>{addr.label}</Text>
-                                                                {addr.isDefault && <Badge count="Default" style={{ backgroundColor: '#E0E7FF', color: '#4338CA', fontSize: '10px' }} />}
-                                                            </Space>
-                                                            <br />
-                                                            <Text type="secondary">{addr.fullAddress}</Text>
-                                                        </div>
-                                                    </Col>
-                                                    <Col>
-                                                        <Button type="link">Edit</Button>
-                                                    </Col>
-                                                </Row>
-                                            </Card>
-                                        ))}
-                                        <Button type="dashed" block icon={<PlusOutlined />} className="add-address-btn">
-                                            Add New Address
-                                        </Button>
-                                    </Space>
-                                </Radio.Group>
+                                <Title level={4} style={{ marginBottom: '8px' }}>Delivery Location</Title>
+                                <Text type="secondary" style={{ display: 'block', marginBottom: '24px' }}>
+                                    Point the pin exactly where you want your medicines delivered.
+                                </Text>
+
+                                <div className="map-selection-container">
+                                    <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
+
+                                    {/* Fixed Center Pin Overlay */}
+                                    <div className="fixed-pin-wrapper">
+                                        <div className="main-pin">📍</div>
+                                        <div className="pin-pulse"></div>
+                                    </div>
+
+                                    <div className="map-interaction-hint">
+                                        Drag map to adjust position
+                                    </div>
+
+                                    <Button
+                                        icon={<CompassOutlined />}
+                                        className="use-current-loc-btn"
+                                        style={{ position: 'absolute', bottom: '16px', right: '16px', zIndex: 1000 }}
+                                        onClick={handleUseCurrentLocation}
+                                    >
+                                        Use My Current Location
+                                    </Button>
+                                </div>
+
+                                {/* Location Confirmation Bottom Sheet Style */}
+                                <div className="location-confirmation-card">
+                                    <Row align="middle" gutter={20}>
+                                        <Col>
+                                            <div className="location-marker-icon">
+                                                <CompassOutlined />
+                                            </div>
+                                        </Col>
+                                        <Col flex="auto">
+                                            <Text type="secondary" style={{ fontSize: '12px' }}>Deliver to:</Text>
+                                            <div style={{ wordBreak: 'break-all' }}>
+                                                <Text strong style={{ fontSize: '16px' }}>{locationLabel}</Text>
+                                            </div>
+                                        </Col>
+                                    </Row>
+
+                                    <div style={{ marginTop: '20px' }}>
+                                        <Text type="secondary" style={{ fontSize: '12px' }}>Delivery Notes (Gate color, Apt #, etc.)</Text>
+                                        <Input.TextArea
+                                            placeholder="e.g. Blue gate, apartment 3B, near the big tree"
+                                            rows={2}
+                                            style={{ marginTop: '8px', borderRadius: '12px' }}
+                                            value={deliveryNotes}
+                                            onChange={(e) => setDeliveryNotes(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <Button
+                                        type="primary"
+                                        block
+                                        size="large"
+                                        className="confirm-location-btn"
+                                        style={{ marginTop: '24px' }}
+                                        onClick={handleConfirmLocation}
+                                        disabled={isLocationConfirmed || locationLabel === 'Locating...'}
+                                    >
+                                        {isLocationConfirmed ? 'Location Set ✓' : 'Confirm Delivery Location'}
+                                    </Button>
+                                </div>
                             </div>
                         )}
 
@@ -200,7 +350,17 @@ const Checkout = () => {
                                 <Card type="inner" title="Order Details" className="review-inner-card">
                                     <div className="review-stat">
                                         <Text type="secondary">Delivery To:</Text>
-                                        <Text strong>{addresses.find(a => a.id === selectedAddress)?.label} - {addresses.find(a => a.id === selectedAddress)?.fullAddress}</Text>
+                                        <div style={{ wordBreak: 'break-all' }}>
+                                            <Text strong>{locationLabel}</Text>
+                                        </div>
+                                        {deliveryNotes && (
+                                            <div style={{ marginTop: '4px' }}>
+                                                <Text type="secondary" style={{ fontSize: '13px' }}>
+                                                    <MessageOutlined style={{ marginRight: '8px' }} />
+                                                    "{deliveryNotes}"
+                                                </Text>
+                                            </div>
+                                        )}
                                     </div>
                                     <Divider style={{ margin: '12px 0' }} />
                                     <div className="review-stat">
@@ -265,10 +425,14 @@ const Checkout = () => {
                     <Result
                         status="success"
                         title="Order Placed Successfully!"
-                        subTitle="Your order #ORD-8829 is being processed by Kenema Pharmacy."
+                        subTitle="Your order is being processed by the pharmacy."
                         extra={[
-                            <Button type="primary" key="track" onClick={() => navigate('/customer/orders')}>Track My Order</Button>,
-                            <Button key="home" onClick={() => navigate('/customer/dashboard')}>Back to Dashboard</Button>,
+                            <Button type="primary" key="track" onClick={() => navigate('/customer/orders/track/ORD-LATEST')}>
+                                Track Order Live
+                            </Button>,
+                            <Button key="orders" onClick={() => navigate('/customer/orders')}>
+                                Go to My Orders
+                            </Button>,
                         ]}
                     />
                 </div>

@@ -142,3 +142,118 @@
         padding: 16px;
     }
 }
+
+/* Map-First Checkout Styles */
+.map-selection-container {
+    height: 450px;
+    width: 100%;
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+}
+
+.soft-blue-map .leaflet-tile-container {
+    filter: hue-rotate(10deg) saturate(0.8) brightness(1.05) contrast(1.05);
+    /* Soft adjustment */
+}
+
+/* Fixed Center Pin (Uber Style) */
+.fixed-pin-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    z-index: 1000;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.main-pin {
+    font-size: 40px;
+    color: #1E88E5;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+    animation: pinFloat 2s ease-in-out infinite;
+}
+
+.pin-pulse {
+    width: 20px;
+    height: 10px;
+    background: rgba(30, 136, 229, 0.4);
+    border-radius: 50%;
+    margin-top: -10px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pinFloat {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(3);
+        opacity: 0;
+    }
+}
+
+/* Location Confirmation Card (Bottom Sheet Style) */
+.location-confirmation-card {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 20px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+    position: relative;
+    z-index: 1001;
+    margin-top: -40px;
+    border: 1px solid var(--border-color);
+}
+
+.location-marker-icon {
+    font-size: 24px;
+    color: #1E88E5;
+    background: #E3F2FD;
+    padding: 12px;
+    border-radius: 12px;
+}
+
+.confirm-location-btn {
+    height: 54px !important;
+    border-radius: 16px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+}
+
+.confirm-location-btn:disabled {
+    background: #E2E8F0 !important;
+    color: #94A3B8 !important;
+}
+
+.map-interaction-hint {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 16px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-size: 12px;
+    pointer-events: none;
+}
