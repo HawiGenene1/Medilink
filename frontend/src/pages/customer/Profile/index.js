@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App } from 'antd';
+import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App, Divider } from 'antd';
 import {
   UserOutlined,
   MailOutlined,
@@ -7,7 +7,8 @@ import {
   EnvironmentOutlined,
   UploadOutlined,
   SafetyCertificateOutlined,
-  EditOutlined
+  EditOutlined,
+  CameraOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
@@ -64,21 +65,49 @@ const Profile = () => {
     { id: 2, type: 'Work', address: 'Kazanchis, Office 404', default: false },
   ];
 
+  const handleProfileUpdate = async (values) => {
+    setLoading(true);
+    try {
+      await api.put('/users/profile', values);
+      message.success('Profile updated successfully');
+      setEditing(false);
+      // Optional: Update local storage/context if needed, though reload is usually safer for global state
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      console.error('Update failed:', error);
+      message.error('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderProfileForm = () => (
-    <Form layout="vertical" initialValues={{
-      firstName: user?.firstName || 'John',
-      lastName: user?.lastName || 'Doe',
-      email: user?.email || 'customer@medilink.com',
-      phone: '+251 911 22 33 44'
-    }}>
+    <Form
+      layout="vertical"
+      onFinish={handleProfileUpdate}
+      initialValues={{
+        firstName: user?.firstName || '',
+        lastName: user?.lastName || '',
+        email: user?.email || '',
+        phone: user?.phone || ''
+      }}
+    >
       <Row gutter={24}>
         <Col span={12}>
-          <Form.Item label="First Name" name="firstName">
+          <Form.Item
+            label="First Name"
+            name="firstName"
+            rules={[{ required: true, message: 'Please enter your first name' }]}
+          >
             <Input disabled={!editing} prefix={<UserOutlined />} />
           </Form.Item>
         </Col>
         <Col span={12}>
-          <Form.Item label="Last Name" name="lastName">
+          <Form.Item
+            label="Last Name"
+            name="lastName"
+            rules={[{ required: true, message: 'Please enter your last name' }]}
+          >
             <Input disabled={!editing} prefix={<UserOutlined />} />
           </Form.Item>
         </Col>
@@ -94,9 +123,45 @@ const Profile = () => {
         </Col>
       </Row>
       {editing && (
-        <Button type="primary">Save Changes</Button>
+        <Button type="primary" htmlType="submit" loading={loading} style={{ marginTop: '16px' }}>
+          Save Identity Changes
+        </Button>
       )}
     </Form>
+  );
+
+  const AccountDetails = () => (
+    <List>
+      <List.Item>
+        <List.Item.Meta
+          title={<Text type="secondary">User ID</Text>}
+          description={<Text strong>{user?._id || 'N/A'}</Text>}
+        />
+      </List.Item>
+      <List.Item>
+        <List.Item.Meta
+          title={<Text type="secondary">Account Role</Text>}
+          description={<Tag color="blue">{user?.role?.toUpperCase() || 'CUSTOMER'}</Tag>}
+        />
+      </List.Item>
+      <List.Item>
+        <List.Item.Meta
+          title={<Text type="secondary">Member Since</Text>}
+          description={<Text strong>{user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</Text>}
+        />
+      </List.Item>
+      <List.Item>
+        <List.Item.Meta
+          title={<Text type="secondary">Verification Status</Text>}
+          description={
+            <Space>
+              <Tag color="success">Email Verified</Tag>
+              <Tag color="success">Phone Verified</Tag>
+            </Space>
+          }
+        />
+      </List.Item>
+    </List>
   );
 
   const tabItems = [
@@ -112,12 +177,17 @@ const Profile = () => {
               icon={<EditOutlined />}
               onClick={() => setEditing(!editing)}
             >
-              {editing ? 'Cancel' : 'Edit Profile'}
+              {editing ? 'Cancel' : 'Edit Identity'}
             </Button>
           </div>
           {renderProfileForm()}
         </>
       )
+    },
+    {
+      key: 'accountId',
+      label: 'Account Details',
+      children: <AccountDetails />
     },
     {
       key: '2',
@@ -175,12 +245,12 @@ const Profile = () => {
         <Col xs={24} md={8}>
           <Card style={{ textAlign: 'center', borderRadius: '16px' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-              <Avatar size={100} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} style={{ backgroundColor: '#4361ee' }} />
+              <Avatar size={100} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} style={{ backgroundColor: '#4361ee', border: '4px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
               <Button
                 shape="circle"
-                icon={<UploadOutlined />}
-                size="small"
-                style={{ position: 'absolute', bottom: 0, right: 0 }}
+                icon={<CameraOutlined />}
+                size="middle"
+                style={{ position: 'absolute', bottom: -5, right: -5, backgroundColor: '#4361ee', color: '#fff', border: '2px solid #fff' }}
                 onClick={triggerFileInput}
                 loading={loading}
               />
@@ -190,11 +260,28 @@ const Profile = () => {
                 style={{ display: 'none' }}
                 accept="image/*"
                 onChange={handleImageUpload}
-                capture="user" // Optional: prompts camera on mobile
+                capture="user"
               />
             </div>
             <Title level={4} style={{ margin: 0 }}>{user?.firstName} {user?.lastName}</Title>
-            <Text type="secondary">Customer</Text>
+            <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>{user?.email}</Text>
+
+            <Divider style={{ margin: '12px 0' }} />
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Card size="small" bordered={false} style={{ background: '#f8f9fa' }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>Orders</Text><br />
+                  <Text strong>12</Text>
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card size="small" bordered={false} style={{ background: '#f8f9fa' }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>Rx Files</Text><br />
+                  <Text strong>4</Text>
+                </Card>
+              </Col>
+            </Row>
 
             <div style={{ marginTop: '24px', textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>

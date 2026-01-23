@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Verify connection configuration
-transporter.verify(function(error, success) {
+transporter.verify(function (error, success) {
     if (error) {
         logger.error('Email server connection error:', error);
     } else {
@@ -47,7 +47,7 @@ async function sendEmail(to, subject, html, retries = 3) {
     };
 
     let lastError;
-    
+
     for (let i = 0; i < retries; i++) {
         try {
             await transporter.sendMail(mailOptions);
@@ -62,9 +62,9 @@ async function sendEmail(to, subject, html, retries = 3) {
     }
 
     logger.error(`Failed to send email to ${to} after ${retries} attempts:`, lastError);
-    return { 
-        success: false, 
-        error: `Failed to send email after ${retries} attempts: ${lastError.message}` 
+    return {
+        success: false,
+        error: `Failed to send email after ${retries} attempts: ${lastError.message}`
     };
 }
 
@@ -75,9 +75,9 @@ async function sendEmail(to, subject, html, retries = 3) {
  * @param {string} password - Generated password
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendWelcomeEmail(email, name, password) {
+async function sendWelcomeEmail(email, name, password, verificationToken) {
     const welcomeEmail = require('../templates/welcomeEmail');
-    const { subject, html } = welcomeEmail(name, password);
+    const { subject, html } = welcomeEmail(name, password, verificationToken);
     return sendEmail(email, subject, html);
 }
 
@@ -94,9 +94,9 @@ async function sendPasswordResetEmail(email, name, resetLink) {
     return sendEmail(email, subject, html);
 }
 
-module.exports = { 
+module.exports = {
     sendEmail,
     sendWelcomeEmail,
     sendPasswordResetEmail,
-    transporter 
+    transporter
 };

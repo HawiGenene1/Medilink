@@ -9,10 +9,10 @@ import {
   IdcardOutlined,
   UploadOutlined
 } from '@ant-design/icons';
+import api from '../../../services/api';
 import './PharmacyRegister.css';
 
 const { TextArea } = Input;
-
 const PharmacyRegister = () => {
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState([]);
@@ -22,41 +22,24 @@ const PharmacyRegister = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // Prepare form data for file uploads
-      const formData = new FormData();
+      const userData = {
+        ...values,
+        licenseDocument: "license_doc_id", // Placeholder for actual file upload handling
+        tinDocument: "tin_doc_id"         // Placeholder
+      };
 
-      // Add form values to formData
-      Object.keys(values).forEach(key => {
-        if (values[key] !== undefined && values[key] !== null) {
-          formData.append(key, values[key]);
-        }
-      });
+      // Send registration request using api utility
+      const response = await api.post('/pharmacy/register', userData);
 
-      // Add files to formData
-      fileList.forEach(file => {
-        if (file.originFileObj) {
-          formData.append('documents', file.originFileObj);
-        }
-      });
-
-      // Send registration request
-      const response = await fetch('http://localhost:5000/api/pharmacy/register', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        message.success('Pharmacy registration submitted for approval. We will contact you soon!');
-        // Redirect to status check page
-        navigate(`/pharmacy/status/${data.data?.id || ''}`);
+      if (response.data.success) {
+        message.success(response.data.message || 'Registration submitted for approval!');
+        navigate('/auth/login');
       } else {
-        message.error(data.message || 'Registration failed. Please try again.');
+        message.error(response.data.message || 'Registration failed. Please try again.');
       }
     } catch (error) {
       console.error('Registration error:', error);
-      message.error('An error occurred during registration. Please try again.');
+      message.error(error.response?.data?.message || 'An error occurred during registration. Please try again.');
     } finally {
       setLoading(false);
     }

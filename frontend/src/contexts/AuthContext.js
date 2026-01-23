@@ -14,36 +14,20 @@ export const useAuth = () => {
   return context;
 };
 
-// Development-only mock user
-const devUser = {
-  _id: 'dev-user-123',
-  email: 'dev@example.com',
-  firstName: 'Dev',
-  lastName: 'User',
-  role: 'customer',
-  isEmailVerified: true
-};
 
-// Development-only mock token
-const devToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkZXYtdXNlci0xMjMiLCJlbWFpbCI6ImRldkBleGFtcGxlLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTYzNTc5MDQwMCwiZXhwIjoxNjM1ODc2ODAwfQ.mock-token-for-development';
-
-// Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
-  // Check if user is logged in on initial load
-  // Check if user is logged in on initial load
-  // Check if user is logged in on initial load
   useEffect(() => {
     const token = localStorage.getItem('token');
 
     if (token) {
-      api.get('/auth/current-user')
+      api.get('/auth/me')
         .then(response => {
-          setUser(response.data);
+          setUser(response.data.user);
           setIsAuthenticated(true);
         })
         .catch(() => {
@@ -61,31 +45,6 @@ export const AuthProvider = ({ children }) => {
 
   // Login function
   const login = async (email, password) => {
-    // In development, return mock user based on email
-    if (process.env.NODE_ENV === 'development') {
-      let role = 'customer';
-      if (email.includes('admin')) role = 'admin';
-      if (email.includes('pharmacy')) role = 'pharmacy_admin';
-      if (email.includes('staff')) role = 'pharmacy_staff';
-      if (email.includes('cashier')) role = 'cashier';
-
-      const mockUser = {
-        _id: 'mock-user-' + role,
-        email,
-        firstName: role.toUpperCase(),
-        lastName: 'User',
-        role: role
-      };
-
-      // Create a dummy JWT with the role encoded
-      const mockToken = `header.${btoa(JSON.stringify({ email, role }))}.signature`;
-
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      localStorage.setItem('token', mockToken);
-      return { success: true, user: mockUser };
-    }
-
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
@@ -96,6 +55,25 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Login failed:', error);
       return { success: false, message: error.response?.data?.message || 'Login failed' };
+    }
+  };
+
+  // Registration function
+  const register = async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true, user };
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Registration failed',
+        errors: error.response?.data?.errors
+      };
     }
   };
 
@@ -126,6 +104,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     loading,
     login,
+    register,
     logout,
     hasRole,
     hasAnyRole

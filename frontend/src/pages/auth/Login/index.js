@@ -107,6 +107,7 @@ const Login = () => {
             </Link>
           </div>
 
+<<<<<<< HEAD
           {/* Dev Helper - Quick Login */}
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '16px' }}>
             <p style={{ fontSize: '12px', color: '#888', textAlign: 'center' }}>Demo Quick Login:</p>
@@ -117,6 +118,9 @@ const Login = () => {
               <Button size="small" onClick={() => onFinish({ email: 'staff@test.com', password: 'staff123' })}>Staff</Button>
             </div>
           </div>
+=======
+
+>>>>>>> 09ab79ab91bef4f0e56e74913f5963c4dc1d0992
         </Form>
       </Card>
     </div>

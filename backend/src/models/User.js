@@ -20,31 +20,20 @@ const userSchema = new mongoose.Schema({
     trim: true,
     match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
   },
-  // password: {
-  //   type: String,
-  //   required: [true, 'Password is required'],
-  //   minlength: [6, 'Password must be at least 6 characters'],
-  //   select: false // Don't return password by default in queries
-  // },
-  // phone: {
-  //   type: String,
-  //   required: [true, 'Phone number is required'],
-  //   trim: true
-  // },
-  // role: {
-  //   type: String,
-  //   enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
-  //   default: 'customer'
-  // },
-
   password: {
     type: String,
-    required: true,
-    select: false
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false // Don't return password by default in queries
+  },
+phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    trim: true
   },
   role: {
     type: String,
-    enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'admin', 'delivery'],
+    enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
     default: 'customer'
   },
 
@@ -86,20 +75,19 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'suspended', 'rejected'],
+    default: 'pending'
+  },
   isEmailVerified: {
     type: Boolean,
     default: false
   },
+  verificationToken: String,
+  verificationTokenExpires: Date,
   lastLogin: {
     type: Date
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   },
   resetToken: { type: String, default: null },
   resetTokenExpire: { type: Date, default: null },
@@ -137,6 +125,19 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ role: 1 });
 userSchema.index({ pharmacyId: 1 });
 
+// Hash password before saving
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) {
+    return;
+  }
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  } catch (error) {
+    throw error;
+  }
+});
 // Method to compare passwords
 userSchema.methods.comparePassword = function (candidatePassword) {
   return new Promise((resolve, reject) => {

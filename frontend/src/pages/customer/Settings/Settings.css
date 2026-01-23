@@ -43,6 +43,38 @@
     height: 32px !important;
 }
 
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.step-fade-in {
+    animation: stepFadeIn 0.3s ease-out;
+}
+
+@keyframes stepFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 .pref-row {
     display: flex;
     justify-content: space-between;
