@@ -1,0 +1,61 @@
+.delivery-register-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+    padding: 40px 20px;
+}
+
+.delivery-register-card {
+    width: 100%;
+    max-width: 600px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+}
+
+.form-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.register-btn {
+    height: 54px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    background: #1E88E5 !important;
+    box-shadow: 0 8px 16px rgba(30, 136, 229, 0.2) !important;
+}
+
+.delivery-register-card .ant-card-head {
+    border-bottom: none;
+    padding-top: 32px;
+}
+
+.delivery-register-card .ant-card-head-title {
+    padding: 0;
+}
+
+.info-message {
+    background: #f8fafc;
+    padding: 12px 16px;
+    border-radius: 12px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid #f1f5f9;
+}
+
+.info-message .anticon {
+    color: #1E88E5;
+    margin-top: 3px;
+}
