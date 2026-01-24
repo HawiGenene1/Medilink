@@ -46,6 +46,9 @@ import DeliveryDashboard from '../pages/delivery/Dashboard';
 import DeliveryDetails from '../pages/delivery/DeliveryDetails';
 import DeliveryProfile from '../pages/delivery/Profile';
 
+// Cashier Pages
+import CashierDashboard from '../pages/cashier/Dashboard';
+
 // User Management (if existing)
 // import UserManagement from '../pages/admin/UserManagement'; 
 
@@ -101,6 +104,17 @@ const AppRouter = () => {
           <Route path="/delivery/details/:id" element={<DeliveryDetails />} />
           <Route path="/delivery/profile" element={<DeliveryProfile />} />
         </Route>
+      </Route>
+
+      {/* Protected Routes - Cashier */}
+      <Route element={<ProtectedRoute allowedRoles={['cashier']} />}>
+        {/* Using MainLayout or creating a specific CashierLayout if needed. 
+            For now assuming MainLayout or direct component rendering. 
+            CashierDashboard usually has its own sidebar/layout logic inside or needs a layout.
+            Let's use MainLayout for consistency if CashierLayout doesn't exist yet, 
+            or better: specific layout implies Sidebar. 
+            I will use MainLayout as a safe default for now. */}
+        <Route path="/cashier/dashboard" element={<CashierDashboard />} />
       </Route>
 
       {/* Redirects & Fallbacks */}

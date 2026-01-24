@@ -115,46 +115,52 @@ const login = async (req, res) => {
 
     const { email, password } = req.body;
     console.log('LOGIN DEBUG: Attempting login for:', email);
-    console.log('LOGIN DEBUG: Password received length:', password ? password.length : 0);
 
-    const user = await User.findOne({ email }).select('+password').populate('role');
+    // Find user
+    const user = await User.findOne({ email }).select('+password');
+    console.log('LOGIN DEBUG: User found:', user ? user._id : 'NO USER');
 
     if (!user) {
-      console.log('LOGIN DEBUG: User not found in DB');
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
       });
     }
 
-    // Check account status
-    // Allow delivery and pharmacy_admin to login even if pending (to complete onboarding)
+    // Check status
+    console.log('LOGIN DEBUG: Checking status. Role:', user.role, 'Status:', user.status);
     if (user.status !== 'active' && !(user.status === 'pending' && (user.role === 'delivery' || user.role === 'pharmacy_admin'))) {
       let statusMessage = 'Your account is pending approval.';
       if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
       if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';
 
+      console.log('LOGIN DEBUG: Account not active:', statusMessage);
       return res.status(403).json({
         success: false,
         message: statusMessage,
       });
     }
 
+    // Verify Password
+    console.log('LOGIN DEBUG: Verifying password...');
     const isMatch = await bcrypt.compare(password, user.password);
     console.log('LOGIN DEBUG: Password match result:', isMatch);
 
     if (!isMatch) {
-      console.log('LOGIN DEBUG: Password mismatch!');
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
       });
     }
 
+    // Generate Token
+    console.log('LOGIN DEBUG: Generating token...');
     const token = generateToken({ userId: user._id, role: user.role });
+    console.log('LOGIN DEBUG: Token generated.');
 
     const { password: _pwd, ...safeUser } = user.toObject();
 
+    console.log('LOGIN DEBUG: Sending response.');
     return res.json({
       success: true,
       token,
@@ -163,13 +169,13 @@ const login = async (req, res) => {
         firstName: safeUser.firstName,
         lastName: safeUser.lastName,
         email: safeUser.email,
-        role: safeUser.role.name,
+        role: safeUser.role,
         phone: safeUser.phone,
         status: safeUser.status
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Login error CRASH:', error); // Log full object
     return res.status(500).json({
       success: false,
       message: 'Server error during login',
@@ -185,7 +191,7 @@ const login = async (req, res) => {
  */
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password').populate('role');
+    const user = await User.findById(req.user.userId).select('-password');
 
     if (!user) {
       return res.status(404).json({
@@ -201,7 +207,7 @@ const getCurrentUser = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        role: user.role.name,
+        role: user.role, // Fixed: role is a string
         phone: user.phone,
         status: user.status
       },
