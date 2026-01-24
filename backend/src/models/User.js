@@ -20,37 +20,21 @@ const userSchema = new mongoose.Schema({
     trim: true,
     match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
   },
-  // password: {
-  //   type: String,
-  //   required: [true, 'Password is required'],
-  //   minlength: [6, 'Password must be at least 6 characters'],
-  //   select: false // Don't return password by default in queries
-  // },
-  // phone: {
-  //   type: String,
-  //   required: [true, 'Phone number is required'],
-  //   trim: true
-  // },
-  // role: {
-  //   type: String,
-  //   enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
-  //   default: 'customer'
-  // },
-
   password: {
     type: String,
-    required: true,
-    select: false
+    required: [true, 'Password is required'],
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false // Don't return password by default in queries
   },
-  username: {
+  phone: {
     type: String,
-    required: true,
-    unique: true
+    required: [true, 'Phone number is required'],
+    trim: true
   },
   role: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Role",
-    required: true
+    type: String,
+    enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
+    default: 'customer'
   },
 
   // For staff members - link to their pharmacy
@@ -93,20 +77,19 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'suspended', 'rejected'],
+    default: 'pending'
+  },
   isEmailVerified: {
     type: Boolean,
     default: false
   },
+  verificationToken: String,
+  verificationTokenExpires: Date,
   lastLogin: {
     type: Date
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   },
   resetToken: { type: String, default: null },
   resetTokenExpire: { type: Date, default: null },
@@ -119,16 +102,17 @@ userSchema.index({ role: 1 });
 userSchema.index({ pharmacyId: 1 });
 
 // Hash password before saving
-// Hash password before saving
 userSchema.pre('save', async function () {
-  // Only hash the password if it has been modified (or is new)
   if (!this.isModified('password')) {
     return;
   }
 
-  // Hash password with cost of 12
-  const salt = await bcrypt.genSalt(12);
-  this.password = await bcrypt.hash(this.password, salt);
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  } catch (error) {
+    throw error;
+  }
 });
 
 // Method to compare passwords

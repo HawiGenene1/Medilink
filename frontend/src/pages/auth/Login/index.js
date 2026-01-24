@@ -34,7 +34,7 @@ const Login = () => {
             navigate('/cashier/dashboard');
             break;
           case 'delivery':
-            navigate('/delivery/dashboard');
+            navigate('/auth/delivery/onboarding');
             break;
           case 'admin':
             navigate('/admin/dashboard');
@@ -105,22 +105,18 @@ const Login = () => {
           </Form.Item>
 
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-            <Link to="/register">
+            <Link to="/auth/register">
               Don't have an account? Register
             </Link>
           </div>
 
-          {/* Dev Helper - Quick Login */}
-          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '16px' }}>
-            <p style={{ fontSize: '12px', color: '#888', textAlign: 'center' }}>Demo Quick Login:</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-              <Button size="small" onClick={() => onFinish({ email: 'customer@medilink.com', password: 'Test123' })}>Customer</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'cashier@medilink.com', password: 'Cashier123' })}>Cashier</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'pharmacy@test.com', password: '123' })}>Pharmacy</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'admin@test.com', password: '123' })}>Admin</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'staff@test.com', password: '123' })}>Staff</Button>
-            </div>
+          <div style={{ textAlign: 'center', padding: '12px', borderTop: '1px solid #f1f5f9' }}>
+            <span style={{ color: '#64748b' }}>Want to earn with MediLink? </span>
+            <Link to="/auth/delivery/register" style={{ fontWeight: 600, color: '#1E88E5' }}>
+              Become a Delivery Partner
+            </Link>
           </div>
+
         </Form>
       </Card>
     </div>

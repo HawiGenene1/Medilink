@@ -1,0 +1,398 @@
+import React, { useState, useEffect } from 'react';
+import { Steps, Button, Card, Form, Input, Select, DatePicker, Checkbox, Upload, Row, Col, Typography, message, Result, Space, Descriptions } from 'antd';
+import {
+    UserOutlined,
+    CarOutlined,
+    FileTextOutlined,
+    SafetyOutlined,
+    BankOutlined,
+    BookOutlined,
+    CameraOutlined,
+    CheckCircleOutlined,
+    UploadOutlined,
+    InfoCircleOutlined,
+    ArrowRightOutlined
+} from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import api from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
+import './DeliveryOnboarding.css';
+
+const { Title, Text, Paragraph } = Typography;
+const { Step } = Steps;
+const { Option } = Select;
+
+const DeliveryOnboarding = () => {
+    const { user } = useAuth();
+    const [current, setCurrent] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [profile, setProfile] = useState(null);
+    const [form] = Form.useForm();
+    const navigate = useNavigate();
+
+    const steps = [
+        { title: 'Account', icon: <UserOutlined /> },
+        { title: 'Personal', icon: <UserOutlined /> },
+        { title: 'Vehicle', icon: <CarOutlined /> },
+        { title: 'Documents', icon: <FileTextOutlined /> },
+        { title: 'Background', icon: <SafetyOutlined /> },
+        { title: 'Payment', icon: <BankOutlined /> },
+        { title: 'Orientation', icon: <BookOutlined /> },
+        { title: 'Inspection', icon: <CameraOutlined /> },
+        { title: 'Review', icon: <CheckCircleOutlined /> },
+    ];
+
+    useEffect(() => {
+        if (user && user.status === 'active' && user.role === 'delivery') {
+            navigate('/delivery/dashboard');
+        }
+        fetchOnboardingStatus();
+    }, [user]);
+
+    const fetchOnboardingStatus = async () => {
+        try {
+            const response = await api.get('/delivery/onboarding/status');
+            if (response.data.success) {
+                const profileData = response.data.data;
+                setProfile(profileData);
+                setCurrent(profileData.currentStep - 1);
+
+                // Pre-fill form if data exists
+                if (profileData.currentStep === 2) {
+                    form.setFieldsValue(profileData.personalDetails);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching status:', error);
+            message.error('Failed to load onboarding progress');
+        }
+    };
+
+    const next = async (values) => {
+        setLoading(true);
+        try {
+            const stepNum = current + 1;
+
+            const formData = new FormData();
+            formData.append('step', stepNum);
+
+            if (values) {
+                // If the values contain file objects (for Step 4, 6, 8)
+                // We'll handle them specifically
+                if ([4, 6, 8].includes(stepNum)) {
+                    Object.keys(values).forEach(key => {
+                        if (values[key] && values[key].fileList) {
+                            values[key].fileList.forEach(file => {
+                                formData.append(key, file.originFileObj);
+                            });
+                        }
+                    });
+                }
+                formData.append('data', JSON.stringify(values));
+            }
+
+            const response = await api.post('/delivery/onboarding/step', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            if (response.data.success) {
+                message.success(`Step ${stepNum} completed!`);
+                setCurrent(current + 1);
+                setProfile(response.data.data);
+            }
+        } catch (error) {
+            console.error('Error saving step:', error);
+            message.error('Failed to save progress');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const prev = () => {
+        setCurrent(current - 1);
+    };
+
+    const renderStepContent = () => {
+        switch (current) {
+            case 0: // Step 1: Account Creation (Summary)
+                return (
+                    <div className="account-summary">
+                        <Title level={4}>Account Information</Title>
+                        <Paragraph>You have successfully created your MediLink account.</Paragraph>
+                        <Descriptions bordered column={1} className="summary-list">
+                            <Descriptions.Item label="Name">{user?.firstName} {user?.lastName}</Descriptions.Item>
+                            <Descriptions.Item label="Email">{user?.email}</Descriptions.Item>
+                            <Descriptions.Item label="Phone">{user?.phone}</Descriptions.Item>
+                        </Descriptions>
+                        <div className="terms-acceptance" style={{ marginTop: '24px' }}>
+                            <Checkbox checked disabled>I accept the terms of service and privacy policy.</Checkbox>
+                        </div>
+                        <Button type="primary" onClick={() => setCurrent(1)} size="large" block style={{ marginTop: '24px' }}>
+                            Update Personal Info <ArrowRightOutlined />
+                        </Button>
+                    </div>
+                );
+
+            case 1: // Personal Information
+                return (
+                    <Form form={form} layout="vertical" onFinish={next}>
+                        <Title level={4}>Personal Details</Title>
+                        <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Date of Birth" name="dateOfBirth" rules={[{ required: true }]}>
+                                    <DatePicker style={{ width: '100%' }} size="large" />
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Preferred Language" name="preferredLanguage" initialValue="English">
+                                    <Select size="large">
+                                        <Option value="English">English</Option>
+                                        <Option value="Amharic">Amharic</Option>
+                                        <Option value="Oromo">Oromo</Option>
+                                    </Select>
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Title level={5} style={{ marginTop: '16px' }}>Residential Address</Title>
+                        <Form.Item label="Street" name={['residentialAddress', 'street']} rules={[{ required: true }]}>
+                            <Input placeholder="123 Main St" size="large" />
+                        </Form.Item>
+                        <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="City" name={['residentialAddress', 'city']} rules={[{ required: true }]}>
+                                    <Input placeholder="Addis Ababa" size="large" />
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Zip Code" name={['residentialAddress', 'zipCode']}>
+                                    <Input placeholder="1000" size="large" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Title level={5} style={{ marginTop: '16px' }}>Emergency Contact</Title>
+                        <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Contact Name" name={['emergencyContact', 'name']} rules={[{ required: true }]}>
+                                    <Input placeholder="Full Name" size="large" />
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Phone" name={['emergencyContact', 'phone']} rules={[{ required: true }]}>
+                                    <Input placeholder="+251..." size="large" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Button type="primary" htmlType="submit" size="large" block loading={loading}>Save & Continue</Button>
+                    </Form>
+                );
+
+            case 2: // Vehicle Selection
+                return (
+                    <Form layout="vertical" onFinish={next}>
+                        <Title level={4}>Vehicle Details</Title>
+                        <Form.Item label="Delivery Mode" name="type" rules={[{ required: true }]}>
+                            <Select size="large" placeholder="Select your vehicle type">
+                                <Option value="car">🚗 Car</Option>
+                                <Option value="motorcycle">🛵 Motorcycle / Scooter</Option>
+                                <Option value="bicycle">🚴 Bicycle</Option>
+                                <Option value="van">🛻 Van</Option>
+                            </Select>
+                        </Form.Item>
+                        <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Make" name="make" rules={[{ required: true }]}>
+                                    <Input placeholder="e.g. Toyota, Honda" size="large" />
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Model" name="model" rules={[{ required: true }]}>
+                                    <Input placeholder="e.g. Corolla, Click" size="large" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="License Plate" name="licensePlate" rules={[{ required: true }]}>
+                                    <Input placeholder="AA-12345" size="large" />
+                                </Form.Item>
+                            </Col>
+                            <Col xs={24} md={12}>
+                                <Form.Item label="Color" name="color">
+                                    <Input placeholder="e.g. White, Black" size="large" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Button type="primary" htmlType="submit" size="large" block loading={loading}>Save & Continue</Button>
+                    </Form>
+                );
+
+            case 3: // Document Upload
+                return (
+                    <Form layout="vertical" onFinish={next}>
+                        <Title level={4}>Identity & Eligibility</Title>
+                        <Paragraph>Upload high-quality photos of your documents.</Paragraph>
+                        <Form.Item label="Government ID (Passport / National ID)" name="governmentId" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                            <Upload beforeUpload={() => false} maxCount={1}>
+                                <Button icon={<UploadOutlined />}>Select File</Button>
+                            </Upload>
+                        </Form.Item>
+                        <Form.Item label="Driver's License" name="driversLicense" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                            <Upload beforeUpload={() => false} maxCount={1}>
+                                <Button icon={<UploadOutlined />}>Select File</Button>
+                            </Upload>
+                        </Form.Item>
+                        <Form.Item label="Vehicle Registration (Blue Book)" name="vehicleRegistration" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                            <Upload beforeUpload={() => false} maxCount={1}>
+                                <Button icon={<UploadOutlined />}>Select File</Button>
+                            </Upload>
+                        </Form.Item>
+                        <Form.Item label="Proof of Insurance" name="insuranceProof" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                            <Upload beforeUpload={() => false} maxCount={1}>
+                                <Button icon={<UploadOutlined />}>Select File</Button>
+                            </Upload>
+                        </Form.Item>
+                        <Button type="primary" htmlType="submit" size="large" block loading={loading}>Upload & Continue</Button>
+                    </Form>
+                );
+
+            case 4: // Background Check
+                return (
+                    <Form layout="vertical" onFinish={next}>
+                        <Title level={4}>Background Check</Title>
+                        <div className="background-info">
+                            <SafetyOutlined className="bg-icon" />
+                            <Paragraph>
+                                To ensure consumer safety, MediLink performs a standard background check through our clinical security partners.
+                            </Paragraph>
+                            <Paragraph>
+                                By continuing, you consent to a record check including driving history (if applicable) and criminal records.
+                            </Paragraph>
+                        </div>
+                        <Form.Item name="consented" valuePropName="checked" rules={[{ required: true, message: 'You must consent to continue' }]}>
+                            <Checkbox>I consent to a background check and certify all information is accurate.</Checkbox>
+                        </Form.Item>
+                        <Button type="primary" htmlType="submit" size="large" block loading={loading}>Confirm Consent</Button>
+                    </Form>
+                );
+
+            case 5: // Payment Setup
+                return (
+                    <Form layout="vertical" onFinish={next}>
+                        <Title level={4}>Bank & Payment Setup</Title>
+                        <Form.Item label="Bank Name" name="bankName" rules={[{ required: true }]}>
+                            <Select size="large">
+                                <Option value="CBE">Commercial Bank of Ethiopia (CBE)</Option>
+                                <Option value="Dashen">Dashen Bank</Option>
+                                <Option value="Awash">Awash Bank</Option>
+                                <Option value="Abyssinia">Bank of Abyssinia</Option>
+                            </Select>
+                        </Form.Item>
+                        <Form.Item label="Account Number" name="accountNumber" rules={[{ required: true }]}>
+                            <Input placeholder="Enter your 13-digit account number" size="large" />
+                        </Form.Item>
+                        <Form.Item label="Payout Preference" name="preference" initialValue="weekly">
+                            <Select size="large">
+                                <Option value="weekly">Weekly Payout</Option>
+                                <Option value="instant">Instant Pay (Per Delivery)</Option>
+                            </Select>
+                        </Form.Item>
+                        <Form.Item label="Photo of Check or Bank Statement" name="chequePhoto" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                            <Upload beforeUpload={() => false} maxCount={1}>
+                                <Button icon={<UploadOutlined />}>Select Photo</Button>
+                            </Upload>
+                        </Form.Item>
+                        <Button type="primary" htmlType="submit" size="large" block loading={loading}>Save Payout Info</Button>
+                    </Form>
+                );
+
+            case 6: // Orientation
+                return (
+                    <div className="orientation-module">
+                        <Title level={4}>Partner Orientation</Title>
+                        <div className="video-placeholder">
+                            <BookOutlined className="module-icon" />
+                            <Paragraph>Watch our 5-minute partner safety and standards video.</Paragraph>
+                            <Button type="primary" ghost icon={<CheckCircleOutlined />}>Start Training</Button>
+                        </div>
+                        <Space direction="vertical" style={{ width: '100%', marginTop: '24px' }}>
+                            <Checkbox checked>I have watched the safety orientation.</Checkbox>
+                            <Checkbox checked>I understand the clinical handling requirements for medicines.</Checkbox>
+                        </Space>
+                        <Button type="primary" onClick={() => next({ completed: true })} size="large" block loading={loading} style={{ marginTop: '24px' }}>
+                            Complete Orientation
+                        </Button>
+                    </div>
+                );
+
+            case 7: // Vehicle Inspection
+                return (
+                    <Form layout="vertical" onFinish={next}>
+                        <Title level={4}>Vehicle Inspection</Title>
+                        <Paragraph>Take clear photos of your vehicle (Front, Side, Interior/Storage area).</Paragraph>
+                        <Form.Item name="inspectionPhotos" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                            <Upload
+                                listType="picture-card"
+                                beforeUpload={() => false}
+                                multiple
+                            >
+                                <div style={{ marginTop: 8 }}>
+                                    <CameraOutlined />
+                                    <div style={{ marginTop: 8 }}>Upload Photo</div>
+                                </div>
+                            </Upload>
+                        </Form.Item>
+                        <Button type="primary" htmlType="submit" size="large" block loading={loading}>Submit for Inspection</Button>
+                    </Form>
+                );
+
+            case 8: // Final Review
+                return (
+                    <Result
+                        status="success"
+                        title="Application Submitted!"
+                        subTitle="Our clinical review team will verify your documents and background check. This usually takes 2-3 business days. We will email you once your account is activated."
+                        extra={[
+                            <Button type="primary" key="dashboard" onClick={() => navigate('/delivery/dashboard')}>
+                                Go to Dashboard
+                            </Button>,
+                            <Button key="support">Contact Support</Button>
+                        ]}
+                    />
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className="onboarding-container">
+            <Card className="onboarding-card">
+                <div className="onboarding-header">
+                    <Title level={2}>Partner Onboarding</Title>
+                    <Paragraph>Follow these steps to activate your delivery account.</Paragraph>
+                </div>
+
+                <Steps current={current} size="small" className="onboarding-steps">
+                    {steps.map(item => (
+                        <Step key={item.title} title={item.title} icon={item.icon} />
+                    ))}
+                </Steps>
+
+                <div className="step-content-wrapper">
+                    {renderStepContent()}
+                </div>
+
+                {current > 1 && current < 8 && (
+                    <Button style={{ marginTop: '16px' }} onClick={prev}>
+                        Previous
+                    </Button>
+                )}
+            </Card>
+        </div>
+    );
+};
+
+export default DeliveryOnboarding;

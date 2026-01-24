@@ -29,6 +29,11 @@ router.post('/register', [
 // @access  Public
 router.get('/status/:id', checkPharmacyStatus);
 
+// @route   GET /api/pharmacy/:id
+// @desc    Get public pharmacy details by ID
+// @access  Public
+router.get('/:id', getPharmacyById);
+
 // ============ SUBSCRIPTION ROUTES (Protected) ============
 
 // @route   GET /api/pharmacy/subscription

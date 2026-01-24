@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { register, login, getCurrentUser } = require('../controllers/authController');
+const {
+  register,
+  login,
+  getCurrentUser,
+  verifyEmail
+} = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
 const {
   requestPasswordReset,
@@ -16,35 +21,18 @@ const validateRegistration = [
   body('firstName', 'First name is required').not().isEmpty().trim(),
   body('lastName', 'Last name is required').not().isEmpty().trim(),
   body('email', 'Please include a valid email').isEmail().normalizeEmail(),
-  body('phone', 'Phone number is required').not().isEmpty().trim(),
-  body('role', 'Invalid role').optional().isIn(['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin']),
-  // Password is required only for non-customer roles
-  (req, res, next) => {
-    const { role = 'customer' } = req.body;
-
-    if (role !== 'customer' && !req.body.password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password is required for this user role',
-      });
-    }
-
-    // For customer, password is auto-generated
-    // For other roles, validate password if provided
-    if (req.body.password) {
-      body('password', 'Password must be at least 6 characters')
-        .isLength({ min: 6 })
-        .run(req);
-    }
-
-    next();
-  }
+  body('phone', 'Phone number is required').not().isEmpty().trim()
 ];
 
 // @route   POST /api/auth/register
-// @desc    Register a new user
+// @desc    Register a new customer
 // @access  Public
 router.post('/register', validateRegistration, register);
+
+// @route   GET /api/auth/verify-email/:token
+// @desc    Verify email & activate account
+// @access  Public
+router.get('/verify-email/:token', verifyEmail);
 
 // @desc    Authenticate user & get token
 // @route   POST /api/auth/login

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Layouts
@@ -11,10 +12,17 @@ import ProtectedRoute from './ProtectedRoute';
 // Auth Pages
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+import DeliveryRegister from '../pages/auth/DeliveryRegister';
+import DeliveryOnboarding from '../pages/auth/DeliveryOnboarding';
 import PharmacyRegister from '../pages/auth/PharmacyRegister';
+import VerifyEmail from '../pages/auth/VerifyEmail';
 
-// Pages
+// Page Imports
 import Home from '../pages/Home';
+import MedicineList from '../pages/medicines/MedicineList';
+import MedicineDetail from '../pages/medicines/MedicineDetail';
+
+// Customer Pages
 import CustomerDashboard from '../pages/customer/Dashboard';
 import CustomerMedicines from '../pages/customer/Medicines';
 import CustomerMedicineDetail from '../pages/customer/Medicines/MedicineDetail';
@@ -31,19 +39,15 @@ import CustomerSettings from '../pages/customer/Settings';
 import CustomerNotifications from '../pages/customer/Notifications';
 import CustomerProfile from '../pages/customer/Profile';
 import CustomerFavorites from '../pages/customer/Favorites';
-import MedicineList from '../pages/medicines/MedicineList';
-import MedicineDetail from '../pages/medicines/MedicineDetail';
 
-// Pharmacy Pages
-import PharmacyLayout from '../layouts/PharmacyLayout';
-import Inventory from '../pages/pharmacy-staff/Inventory';
-import PharmacyDashboard from '../pages/pharmacy-admin/Dashboard';
-
-// Admin & Other Pages
-import AdminLayout from '../layouts/AdminLayout';
-import AdminDashboard from '../pages/admin/Dashboard';
-import CashierDashboard from '../pages/cashier/Dashboard';
+// Delivery Pages
+import DeliveryLayout from '../layouts/DeliveryLayout';
 import DeliveryDashboard from '../pages/delivery/Dashboard';
+import DeliveryDetails from '../pages/delivery/DeliveryDetails';
+import DeliveryProfile from '../pages/delivery/Profile';
+
+// User Management (if existing)
+// import UserManagement from '../pages/admin/UserManagement'; 
 
 const AppRouter = () => {
   return (
@@ -53,14 +57,16 @@ const AppRouter = () => {
         <Route path="/" element={<Home />} />
         <Route path="/medicines" element={<MedicineList />} />
         <Route path="/medicines/:id" element={<MedicineDetail />} />
-        {/* <Route path="/pharmacies" element={<PharmacyFinder />} /> */}
       </Route>
 
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
+        <Route path="/auth/delivery/register" element={<DeliveryRegister />} />
+        <Route path="/auth/delivery/onboarding" element={<DeliveryOnboarding />} />
         <Route path="/auth/pharmacy/register" element={<PharmacyRegister />} />
+        <Route path="/auth/verify" element={<VerifyEmail />} />
       </Route>
 
       {/* Protected Routes - Customer */}
@@ -68,7 +74,7 @@ const AppRouter = () => {
         <Route element={<CustomerLayout />}>
           <Route path="/customer/home" element={<CustomerDashboard />} />
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-          {/* Add placeholder routes for other menu items to avoid 404s in demo */}
+
           <Route path="/customer/medicines" element={<CustomerMedicines />} />
           <Route path="/customer/medicines/:id" element={<CustomerMedicineDetail />} />
           <Route path="/customer/items" element={<CustomerCart />} />
@@ -88,34 +94,15 @@ const AppRouter = () => {
         </Route>
       </Route>
 
-      {/* Protected Routes - Pharmacy */}
-      <Route element={<ProtectedRoute allowedRoles={['pharmacy_admin', 'pharmacy_staff']} />}>
-        <Route element={<PharmacyLayout />}>
-          <Route path="/pharmacy-staff/inventory" element={<Inventory />} />
-          <Route path="/pharmacy-admin/dashboard" element={<PharmacyDashboard />} />
-        </Route>
-      </Route>
-
-
-      {/* Protected Routes - Cashier */}
-      <Route element={<ProtectedRoute allowedRoles={['cashier']} />}>
-        <Route path="/cashier/dashboard" element={<CashierDashboard />} />
-        {/* <Route path="/cashier/pos" element={<POS />} /> */}
-      </Route>
-
       {/* Protected Routes - Delivery */}
       <Route element={<ProtectedRoute allowedRoles={['delivery']} />}>
-        <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
-        {/* <Route path="/delivery/tasks" element={<DeliveryTasks />} /> */}
-      </Route>
-
-      {/* Protected Routes - Admin */}
-      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-        <Route element={<AdminLayout />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          {/* <Route path="/admin/users" element={<UserManagement />} /> */}
+        <Route element={<DeliveryLayout />}>
+          <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
+          <Route path="/delivery/details/:id" element={<DeliveryDetails />} />
+          <Route path="/delivery/profile" element={<DeliveryProfile />} />
         </Route>
       </Route>
+
       {/* Redirects & Fallbacks */}
       <Route path="/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />

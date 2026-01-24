@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Badge, Result, Tag, Alert } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Result, Tag, Alert, Input } from 'antd';
 import {
     EnvironmentOutlined,
     SafetyCertificateOutlined,
@@ -7,14 +7,23 @@ import {
     CarryOutOutlined,
     CheckCircleFilled,
     MedicineBoxOutlined,
-    PlusOutlined,
-    ArrowLeftOutlined
+    ArrowLeftOutlined,
+    CompassOutlined,
+    MessageOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
-import { ordersAPI } from '../../../services/api/orders';
-import { message, Spin } from 'antd';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import './Checkout.css';
+
+// Fix Leaflet icons
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -22,148 +31,139 @@ const Checkout = () => {
     const navigate = useNavigate();
     const { cartItems, subtotal, clearCart } = useCart();
     const [currentStep, setCurrentStep] = useState(0);
-    const [loading, setLoading] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState('telebirr');
 
-    // Mock Data
-    const addresses = [
-        { id: 'addr-1', label: 'Home', fullAddress: 'Bole, House 456, Addis Ababa', isDefault: true },
-        { id: 'addr-2', label: 'Office', fullAddress: 'Kazanchis, Nani Building 4th Floor, Addis Ababa', isDefault: false },
-    ];
+    // Location State
+    const [mapCenter, setMapCenter] = useState([9.0227, 38.7460]); // Addis Ababa default
+    const [locationLabel, setLocationLabel] = useState('Locating...');
+    const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
+    const [deliveryNotes, setDeliveryNotes] = useState('');
+    const [selectedAddressCoords, setSelectedAddressCoords] = useState(null);
 
-    const [selectedAddress, setSelectedAddress] = useState('addr-1');
-    const [paymentMethod, setPaymentMethod] = useState('chapa');
+    // Map Refs
+    const mapRef = useRef(null);
+    const mapInstance = useRef(null);
+    const geocodeTimeout = useRef(null);
 
     const steps = [
-        { title: 'Address', icon: <EnvironmentOutlined /> },
+        { title: 'Location', icon: <EnvironmentOutlined /> },
         { title: 'Prescription', icon: <SafetyCertificateOutlined /> },
         { title: 'Payment', icon: <CreditCardOutlined /> },
         { title: 'Review', icon: <CarryOutOutlined /> },
     ];
 
-    const handleNext = () => setCurrentStep(prev => prev + 1);
-    const handlePrev = () => setCurrentStep(prev => prev - 1);
+    // Reverse Geocoding
+    const reverseGeocode = async (lat, lng) => {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+            const data = await response.json();
+            const address = data.display_name.split(',').slice(0, 2).join(',');
+            setLocationLabel(address || 'Unknown Location');
+        } catch (error) {
+            console.error('Geocoding failed:', error);
+            setLocationLabel(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        }
+    };
 
-    const [showChapa, setShowChapa] = useState(false);
-
-    // Load Chapa Inline Script
+    // Initialize Map for Step 0
     useEffect(() => {
-        const script = document.createElement('script');
-        script.src = "https://js.chapa.co/v1/inline.js";
-        script.crossOrigin = "anonymous"; // Enable error details for cross-origin scripts
-        script.async = true;
-        document.body.appendChild(script);
+        if (currentStep === 0 && mapRef.current && !mapInstance.current) {
+            mapInstance.current = L.map(mapRef.current, {
+                zoomControl: false,
+                attributionControl: false
+            }).setView(mapCenter, 16);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
+
+            // Add Soft Blue Theme class to container
+            mapRef.current.classList.add('soft-blue-map');
+
+            // Handle Map Movement
+            mapInstance.current.on('move', () => {
+                const center = mapInstance.current.getCenter();
+                setMapCenter([center.lat, center.lng]);
+                setIsLocationConfirmed(false); // Reset confirmation on move
+
+                // Debounced Geocoding
+                if (geocodeTimeout.current) clearTimeout(geocodeTimeout.current);
+                geocodeTimeout.current = setTimeout(() => {
+                    reverseGeocode(center.lat, center.lng);
+                }, 800);
+            });
+
+            // Initial geocode
+            reverseGeocode(mapCenter[0], mapCenter[1]);
+        }
+
         return () => {
-            if (document.body.contains(script)) {
-                document.body.removeChild(script);
+            if (mapInstance.current) {
+                mapInstance.current.remove();
+                mapInstance.current = null;
             }
         };
-    }, []);
+    }, [currentStep]);
+
+    // Load Pharmacy Location
+    useEffect(() => {
+        if (cartItems.length > 0 && cartItems[0].pharmacyId) {
+            const fetchPharmacy = async () => {
+                try {
+                    const response = await fetch(`http://localhost:5000/api/pharmacy/${cartItems[0].pharmacyId}`);
+                    const data = await response.json();
+                    if (data.success && data.data.location?.coordinates) {
+                        const [lng, lat] = data.data.location.coordinates;
+
+                        // Add pharmacy marker to map if map exists
+                        if (mapInstance.current) {
+                            const pharmacyIcon = L.divIcon({
+                                className: 'pharmacy-marker-icon',
+                                html: '🏥',
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 30]
+                            });
+                            L.marker([lat, lng], { icon: pharmacyIcon })
+                                .addTo(mapInstance.current)
+                                .bindPopup(`<b>${data.data.name}</b><br/>Pickup Location`)
+                                .openPopup();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load pharmacy location', error);
+                }
+            };
+            fetchPharmacy();
+        }
+    }, [cartItems, currentStep]);
+
+    const handleNext = () => {
+        if (currentStep === 0 && !isLocationConfirmed) {
+            return; // Safety rule
+        }
+        setCurrentStep(prev => prev + 1);
+    };
+
+    const handleConfirmLocation = () => {
+        setSelectedAddressCoords(mapCenter);
+        setIsLocationConfirmed(true);
+    };
+
+    const handleUseCurrentLocation = () => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                mapInstance.current.flyTo([latitude, longitude], 17);
+            });
+        }
+    };
+    const handlePrev = () => setCurrentStep(prev => prev - 1);
 
     const handlePlaceOrder = async () => {
         try {
-            setLoading(true);
-            const address = addresses.find(a => a.id === selectedAddress);
-
-            // 1. Create Order
-            const orderPayload = {
-                items: cartItems.map(item => ({
-                    medicineId: item.id || item._id, // Handle both id formats
-                    quantity: item.quantity,
-                    price: item.priceValue
-                })),
-                shippingAddress: address.fullAddress,
-                paymentMethod: 'chapa', // Force Chapa as generic provider
-                deliveryFee: 50
-            };
-
-            const orderRes = await ordersAPI.createOrder(orderPayload);
-            const order = orderRes.data.data || orderRes.data; // Adjust based on API response structure
-            const orderId = order._id || order.id || order.orderId;
-
-            if (!orderId) throw new Error('Failed to create order');
-
-            // 2. Initialize Chapa Payment (To create DB record & get keys)
-            const paymentPayload = {
-                orderId: orderId,
-                amount: subtotal + 50,
-                paymentMethod: paymentMethod, // Selected specific provider (telebirr, etc)
-                returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
-                phoneNumber: '0911234567' // TODO: Get from user profile
-            };
-
-            const paymentRes = await ordersAPI.initializeChapaPayment(paymentPayload);
-
-            if (paymentRes.data.success) {
-                // 3. Initialize Chapa Inline
-                clearCart();
-                setShowChapa(true); // Hide our button, show Chapa container
-                setLoading(false);
-
-                // Debug logging
-                console.log('Chapa Initialization Response:', paymentRes.data);
-
-                if (window.ChapaCheckout) {
-                    try {
-                        if (!paymentRes.data.publicKey) {
-                            throw new Error('Chapa Public Key is missing from backend response');
-                        }
-
-                        const chapa = new window.ChapaCheckout({
-                            publicKey: paymentRes.data.publicKey,
-                            amount: (subtotal + 50).toString(),
-                            currency: 'ETB',
-                            tx_ref: paymentRes.data.txRef, // Link to backend payment
-                            email: "israel@negade.et", // TODO: Get from user profile
-                            first_name: "Israel",
-                            last_name: "Goytom",
-                            title: "Medilink Payment",
-                            description: `Payment for Order ${order.orderNumber}`,
-                            callbackUrl: "https://example.com/callbackurl", // Optional
-                            returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
-                            customizations: {
-                                buttonText: 'Pay Now',
-                                styles: `
-                                    .chapa-pay-button { 
-                                        background-color: #1890ff; 
-                                        color: white;
-                                        width: 100%;
-                                        padding: 10px;
-                                        border-radius: 4px;
-                                        font-weight: bold;
-                                        cursor: pointer;
-                                    }
-                                    .chapa-pay-button:hover {
-                                        background-color: #40a9ff;
-                                    }
-                                `
-                            }
-                        });
-
-                        console.log('Initializing Chapa form...');
-                        chapa.initialize('chapa-inline-form');
-                    } catch (chapaError) {
-                        console.error('Chapa Constructor Error:', chapaError);
-                        message.error(`Payment System Error: ${chapaError.message}`);
-                        setShowChapa(false); // Re-enable Pay button
-                    }
-                } else {
-                    message.error("Payment gateway script not loaded. Please refresh.");
-                    setShowChapa(false);
-                }
-
-            } else {
-                throw new Error('Payment initialization failed');
-            }
-
+            const mockOrderId = `ORD-${Date.now()}`;
+            clearCart();
+            setCurrentStep(4);
         } catch (error) {
-            console.error('Checkout Error:', error);
-            const errorMsg = error.response?.data?.message || error.message || 'Failed to place order. Please try again.';
-            if (error.response?.data?.errors) {
-                message.error(error.response.data.errors.map(e => e.msg).join(', '));
-            } else {
-                message.error(errorMsg);
-            }
-            setLoading(false);
+            console.error('Order failed', error);
         }
     };
 
@@ -191,44 +191,73 @@ const Checkout = () => {
                     <Card className="checkout-main-card">
                         {currentStep === 0 && (
                             <div className="checkout-step-content fade-in">
-                                <Title level={4} style={{ marginBottom: '24px' }}>Select Delivery Address</Title>
-                                <Radio.Group
-                                    value={selectedAddress}
-                                    onChange={e => setSelectedAddress(e.target.value)}
-                                    style={{ width: '100%' }}
-                                >
-                                    <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                                        {addresses.map(addr => (
-                                            <Card
-                                                key={addr.id}
-                                                className={`address-option-card ${selectedAddress === addr.id ? 'selected' : ''}`}
-                                                onClick={() => setSelectedAddress(addr.id)}
-                                            >
-                                                <Row align="middle">
-                                                    <Col flex="40px">
-                                                        <Radio value={addr.id} />
-                                                    </Col>
-                                                    <Col flex="auto">
-                                                        <div>
-                                                            <Space>
-                                                                <Text strong style={{ fontSize: '16px' }}>{addr.label}</Text>
-                                                                {addr.isDefault && <Badge count="Default" style={{ backgroundColor: '#E0E7FF', color: '#4338CA', fontSize: '10px' }} />}
-                                                            </Space>
-                                                            <br />
-                                                            <Text type="secondary">{addr.fullAddress}</Text>
-                                                        </div>
-                                                    </Col>
-                                                    <Col>
-                                                        <Button type="link">Edit</Button>
-                                                    </Col>
-                                                </Row>
-                                            </Card>
-                                        ))}
-                                        <Button type="dashed" block icon={<PlusOutlined />} className="add-address-btn">
-                                            Add New Address
-                                        </Button>
-                                    </Space>
-                                </Radio.Group>
+                                <Title level={4} style={{ marginBottom: '8px' }}>Delivery Location</Title>
+                                <Text type="secondary" style={{ display: 'block', marginBottom: '24px' }}>
+                                    Point the pin exactly where you want your medicines delivered.
+                                </Text>
+
+                                <div className="map-selection-container">
+                                    <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
+
+                                    {/* Fixed Center Pin Overlay */}
+                                    <div className="fixed-pin-wrapper">
+                                        <div className="main-pin">📍</div>
+                                        <div className="pin-pulse"></div>
+                                    </div>
+
+                                    <div className="map-interaction-hint">
+                                        Drag map to adjust position
+                                    </div>
+
+                                    <Button
+                                        icon={<CompassOutlined />}
+                                        className="use-current-loc-btn"
+                                        style={{ position: 'absolute', bottom: '16px', right: '16px', zIndex: 1000 }}
+                                        onClick={handleUseCurrentLocation}
+                                    >
+                                        Use My Current Location
+                                    </Button>
+                                </div>
+
+                                {/* Location Confirmation Bottom Sheet Style */}
+                                <div className="location-confirmation-card">
+                                    <Row align="middle" gutter={20}>
+                                        <Col>
+                                            <div className="location-marker-icon">
+                                                <CompassOutlined />
+                                            </div>
+                                        </Col>
+                                        <Col flex="auto">
+                                            <Text type="secondary" style={{ fontSize: '12px' }}>Deliver to:</Text>
+                                            <div style={{ wordBreak: 'break-all' }}>
+                                                <Text strong style={{ fontSize: '16px' }}>{locationLabel}</Text>
+                                            </div>
+                                        </Col>
+                                    </Row>
+
+                                    <div style={{ marginTop: '20px' }}>
+                                        <Text type="secondary" style={{ fontSize: '12px' }}>Delivery Notes (Gate color, Apt #, etc.)</Text>
+                                        <Input.TextArea
+                                            placeholder="e.g. Blue gate, apartment 3B, near the big tree"
+                                            rows={2}
+                                            style={{ marginTop: '8px', borderRadius: '12px' }}
+                                            value={deliveryNotes}
+                                            onChange={(e) => setDeliveryNotes(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <Button
+                                        type="primary"
+                                        block
+                                        size="large"
+                                        className="confirm-location-btn"
+                                        style={{ marginTop: '24px' }}
+                                        onClick={handleConfirmLocation}
+                                        disabled={isLocationConfirmed || locationLabel === 'Locating...'}
+                                    >
+                                        {isLocationConfirmed ? 'Location Set ✓' : 'Confirm Delivery Location'}
+                                    </Button>
+                                </div>
                             </div>
                         )}
 
@@ -336,7 +365,17 @@ const Checkout = () => {
                                 <Card type="inner" title="Order Details" className="review-inner-card">
                                     <div className="review-stat">
                                         <Text type="secondary">Delivery To:</Text>
-                                        <Text strong>{addresses.find(a => a.id === selectedAddress)?.label} - {addresses.find(a => a.id === selectedAddress)?.fullAddress}</Text>
+                                        <div style={{ wordBreak: 'break-all' }}>
+                                            <Text strong>{locationLabel}</Text>
+                                        </div>
+                                        {deliveryNotes && (
+                                            <div style={{ marginTop: '4px' }}>
+                                                <Text type="secondary" style={{ fontSize: '13px' }}>
+                                                    <MessageOutlined style={{ marginRight: '8px' }} />
+                                                    "{deliveryNotes}"
+                                                </Text>
+                                            </div>
+                                        )}
                                     </div>
                                     <Divider style={{ margin: '12px 0' }} />
                                     <div className="review-stat">
@@ -401,10 +440,14 @@ const Checkout = () => {
                     <Result
                         status="success"
                         title="Order Placed Successfully!"
-                        subTitle="Your order #ORD-8829 is being processed by Kenema Pharmacy."
+                        subTitle="Your order is being processed by the pharmacy."
                         extra={[
-                            <Button type="primary" key="track" onClick={() => navigate('/customer/orders')}>Track My Order</Button>,
-                            <Button key="home" onClick={() => navigate('/customer/dashboard')}>Back to Dashboard</Button>,
+                            <Button type="primary" key="track" onClick={() => navigate('/customer/orders/track/ORD-LATEST')}>
+                                Track Order Live
+                            </Button>,
+                            <Button key="orders" onClick={() => navigate('/customer/orders')}>
+                                Go to My Orders
+                            </Button>,
                         ]}
                     />
                 </div>

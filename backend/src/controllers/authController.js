@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const { generatePassword } = require('../utils/passwordGenerator');
 const { sendWelcomeEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
+const crypto = require('crypto');
 
 /**
  * @route   POST /api/auth/register
@@ -23,7 +24,7 @@ const register = async (req, res) => {
       });
     }
 
-    const { firstName, lastName, email, phone, role = 'customer' } = req.body;
+    const { firstName, lastName, email, phone, role, vehicleInfo } = req.body;
 
     // Check if user already exists
     let user = await User.findOne({ email });
@@ -34,45 +35,37 @@ const register = async (req, res) => {
       });
     }
 
-    // Generate a secure password for customers, or use provided one for other roles
-    let password;
-    if (role === 'customer') {
-      password = generatePassword(12);
-    } else {
-      // For non-customer roles, password is required in the request
-      if (!req.body.password) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password is required for this user role',
-        });
-      }
-      password = req.body.password;
-    }
+    // Role safety: only allow customer and delivery to be requested via public registration
+    const targetRole = (role === 'delivery' || role === 'customer') ? role : 'customer';
 
-    // Create new user
+    // Generate a secure password
+    const password = generatePassword(12);
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+    // Create new user (Strictly Customer, Pending status)
     user = new User({
       firstName,
       lastName,
       email,
       phone,
-      role,
-      // Password will be hashed in the pre-save hook
-      password
+      role: targetRole,
+      status: 'pending',
+      password,
+      verificationToken,
+      verificationTokenExpires,
+      vehicleInfo: targetRole === 'delivery' ? vehicleInfo : undefined
     });
 
     // Hash password and save user
     await user.save();
 
-    // If this is a customer, send welcome email with generated password
-    if (role === 'customer') {
-      try {
-        await sendWelcomeEmail(email, `${firstName} ${lastName}`, password);
-        logger.info(`Welcome email sent to ${email}`);
-      } catch (emailError) {
-        // Log the error but don't fail the registration
-        logger.error('Failed to send welcome email:', emailError);
-      }
-    }
+    // Non-blocking welcome email delivery with verification token
+    sendWelcomeEmail(email, `${firstName} ${lastName}`, password, verificationToken)
+      .then(() => logger.info(`Welcome email sent to ${email}`))
+      .catch((emailError) => logger.error('Failed to send welcome email:', emailError));
 
     const token = generateToken({
       userId: user._id,
@@ -82,17 +75,16 @@ const register = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      data: {
-        token,
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-        },
+      message: 'User registered successfully. Please check your email for your generated password.',
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        status: user.status
       },
     });
   } catch (error) {
@@ -135,8 +127,19 @@ const login = async (req, res) => {
       });
     }
 
-    console.log('LOGIN DEBUG: User found. Role:', user.role ? user.role.name : 'No Role');
-    console.log('LOGIN DEBUG: Comparing password...');
+    // Check account status
+    // Allow delivery and pharmacy_admin to login even if pending (to complete onboarding)
+    if (user.status !== 'active' && !(user.status === 'pending' && (user.role === 'delivery' || user.role === 'pharmacy_admin'))) {
+      let statusMessage = 'Your account is pending approval.';
+      if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
+      if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';
+
+      return res.status(403).json({
+        success: false,
+        message: statusMessage,
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     console.log('LOGIN DEBUG: Password match result:', isMatch);
 
@@ -148,11 +151,7 @@ const login = async (req, res) => {
       });
     }
 
-    const token = generateToken({
-      userId: user._id,
-      email: user.email,
-      role: user.role
-    });
+    const token = generateToken({ userId: user._id, role: user.role });
 
     const { password: _pwd, ...safeUser } = user.toObject();
 
@@ -166,6 +165,7 @@ const login = async (req, res) => {
         email: safeUser.email,
         role: safeUser.role.name,
         phone: safeUser.phone,
+        status: safeUser.status
       },
     });
   } catch (error) {
@@ -203,6 +203,7 @@ const getCurrentUser = async (req, res) => {
         email: user.email,
         role: user.role.name,
         phone: user.phone,
+        status: user.status
       },
     });
   } catch (error) {
@@ -215,8 +216,138 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+/**
+ * @route   POST /api/auth/register-pharmacy
+ * @desc    Register a new pharmacy owner
+ * @access  Public
+ */
+const registerPharmacy = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array(),
+      });
+    }
+
+    const { firstName, lastName, email, phone } = req.body;
+
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists',
+      });
+    }
+
+    // Generate a secure password
+    const password = generatePassword(12);
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+
+    // Create new user (Pharmacy Admin, Pending status)
+    user = new User({
+      firstName,
+      lastName,
+      email,
+      phone,
+      role: 'pharmacy_admin',
+      status: 'pending',
+      password,
+      verificationToken,
+      verificationTokenExpires
+    });
+
+    // Hash password and save user
+    await user.save();
+
+    // Non-blocking welcome email delivery with verification token
+    sendWelcomeEmail(email, `${firstName} ${lastName}`, password, verificationToken)
+      .then(() => logger.info(`Pharmacy welcome email sent to ${email}`))
+      .catch((emailError) => logger.error('Failed to send pharmacy welcome email:', emailError));
+
+    return res.status(201).json({
+      success: true,
+      message: 'Pharmacy registration submitted successfully. Your account is pending approval.',
+      data: {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          status: user.status
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Pharmacy registration error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during pharmacy registration',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @route   GET /api/auth/verify-email/:token
+ * @desc    Verify email & activate account
+ * @access  Public
+ */
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const now = new Date();
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: now }
+    });
+
+    if (!user) {
+      console.warn(`Verification failed for token: ${token}`);
+      const expiredUser = await User.findOne({ verificationToken: token });
+      if (expiredUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verification link has expired. Please register again.',
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid verification token.',
+      });
+    }
+
+    user.isEmailVerified = true;
+    user.status = 'active';
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Account activated successfully! You can now log in.',
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during email verification',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getCurrentUser,
+  verifyEmail,
 };

@@ -6,7 +6,7 @@ import {
     MessageOutlined,
     ClockCircleOutlined,
     CheckCircleFilled,
-    NavigationOutlined,
+    SendOutlined,
     UserOutlined,
     LoadingOutlined
 } from '@ant-design/icons';
@@ -71,15 +71,100 @@ const OrderTracking = () => {
     // Initialize Map
     useEffect(() => {
         if (mapRef.current && !mapInstance.current) {
-            mapInstance.current = L.map(mapRef.current).setView(driverPos, 15);
+            mapInstance.current = L.map(mapRef.current, {
+                zoomControl: false,
+                attributionControl: false
+            }).setView(driverPos, 15);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(mapInstance.current);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
 
-            driverMarkerRef.current = L.marker(driverPos)
+            // Apply Theme
+            mapRef.current.classList.add('soft-blue-map');
+
+            // Courier Marker (Pulsing)
+            const courierIcon = L.divIcon({
+                className: 'pulse-marker',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            driverMarkerRef.current = L.marker(driverPos, { icon: courierIcon })
                 .addTo(mapInstance.current)
-                .bindPopup('Driver is here. Heading to your location.');
+                .bindPopup('<b>Courier</b><br/>Heading to your location');
+
+            // Customer Destination Marker
+            const destIcon = L.divIcon({
+                className: 'customer-destination-marker',
+                html: '📍',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+            });
+
+            const markers = []; // Keep track to fit bounds
+
+            // Add Driver Marker
+            markers.push(driverPos);
+
+            if (orderData?.deliveryAddress?.coordinates) {
+                const destPos = [
+                    orderData.deliveryAddress.coordinates.latitude,
+                    orderData.deliveryAddress.coordinates.longitude
+                ];
+                markers.push(destPos);
+                L.marker(destPos, { icon: destIcon })
+                    .addTo(mapInstance.current)
+                    .bindPopup('<b>Delivery Destination</b><br/>You are here');
+            }
+
+            // ADDED: Pharmacy Marker
+            if (orderData?.pharmacy?.location?.coordinates || orderData?.pharmacy?._id) {
+                const addPharmacyMarker = (lat, lng, name) => {
+                    const pharmacyIcon = L.divIcon({
+                        className: 'pharmacy-marker-icon',
+                        html: '🏥',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    });
+                    const pPos = [lat, lng];
+                    markers.push(pPos);
+                    L.marker(pPos, { icon: pharmacyIcon })
+                        .addTo(mapInstance.current)
+                        .bindPopup(`<b>${name}</b><br/>Pickup Point`)
+                        .openPopup();
+                };
+
+                // Case 1: Coordinates are populated in orderData
+                if (orderData.pharmacy.location?.coordinates) {
+                    const [plng, plat] = orderData.pharmacy.location.coordinates;
+                    addPharmacyMarker(plat, plng, orderData.pharmacy.name);
+                }
+                // Case 2: Only ID is available (or partial data), fetch full details
+                else if (typeof orderData.pharmacy === 'object' && orderData.pharmacy._id) {
+                    // Since orderData.pharmacy might just be populated with name/address but not location
+                    // We might need to fetch it if location is missing. 
+                    // OR ensure the backend populates it. 
+                    // For now, let's try to fetch if we have an ID but no coordinates
+                    fetch(`http://localhost:5000/api/pharmacy/${orderData.pharmacy._id}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success && data.data.location?.coordinates) {
+                                const [plng, plat] = data.data.location.coordinates;
+                                addPharmacyMarker(plat, plng, data.data.name);
+
+                                // Refit bounds after lazy load
+                                const bounds = L.latLngBounds(markers);
+                                mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
+                            }
+                        })
+                        .catch(err => console.error("Could not load pharmacy loc", err));
+                }
+            }
+
+            // Fit bounds to show all initial markers
+            if (markers.length > 0) {
+                const bounds = L.latLngBounds(markers);
+                mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
+            }
         }
 
         return () => {
@@ -88,7 +173,7 @@ const OrderTracking = () => {
                 mapInstance.current = null;
             }
         };
-    }, []);
+    }, [orderData]); // Re-run when orderData loads to get coordinates
 
     useEffect(() => {
         fetchTracking(); // Initial fetch
@@ -103,21 +188,34 @@ const OrderTracking = () => {
         return <CheckCircleFilled style={{ color: '#43A047', fontSize: '16px' }} />;
     };
 
-    const timelineItems = (orderData?.statusHistory || []).map((item, index) => ({
-        dot: getStatusIcon(item.status, index === (orderData?.statusHistory.length - 1)),
-        children: (
-            <div>
-                <Text strong style={{ textTransform: 'capitalize' }}>
-                    {item.status.replace(/_/g, ' ')}
-                </Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {new Date(item.timestamp || new Date()).toLocaleString()}
-                </Text>
-                {item.note && <div style={{ fontSize: '13px' }}>{item.note}</div>}
-            </div>
-        )
-    }));
+    const statusMapping = {
+        'confirmed': 'Order Accepted',
+        'preparing': 'Packed',
+        'ready': 'Picked Up',
+        'out_for_delivery': 'On the Way',
+        'delivered': 'Delivered'
+    };
+
+    const timelineItems = (orderData?.statusHistory || []).map((item, index) => {
+        const mappedStatus = statusMapping[item.status] || item.status.replace(/_/g, ' ');
+        const isLatest = index === (orderData?.statusHistory.length - 1);
+
+        return {
+            dot: getStatusIcon(item.status, isLatest),
+            children: (
+                <div>
+                    <Text strong style={{ textTransform: 'capitalize', color: isLatest ? '#1E88E5' : 'inherit' }}>
+                        {mappedStatus}
+                    </Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                        {new Date(item.timestamp || new Date()).toLocaleString()}
+                    </Text>
+                    {item.note && <div style={{ fontSize: '13px', marginTop: '4px' }}>{item.note}</div>}
+                </div>
+            )
+        };
+    });
 
     if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}><LoadingOutlined style={{ fontSize: '24px' }} /></div>;
 

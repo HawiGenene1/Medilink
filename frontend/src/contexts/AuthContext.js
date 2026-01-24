@@ -14,29 +14,13 @@ export const useAuth = () => {
   return context;
 };
 
-// Development-only mock user
-const devUser = {
-  _id: 'dev-user-123',
-  email: 'dev@example.com',
-  firstName: 'Dev',
-  lastName: 'User',
-  role: 'customer',
-  isEmailVerified: true
-};
 
-// Development-only mock token
-const devToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkZXYtdXNlci0xMjMiLCJlbWFpbCI6ImRldkBleGFtcGxlLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTYzNTc5MDQwMCwiZXhwIjoxNjM1ODc2ODAwfQ.mock-token-for-development';
-
-// Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
-  // Check if user is logged in on initial load
-  // Check if user is logged in on initial load
-  // Check if user is logged in on initial load
   useEffect(() => {
     const token = localStorage.getItem('token');
 
@@ -75,6 +59,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Registration function
+  const register = async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true, user };
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Registration failed',
+        errors: error.response?.data?.errors
+      };
+    }
+  };
+
   // Logout function
   const logout = () => {
     localStorage.removeItem('token');
@@ -102,6 +105,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     loading,
     login,
+    register,
     logout,
     hasRole,
     hasAnyRole

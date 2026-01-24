@@ -26,10 +26,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
 
-  // In development mode, bypass authentication checks
-  if (process.env.NODE_ENV === 'development') {
-    return children ? children : <Outlet />;
-  }
+
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {

@@ -89,3 +89,25 @@ exports.updateUserProfile = async (req, res) => {
         res.status(500).json({ message: 'Server error updating profile' });
     }
 };
+
+// @desc    Delete user account
+// @route   DELETE /api/users/profile
+// @access  Private
+exports.deleteUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Potential addition: delete associated favorites, orders, etc.
+        // For now, focus on User account deletion
+        await User.findByIdAndDelete(req.user.id);
+
+        res.json({ message: 'Account deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting account:', error);
+        res.status(500).json({ message: 'Server error deleting account' });
+    }
+};
