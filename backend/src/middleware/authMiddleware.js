@@ -8,7 +8,7 @@ const protect = async (req, res, next) => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -21,10 +21,10 @@ const protect = async (req, res, next) => {
     try {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+
       // Find user by ID from token
       const user = await User.findById(decoded.userId).select('-password');
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -96,9 +96,13 @@ const authRequired = authorize;
 // Basic auth (no role restrictions) for routes like /api/auth/me
 const authenticate = protect;
 
+// Composite middleware for admin access
+const protectAdmin = [protect, authorize('admin')];
+
 module.exports = {
   protect,
   authorize,
   authRequired,
-  authenticate
+  authenticate,
+  protectAdmin
 };

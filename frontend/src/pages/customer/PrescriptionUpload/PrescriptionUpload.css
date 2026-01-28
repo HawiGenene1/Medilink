@@ -1,0 +1,245 @@
+.prescription-upload-container {
+  padding: 24px;
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+.upload-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.upload-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.upload-header h3 {
+  color: #1890ff;
+  margin-bottom: 8px;
+}
+
+.upload-form {
+  margin-bottom: 32px;
+}
+
+.upload-dragger {
+  border: 2px dashed #d9d9d9 !important;
+  border-radius: 8px !important;
+  background: #fafafa !important;
+  transition: all 0.3s ease;
+}
+
+.upload-dragger:hover {
+  border-color: #1890ff !important;
+  background: #f0f8ff !important;
+}
+
+.upload-dragger .ant-upload-drag-icon {
+  margin-bottom: 16px;
+}
+
+.upload-dragger .ant-upload-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.upload-dragger .ant-upload-hint {
+  font-size: 14px;
+  color: #8c8c8c;
+}
+
+.uploaded-file-preview {
+  margin-top: 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #f9f9f9;
+}
+
+.file-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+}
+
+.upload-tips {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 6px;
+  padding: 16px;
+  margin-top: 24px;
+}
+
+.upload-tips h5 {
+  color: #52c41a;
+  margin-bottom: 12px;
+}
+
+.upload-tips ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.upload-tips li {
+  margin-bottom: 8px;
+  color: #595959;
+  font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .prescription-upload-container {
+    padding: 16px;
+  }
+  
+  .upload-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+  }
+  
+  .upload-header h3 {
+    font-size: 20px;
+  }
+  
+  .upload-form {
+    margin-bottom: 24px;
+  }
+  
+  .file-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .file-info .ant-space {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Loading state */
+.upload-card .ant-spin-container {
+  min-height: 200px;
+}
+
+/* Success state */
+.upload-success-message {
+  text-align: center;
+  padding: 32px;
+}
+
+.upload-success-message .anticon {
+  font-size: 64px;
+  color: #52c41a;
+  margin-bottom: 16px;
+}
+
+/* Error state */
+.upload-error-message {
+  text-align: center;
+  padding: 32px;
+  color: #ff4d4f;
+}
+
+.upload-error-message .anticon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+/* File type indicators */
+.file-type-image {
+  color: #1890ff;
+}
+
+.file-type-pdf {
+  color: #ff4d4f;
+}
+
+/* Urgency level styling */
+.ant-tag {
+  margin: 0;
+}
+
+/* Form styling */
+.upload-form .ant-form-item-label > label {
+  font-weight: 500;
+}
+
+.upload-form .ant-input,
+.upload-form .ant-select-selector {
+  border-radius: 6px;
+}
+
+.upload-form .ant-btn-primary {
+  height: 48px;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.upload-form .ant-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+}
+
+/* Alert styling */
+.upload-card .ant-alert {
+  border-radius: 6px;
+}
+
+.upload-card .ant-alert-info {
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+}
+
+.upload-card .ant-alert-info .ant-alert-icon {
+  color: #1890ff;
+}
+
+/* Modal preview styling */
+.ant-modal .ant-modal-body {
+  padding: 16px;
+}
+
+.ant-modal .ant-modal-body img {
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation */
+.upload-dragger {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.uploaded-file-preview {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

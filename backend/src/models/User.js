@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false // Don't return password by default in queries
   },
-  phone: {
+phone: {
     type: String,
     required: [true, 'Phone number is required'],
     trim: true
@@ -41,9 +41,7 @@ const userSchema = new mongoose.Schema({
   pharmacyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Pharmacy',
-    required: function () {
-      return ['pharmacy_staff', 'pharmacy_admin', 'cashier'].includes(this.role);
-    }
+    required: false // Make it optional for now
   },
   // Address for customers and delivery personnel
   address: {
@@ -93,6 +91,32 @@ const userSchema = new mongoose.Schema({
   },
   resetToken: { type: String, default: null },
   resetTokenExpire: { type: Date, default: null },
+
+  // Admin management fields
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  disabledAt: Date,
+  disabledReason: String,
+  disabledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  enabledAt: Date,
+  enabledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  roleUpdatedAt: Date,
+  roleUpdatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  roleUpdateReason: String,
+  permissions: [{
+    type: String
+  }]
 }, {
   timestamps: true
 });
@@ -114,14 +138,14 @@ userSchema.pre('save', async function () {
     throw error;
   }
 });
-
 // Method to compare passwords
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    throw new Error(error);
-  }
+userSchema.methods.comparePassword = function (candidatePassword) {
+  return new Promise((resolve, reject) => {
+    bcrypt.compare(candidatePassword, this.password, (err, isMatch) => {
+      if (err) return reject(err);
+      resolve(isMatch);
+    });
+  });
 };
 
 // Method to get user without sensitive data

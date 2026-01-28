@@ -43,8 +43,31 @@ import DeliveryDashboard from '../pages/delivery/Dashboard';
 import DeliveryDetails from '../pages/delivery/DeliveryDetails';
 import DeliveryProfile from '../pages/delivery/Profile';
 
-// User Management (if existing)
-// import UserManagement from '../pages/admin/UserManagement'; 
+// Pharmacy Pages
+import PharmacyLayout from '../layouts/PharmacyLayout';
+import Inventory from '../pages/pharmacy-staff/Inventory';
+import PharmacyDashboard from '../pages/pharmacy-admin/Dashboard';
+
+// Admin & Other Pages
+import AdminLayout from '../layouts/AdminLayout';
+import AdminDashboard from '../pages/admin/Dashboard';
+import CashierDashboard from '../pages/cashier/Dashboard';
+
+// Real Admin Components
+import UsersList from '../pages/admin/Users/UsersList';
+import UserDetails from '../pages/admin/Users/UserDetails';
+import PendingRegistrations from '../pages/admin/Users/PendingRegistrations';
+import PharmacyList from '../pages/admin/Pharmacies/PharmacyList';
+import PharmacyDetail from '../pages/admin/Pharmacies/PharmacyDetail';
+import SystemMonitoring from '../pages/admin/Monitoring/SystemMonitoring';
+import AuditLogs from '../pages/admin/Audit/AuditLogs';
+import SecurityDashboard from '../pages/admin/Security/SecurityDashboard';
+import Communication from '../pages/admin/Communication/Communication';
+import DataManagement from '../pages/admin/Data/DataManagement';
+import Analytics from '../pages/admin/Analytics/Analytics';
+import Settings from '../pages/admin/Settings/Settings';
+import DeliveryApplicationList from '../pages/admin/DeliveryApplications/DeliveryApplicationList';
+import DeliveryApplicationDetail from '../pages/admin/DeliveryApplications/DeliveryApplicationDetail';
 
 const AppRouter = () => {
   return (
@@ -96,6 +119,54 @@ const AppRouter = () => {
         </Route>
       </Route>
 
+      {/* Protected Routes - Pharmacy */}
+      <Route element={<ProtectedRoute allowedRoles={['pharmacy_admin', 'pharmacy_staff']} />}>
+        <Route element={<PharmacyLayout />}>
+          <Route path="/pharmacy-staff/inventory" element={<Inventory />} />
+          <Route path="/pharmacy-admin/dashboard" element={<PharmacyDashboard />} />
+        </Route>
+      </Route>
+
+      {/* Protected Routes - Cashier */}
+      <Route element={<ProtectedRoute allowedRoles={['cashier']} />}>
+        <Route path="/cashier/dashboard" element={<CashierDashboard />} />
+        {/* <Route path="/cashier/pos" element={<POS />} /> */}
+      </Route>
+
+      {/* Protected Routes - Admin */}
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route element={<AdminLayout />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+          {/* User Management */}
+          <Route path="/admin/users" element={<UsersList />} />
+          <Route path="/admin/users/:id" element={<UserDetails />} />
+          <Route path="/admin/registrations/pending" element={<PendingRegistrations />} />
+
+          {/* Delivery Applications */}
+          <Route path="/admin/delivery-applications" element={<DeliveryApplicationList />} />
+          <Route path="/admin/delivery-applications/:id" element={<DeliveryApplicationDetail />} />
+
+          {/* Pharmacy Management */}
+          <Route path="/admin/pharmacies" element={<PharmacyList />} />
+          <Route path="/admin/pharmacies/:id" element={<PharmacyDetail />} />
+
+          {/* Monitoring & Security */}
+          <Route path="/admin/monitoring" element={<SystemMonitoring />} />
+          <Route path="/admin/audit" element={<AuditLogs />} />
+          <Route path="/admin/security" element={<SecurityDashboard />} />
+
+          {/* Communication */}
+          <Route path="/admin/communication" element={<Communication />} />
+
+          {/* Data & Analytics */}
+          <Route path="/admin/data" element={<DataManagement />} />
+          <Route path="/admin/analytics" element={<Analytics />} />
+
+          {/* Settings */}
+          <Route path="/admin/settings" element={<Settings />} />
+        </Route>
+      </Route>
       {/* Redirects & Fallbacks */}
       <Route path="/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />

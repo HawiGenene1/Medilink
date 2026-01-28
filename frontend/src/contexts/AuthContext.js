@@ -25,9 +25,9 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
 
     if (token) {
-      api.get('/auth/current-user')
+      api.get('/auth/me')
         .then(response => {
-          setUser(response.data);
+          setUser(response.data.user);
           setIsAuthenticated(true);
         })
         .catch(() => {

@@ -7,7 +7,7 @@ const {
   getCurrentUser,
   verifyEmail
 } = require('../controllers/authController');
-const { authenticate } = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const {
   requestPasswordReset,
   resetPassword,
@@ -25,7 +25,7 @@ const validateRegistration = [
 ];
 
 // @route   POST /api/auth/register
-// @desc    Register a new customer
+// @desc    Register a new user (Customer, Pharmacy, or Delivery)
 // @access  Public
 router.post('/register', validateRegistration, register);
 
@@ -46,19 +46,13 @@ router.post(
   login
 );
 
-// @desc    Get current user
+// @desc    Get current admin
 // @route   GET /api/auth/me
 // @access  Private
-router.get('/me', authenticate, getCurrentUser);
+router.get('/me', protect, authorize('admin'), getCurrentUser);
 
-// @desc    Request password reset
-// @route   POST /api/auth/request-reset
-// @access  Public
-router.post("/request-reset", requestPasswordReset);
-
-// @desc    Reset password
-// @route   POST /api/auth/reset-password/:token
-// @access  Public
-router.post("/reset-password/:token", resetPassword);
+// Password reset routes
+router.post('/request-password-reset', requestPasswordReset);
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

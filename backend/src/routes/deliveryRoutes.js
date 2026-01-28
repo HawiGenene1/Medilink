@@ -1,21 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, authorize } = require('../middleware/authMiddleware');
-const { updateLocation } = require('../controllers/deliveryController');
+const {
+    registerDeliveryPerson,
+    getAllApplications,
+    getApplicationDetails,
+    approveApplication,
+    rejectApplication
+} = require('../controllers/deliveryController');
+const { protect, authorize } = require('../middleware/authMiddleware'); // Assuming these exist
+// Note: You might need to check if authMiddleware path is correct. Usually it is in ../middleware/authMiddleware.js
 
-// Development bypass middleware (optional, but good for consistency)
-const devAuth = (req, res, next) => {
-    if (process.env.NODE_ENV === 'development') {
-        req.user = {
-            userId: 'dev-driver-001',
-            role: 'delivery'
-        };
-        return next();
-    }
-    return authenticate(req, res, next);
-};
+// Public routes
+router.post('/register', registerDeliveryPerson);
 
-// Update delivery live location
-router.patch('/location', devAuth, updateLocation);
+// Admin routes
+router.use(protect);
+router.use(authorize('admin'));
+
+router.get('/admin/applications', getAllApplications);
+router.get('/admin/applications/:id', getApplicationDetails);
+router.post('/admin/applications/:id/approve', approveApplication);
+router.post('/admin/applications/:id/reject', rejectApplication);
 
 module.exports = router;
