@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, Tag, Space, Tabs, InputNumber, Divider, Alert, Avatar } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Typography, Button, Tag, Space, Tabs, InputNumber, Divider, Alert, Avatar, Spin, Empty } from 'antd';
+import api from '../../../services/api';
 import {
     ShoppingCartOutlined,
     MedicineBoxOutlined,
@@ -28,20 +29,25 @@ const MedicineDetail = () => {
     const { isFavorite, toggleFavorite } = useFavorites();
     const [quantity, setQuantity] = useState(1);
     const [rxUploaded, setRxUploaded] = useState(false);
+    const [medicine, setMedicine] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Mock Medicine Data
-    const medicine = {
-        name: 'Amoxicillin 250mg',
-        genericName: 'Amoxicillin trihydrate',
-        price: '120 ETB',
-        prescriptionRequired: true,
-        category: 'Antibiotics',
-        usage: 'Specifically used to treat bacterial infections like pneumonia and bronchitis.',
-        dosage: 'Take 1 capsule three times daily for 7 days. Complete the full course.',
-        warnings: 'Avoid use if you are allergic to penicillin. May cause drowsiness.',
-        storage: 'Store in a cool, dry place away from sunlight.',
-        expiry: 'Oct 2026'
-    };
+    useEffect(() => {
+        const fetchMedicine = async () => {
+            setLoading(true);
+            try {
+                const response = await api.get(`/medicines/${id}`);
+                setMedicine(response.data);
+            } catch (err) {
+                console.error('Error fetching medicine details:', err);
+                setError('Failed to load medicine details.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchMedicine();
+    }, [id]);
 
     const PharmaciesList = () => (
         <div className="pharmacies-tab-list">
@@ -132,6 +138,10 @@ const MedicineDetail = () => {
         },
     ];
 
+    if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>;
+    if (error) return <Alert message="Error" description={error} type="error" showIcon style={{ margin: '24px' }} />;
+    if (!medicine) return <Empty description="Medicine not found" style={{ margin: '48px' }} />;
+
     return (
         <div className="medicine-detail-container fade-in">
             <Button
@@ -150,20 +160,20 @@ const MedicineDetail = () => {
                         <Row gutter={32}>
                             <Col xs={24} md={8}>
                                 <div className="product-image-container">
-                                    <MedicineBoxOutlined style={{ fontSize: '80px', color: '#1E88E5' }} />
+                                    <Avatar shape="square" size={160} src={(medicine.images && medicine.images[0]) || medicine.imageUrl} icon={<MedicineBoxOutlined style={{ fontSize: '80px', color: '#1E88E5' }} />} />
                                 </div>
                             </Col>
                             <Col xs={24} md={16}>
                                 <div className="product-header-info">
                                     <div style={{ marginBottom: '12px' }}>
-                                        {medicine.prescriptionRequired && (
+                                        {medicine.requiresPrescription && (
                                             <Tag icon={<SafetyCertificateOutlined />} color="error">Prescription Required</Tag>
                                         )}
                                         <Tag icon={<CheckCircleOutlined />} color="success">Verified Product</Tag>
                                     </div>
                                     <Title level={2} style={{ margin: 0 }}>{medicine.name}</Title>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Text type="secondary" style={{ fontSize: '16px' }}>{medicine.genericName}</Text>
+                                        <Text type="secondary" style={{ fontSize: '16px' }}>{medicine.genericName || medicine.brand}</Text>
                                         <Button
                                             type="text"
                                             icon={isFavorite(id) ? <HeartFilled style={{ color: '#F44336' }} /> : <HeartOutlined />}
@@ -202,7 +212,9 @@ const MedicineDetail = () => {
                         <div className="panel-pricing">
                             <Text type="secondary">Price per unit</Text>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <Title level={2} style={{ margin: 0, color: '#1E88E5' }}>{medicine.price}</Title>
+                                <Title level={2} style={{ margin: 0, color: '#1E88E5' }}>
+                                    {(medicine.price?.basePrice || 0).toFixed(2)}
+                                </Title>
                                 <Text type="secondary">ETB</Text>
                             </div>
                         </div>
@@ -213,7 +225,7 @@ const MedicineDetail = () => {
                             <Text strong>Quantity</Text>
                             <InputNumber
                                 min={1}
-                                max={10}
+                                max={medicine.stockQuantity || 10}
                                 value={quantity}
                                 onChange={setQuantity}
                                 className="clinical-input-number"
@@ -222,10 +234,12 @@ const MedicineDetail = () => {
 
                         <div className="total-preview-row">
                             <Text>Order Total:</Text>
-                            <Text strong style={{ fontSize: '18px' }}>{120 * quantity} ETB</Text>
+                            <Text strong style={{ fontSize: '18px' }}>
+                                {((medicine.price?.basePrice || 0) * quantity).toFixed(2)} ETB
+                            </Text>
                         </div>
 
-                        {medicine.prescriptionRequired ? (
+                        {medicine.requiresPrescription ? (
                             <div className="rx-upload-section">
                                 <Button
                                     block
@@ -249,13 +263,13 @@ const MedicineDetail = () => {
                                 block
                                 icon={<ShoppingCartOutlined />}
                                 className="add-to-cart-btn"
-                                disabled={medicine.prescriptionRequired && !rxUploaded}
+                                disabled={medicine.requiresPrescription && !rxUploaded}
                                 onClick={() => {
                                     addToCart({ ...medicine, id }, quantity);
                                     navigate('/customer/checkout');
                                 }}
                             >
-                                {medicine.prescriptionRequired && !rxUploaded ? 'Upload Rx First' : 'Add to Cart'}
+                                {medicine.requiresPrescription && !rxUploaded ? 'Upload Rx First' : 'Add to Cart'}
                             </Button>
 
                             <Button
@@ -263,7 +277,7 @@ const MedicineDetail = () => {
                                 block
                                 style={{ background: '#f59e0b', color: 'white', border: 'none' }}
                                 icon={<ArrowRightOutlined />}
-                                disabled={medicine.prescriptionRequired && !rxUploaded}
+                                disabled={medicine.requiresPrescription && !rxUploaded}
                                 onClick={() => {
                                     addToCart({ ...medicine, id }, quantity);
                                     navigate('/customer/checkout');

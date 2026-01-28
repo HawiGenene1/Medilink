@@ -4,6 +4,7 @@ import { Container, Row, Col, Card, Form, Button, Spinner } from 'react-bootstra
 import { Search, Filter, Plus } from 'react-bootstrap-icons';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import './MedicineList.css';
 
 const MedicineList = () => {
   const [medicines, setMedicines] = useState([]);
@@ -18,15 +19,9 @@ const MedicineList = () => {
 
   useEffect(() => {
     const fetchMedicines = async () => {
+      setLoading(true);
       try {
-        const params = new URLSearchParams();
-        if (filters.search) params.append('search', filters.search);
-        if (filters.category) params.append('category', filters.category);
-        if (filters.minPrice) params.append('minPrice', filters.minPrice);
-        if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-        if (filters.sort) params.append('sort', filters.sort);
-
-  const response = await api.get(`/medicines?${params.toString()}`);
+        const response = await api.get('/medicines', { params: filters });
         setMedicines(response.data);
       } catch (error) {
         console.error('Error fetching medicines:', error);
@@ -48,15 +43,15 @@ const MedicineList = () => {
   }
 
   return (
-    <Container className="my-4">
+    <Container className="my-4" style={{ paddingTop: '100px' }}>
       <h2 className="mb-4">Browse Medicines</h2>
-      
+
       {/* Search and Filter Section */}
       <Card className="mb-4">
         <Card.Body>
           <Form>
             <Row>
-              <Col md={6}>
+              <Col md={9}>
                 <Form.Group>
                   <Form.Label><Search /> Search Medicines</Form.Label>
                   <Form.Control
@@ -84,28 +79,23 @@ const MedicineList = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={3} className="d-flex align-items-end">
-                <Button variant="primary" className="w-100">
-                  <Plus /> Add New Medicine
-                </Button>
-              </Col>
             </Row>
           </Form>
         </Card.Body>
       </Card>
 
       {/* Medicine Grid */}
-      <Row xs={1} md={2} lg={3} className="g-4">
+      <Row xs={1} md={2} lg={4} className="g-4">
         {medicines.map(medicine => (
           <Col key={medicine._id}>
             <Card className="h-100">
-              <Card.Img 
-                variant="top" 
-                src={medicine.imageUrl || '/images/medicine-placeholder.jpg'} 
+              <Card.Img
+                variant="top"
+                src={(medicine.images && medicine.images[0]) || medicine.imageUrl || '/images/medicine-placeholder.jpg'}
                 alt={medicine.name}
-                style={{ height: '200px', objectFit: 'cover' }}
+                style={{ height: '160px', objectFit: 'cover' }}
               />
-              <Card.Body>
+              <Card.Body className="d-flex flex-column">
                 <Card.Title>{medicine.name}</Card.Title>
                 <Card.Subtitle className="mb-2 text-muted">
                   {medicine.manufacturer}
@@ -113,9 +103,16 @@ const MedicineList = () => {
                 <Card.Text>
                   {medicine.description?.substring(0, 100)}...
                 </Card.Text>
-                <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">${medicine.price.toFixed(2)}</h5>
-                  <Button variant="primary" as={Link} to={`/medicines/${medicine._id}`}>
+                <div className="d-flex justify-content-between align-items-center mt-auto">
+                  <h6 className="mb-0 fw-bold">
+                    ETB {(medicine.price?.basePrice || medicine.price || 0).toFixed(2)}
+                  </h6>
+                  <Button
+                    variant="primary"
+                    as={Link}
+                    to={`/medicines/${medicine._id}`}
+                    className="view-details-btn"
+                  >
                     View Details
                   </Button>
                 </div>

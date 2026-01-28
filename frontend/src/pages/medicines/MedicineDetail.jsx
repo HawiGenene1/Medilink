@@ -58,7 +58,12 @@ const MedicineDetail = () => {
       <Row>
         <Col md={6}>
           <Card>
-            <Card.Img variant="top" src={medicine.imageUrl || '/images/medicine-placeholder.jpg'} alt={medicine.name} style={{ maxHeight: 500, objectFit: 'contain' }} />
+            <Card.Img
+              variant="top"
+              src={(medicine.images && medicine.images[0]) || medicine.imageUrl || '/images/medicine-placeholder.jpg'}
+              alt={medicine.name}
+              style={{ maxHeight: 500, objectFit: 'contain' }}
+            />
           </Card>
         </Col>
         <Col md={6}>
@@ -67,12 +72,23 @@ const MedicineDetail = () => {
               <Card.Title className="display-6">{medicine.name}</Card.Title>
               <Card.Subtitle className="mb-3 text-muted">{medicine.manufacturer}</Card.Subtitle>
               <div className="mb-4">
-                <h3 className="text-primary">${medicine.price?.toFixed(2)}</h3>
-                <span className={`badge ${medicine.stock > 0 ? 'bg-success' : 'bg-danger'}`}>{medicine.stock > 0 ? 'In Stock' : 'Out of Stock'}</span>
+                <h3 className="text-primary">
+                  ETB {(medicine.price?.basePrice || medicine.price || 0).toFixed(2)}
+                </h3>
+                <span className={`badge ${(medicine.stockQuantity || 0) > 0 ? 'bg-success' : 'bg-danger'}`}>
+                  {(medicine.stockQuantity || 0) > 0 ? 'In Stock' : 'Out of Stock'}
+                </span>
                 {medicine.requiresPrescription && <span className="badge bg-warning text-dark ms-2">Prescription Required</span>}
               </div>
               <Card.Text className="mb-4">{medicine.description}</Card.Text>
-              <div className="mb-4"><h5>Details</h5><ul><li>Category: {medicine.category}</li><li>Dosage: {medicine.dosage || 'N/A'}</li><li>Stock: {medicine.stock} units available</li></ul></div>
+              <div className="mb-4">
+                <h5>Details</h5>
+                <ul>
+                  <li>Category: {medicine.category}</li>
+                  <li>Dosage: {medicine.strength || medicine.dosage || 'N/A'}</li>
+                  <li>Stock: {medicine.stockQuantity || 0} units available</li>
+                </ul>
+              </div>
               {medicine.requiresPrescription && (
                 <div className="mb-4">
                   <h5>Upload Prescription</h5>
@@ -86,9 +102,22 @@ const MedicineDetail = () => {
               <div className="d-flex align-items-center mb-4">
                 <Form.Group className="me-3" style={{ width: '100px' }}>
                   <Form.Label>Quantity</Form.Label>
-                  <Form.Control type="number" min={1} max={medicine.stock} value={quantity} onChange={(e) => setQuantity(Math.min(Number(e.target.value || 1), medicine.stock))} />
+                  <Form.Control
+                    type="number"
+                    min={1}
+                    max={medicine.stockQuantity || 0}
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.min(Math.max(1, Number(e.target.value || 1)), medicine.stockQuantity || 1))}
+                  />
                 </Form.Group>
-                <Button variant="primary" size="lg" onClick={handleAddToCart} disabled={medicine.stock === 0 || (medicine.requiresPrescription && !prescription)}>{uploading ? 'Adding...' : 'Add to Cart'}</Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={(medicine.stockQuantity || 0) === 0 || (medicine.requiresPrescription && !prescription)}
+                >
+                  {uploading ? 'Adding...' : 'Add to Cart'}
+                </Button>
               </div>
               {error && <Alert variant="danger">{error}</Alert>}
             </Card.Body>
