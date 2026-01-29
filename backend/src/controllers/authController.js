@@ -166,12 +166,14 @@ const login = async (req, res) => {
       token,
       user: {
         id: safeUser._id,
+        _id: safeUser._id,
         firstName: safeUser.firstName,
         lastName: safeUser.lastName,
         email: safeUser.email,
         role: safeUser.role,
         phone: safeUser.phone,
-        status: safeUser.status
+        status: safeUser.status,
+        avatar: safeUser.avatar
       },
     });
   } catch (error) {
@@ -204,12 +206,14 @@ const getCurrentUser = async (req, res) => {
       success: true,
       user: {
         id: user._id,
+        _id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
         role: user.role, // Fixed: role is a string
         phone: user.phone,
-        status: user.status
+        status: user.status,
+        avatar: user.avatar
       },
     });
   } catch (error) {

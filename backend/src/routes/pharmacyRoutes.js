@@ -1,8 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { registerPharmacy, checkPharmacyStatus, getPharmacySubscription, requestSubscriptionRenewal } = require('../controllers/pharmacyController');
-const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+const { registerPharmacy, checkPharmacyStatus, getPharmacySubscription, requestSubscriptionRenewal, getPharmacyById } = require('../controllers/pharmacyController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // @route   POST /api/pharmacy/register

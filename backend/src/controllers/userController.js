@@ -71,6 +71,10 @@ exports.updateUserProfile = async (req, res) => {
             user.address = { ...user.address, ...req.body.address };
         }
 
+        if (req.body.settings) {
+            user.settings = { ...user.settings, ...req.body.settings };
+        }
+
         if (req.body.password) {
             user.password = req.body.password;
         }

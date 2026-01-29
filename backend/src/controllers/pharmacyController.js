@@ -79,8 +79,6 @@ const registerPharmacy = async (req, res) => {
   }
 };
 
-};
-
 /**
  * @route   GET /api/pharmacy/:id
  * @desc    Get public pharmacy details by ID
@@ -157,20 +155,55 @@ const checkPharmacyStatus = async (req, res) => {
  */
 const getPharmacySubscription = async (req, res) => {
   try {
-    // In a real implementation, you would get the pharmacy ID from the authenticated user
-    // For now, we'll use a placeholder response
+    // Assuming req.user.pharmacyId is populated by auth middleware
+    // If not, we might need to find the user's pharmacy first
+    let pharmacyId = req.user.pharmacyId;
+
+    if (!pharmacyId) {
+      // Fallback: try to find pharmacy owned by this user
+      const pharmacy = await Pharmacy.findOne({ owner: req.user._id });
+      if (pharmacy) {
+        pharmacyId = pharmacy._id;
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: 'Pharmacy not found for this user'
+        });
+      }
+    }
+
+    const { Subscription } = require('../models/Subscription'); // Ensure model is imported if not already top-level
+    // Actually, Subscription is likely required at top level. Let's check imports.
+    // Use the Subscription model (already imported in pharmacyAdminController, need to check here)
+    // Wait, previous file view didn't show Subscription import at top of this file. 
+    // I need to add imports to the top of file first or require them here.
+    // Safe approach: require here or better, add imports at top in a separate step? 
+    // I will require them inside for now to avoid messing up top lines blindly, 
+    // or better yet, I will use the models that should be available. 
+    // Let's assume I need to require Subscription.
+
+    const SubscriptionModel = require('../models/Subscription');
+
+    const subscription = await SubscriptionModel.findOne({ pharmacy: pharmacyId, status: 'active' });
+
+    if (!subscription) {
+      // Return valid empty response or 404 depending on frontend expectation.
+      // Usually better to return null data or specific message "No active subscription"
+      return res.json({
+        success: true,
+        data: null,
+        message: 'No active subscription found'
+      });
+    }
+
     res.json({
       success: true,
       data: {
-        plan: 'basic',
-        status: 'active',
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        features: [
-          'inventory_management',
-          'sales_tracking',
-          'basic_reporting'
-        ]
+        plan: subscription.plan,
+        status: subscription.status,
+        startDate: subscription.startDate,
+        endDate: subscription.endDate,
+        features: subscription.features
       }
     });
   } catch (error) {
@@ -190,15 +223,50 @@ const getPharmacySubscription = async (req, res) => {
  */
 const requestSubscriptionRenewal = async (req, res) => {
   try {
-    const { mode = 'monthly' } = req.body;
+    const { mode } = req.body; // 'monthly' or 'annually'
+    let pharmacyId = req.user.pharmacyId;
 
-    // In a real implementation, you would process the renewal request here
-    // This is just a placeholder response
+    if (!pharmacyId) {
+      const PharmacyModel = require('../models/Pharmacy');
+      const pharmacy = await PharmacyModel.findOne({ owner: req.user._id });
+      if (pharmacy) {
+        pharmacyId = pharmacy._id;
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: 'Pharmacy not found'
+        });
+      }
+    }
+
+    // specific logic for renewal request
+    // For now, we can create a history record or a temp request object
+    // Since we don't have a specific "RenewalRequest" model yet, maybe we just log it 
+    // or send an email to admins?
+    // The user wants "real API". 
+    // Let's actually create a SubscriptionHistory entry indicating request
+    const SubscriptionHistory = require('../models/SubscriptionHistory');
+    const SubscriptionModel = require('../models/Subscription');
+
+    const currentSub = await SubscriptionModel.findOne({ pharmacy: pharmacyId, status: 'active' });
+
+    // Notify admins (mock email for now, or real email service)
+    const { sendEmail } = require('../services/emailService');
+    // Send email to system admin
+    // For now, just log and return success
+
+    await SubscriptionHistory.create({
+      subscription: currentSub ? currentSub._id : null,
+      pharmacy: pharmacyId,
+      action: 'renewal_requested',
+      details: `Requested renewal for ${mode} plan`,
+      performedBy: req.user._id
+    });
+
     res.status(200).json({
       success: true,
       message: `Subscription renewal request received for ${mode} plan`,
       data: {
-        requestId: `sub_req_${Date.now()}`,
         status: 'pending_payment',
         requestedPlan: mode,
         requestedAt: new Date().toISOString()

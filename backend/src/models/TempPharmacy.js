@@ -12,11 +12,15 @@ const tempPharmacySchema = new mongoose.Schema({
     required: [true, 'License number is required'],
     unique: true
   },
+  licenseExpiryDate: {
+    type: Date,
+    required: false // Optional for now to avoid breaking existing records
+  },
   establishedDate: {
     type: Date,
     required: [true, 'Established date is required']
   },
-  
+
   // Contact Information
   ownerName: {
     type: String,
@@ -34,7 +38,7 @@ const tempPharmacySchema = new mongoose.Schema({
     required: [true, 'Phone number is required'],
     match: [/^[0-9\-+()\s]+$/, 'Please provide a valid phone number']
   },
-  
+
   // Address Information
   address: {
     street: {
@@ -58,13 +62,13 @@ const tempPharmacySchema = new mongoose.Schema({
       default: 'Ethiopia'
     }
   },
-  
+
   // Business Information
   tinNumber: {
     type: String,
     required: [true, 'TIN number is required']
   },
-  
+
   // Status
   status: {
     type: String,
@@ -75,7 +79,7 @@ const tempPharmacySchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  
+
   // Documents
   licenseDocument: {
     type: String, // URL to the document
@@ -85,15 +89,15 @@ const tempPharmacySchema = new mongoose.Schema({
     type: String, // URL to the document
     required: [true, 'TIN document is required']
   },
-  
+
   // Timestamps
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
+  createdAt: {
+    type: Date,
+    default: Date.now
   },
-  updatedAt: { 
-    type: Date, 
-    default: Date.now 
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true,
@@ -105,7 +109,7 @@ const tempPharmacySchema = new mongoose.Schema({
 tempPharmacySchema.index({ status: 1 });
 
 // Pre-save hook to update updatedAt
-tempPharmacySchema.pre('save', function(next) {
+tempPharmacySchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });

@@ -9,13 +9,25 @@ const subscriptionSchema = new mongoose.Schema({
   },
 
   // Subscription Plan
+  plan: {
+    type: String,
+    enum: ['basic', 'standard', 'premium'],
+    required: true
+  },
   mode: {
     type: String,
     enum: ['monthly', 'annually'],
     default: 'annually',
     required: true
   },
-  
+  features: [{
+    type: String
+  }],
+  maxStaff: {
+    type: Number,
+    default: 1
+  },
+
   // Pricing
   price: {
     type: Number,
@@ -101,14 +113,14 @@ const subscriptionSchema = new mongoose.Schema({
 });
 
 // Virtual for days remaining
-subscriptionSchema.virtual('daysRemaining').get(function() {
+subscriptionSchema.virtual('daysRemaining').get(function () {
   const now = new Date();
   const diff = this.endDate - now;
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 });
 
 // Virtual for is expired
-subscriptionSchema.virtual('isExpired').get(function() {
+subscriptionSchema.virtual('isExpired').get(function () {
   return new Date() > this.endDate;
 });
 
@@ -118,10 +130,5 @@ subscriptionSchema.index({ status: 1 });
 subscriptionSchema.index({ 'payment.status': 1 });
 subscriptionSchema.index({ endDate: 1 });
 
-// Pre-save hook
-subscriptionSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
-
+// End of schema definition - removed redundant pre-save hook as timestamps: true is used
 module.exports = mongoose.model("Subscription", subscriptionSchema);

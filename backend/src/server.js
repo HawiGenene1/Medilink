@@ -4,12 +4,14 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 // Initialize Express app
+const path = require('path');
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json()); // parse JSON requests
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use("/api/test", require("./routes/testRoutes"));
 
 // Connect to MongoDB
@@ -24,30 +26,37 @@ if (MONGO_URI) {
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
-// const adminRoutes = require('./routes/adminRoutes');
-// const cashierRoutes = require('./routes/cashierRoutes');
-// const customerRoutes = require('./routes/customerRoutes');
-// const deliveryRoutes = require('./routes/deliveryRoutes');
-// const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
-// const pharmacyRoutes = require('./routes/pharmacyRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
+const pharmacyRoutes = require('./routes/pharmacyRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 // Import Middleware
 const { authenticate, authorize } = require('./middleware/authMiddleware');
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+
+// Pharmacy Routes (for pharmacy owners/staff)
+app.use('/api/pharmacy', pharmacyRoutes);
+
+// Pharmacy Admin Routes (platform-level administration)
+app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
+
+// Admin Routes
+try {
+  app.use('/api/admin', authenticate, authorize('admin'), adminRoutes);
+} catch (e) {
+  console.warn('Admin routes not mounted:', e.message);
+}
+
 // Medicines API
 try {
   app.use('/api/medicines', require('./routes/medicineRoutes'));
 } catch (e) {
   console.warn('Medicine routes not mounted:', e.message);
 }
-// app.use('/api/admin', authenticate, authorize('admin'), adminRoutes);
-// app.use('/api/cashier', authenticate, authorize('cashier'), cashierRoutes);
-// app.use('/api/customer', authenticate, authorize('customer'), customerRoutes);
-// app.use('/api/delivery', authenticate, authorize('delivery'), deliveryRoutes);
-// app.use('/api/pharmacy-admin', authenticate, authorize('pharmacy_admin'), pharmacyAdminRoutes);
-// app.use('/api/pharmacy', authenticate, authorize('pharmacy_staff', 'pharmacy_admin'), pharmacyRoutes);
 
 // Test route
 app.get('/', (req, res) => {

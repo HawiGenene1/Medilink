@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Input, Avatar, Badge, Dropdown, Button, Drawer, Space, Typography } from 'antd';
 import { useCart } from '../contexts/CartContext';
 import {
@@ -24,6 +24,7 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
     const [locationModalOpen, setLocationModalOpen] = useState(false);
     const [currentLocation, setCurrentLocation] = useState('Addis Ababa');
     const [searchValue, setSearchValue] = useState('');
+    const [notificationCount, setNotificationCount] = useState(0);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -37,6 +38,34 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
         // useCart might throw if context not provided, ignore
     }
 
+    // Fetch notifications/alerts count for pharmacy_admin
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (role === 'pharmacy_admin') {
+                try {
+                    const response = await fetch('http://localhost:5000/api/pharmacy-admin/alerts', {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        // Count total alerts
+                        const totalCount = data.data.reduce((sum, alert) => sum + (alert.count || 0), 0);
+                        setNotificationCount(totalCount);
+                    }
+                } catch (error) {
+                    console.error('Error fetching notifications:', error);
+                }
+            }
+        };
+
+        fetchNotifications();
+        // Refresh every 60 seconds
+        const interval = setInterval(fetchNotifications, 60000);
+        return () => clearInterval(interval);
+    }, [role]);
+
     const toggle = () => {
         setCollapsed(!collapsed);
     };
@@ -46,7 +75,17 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
             logout();
         } else {
             navigate(key);
-            setMobileDrawerOpen(false); // Close drawer on mobile nav
+            setMobileDrawerOpen(false);
+        }
+    };
+
+    const handleUserMenuClick = ({ key }) => {
+        if (key === 'logout') {
+            logout();
+        } else if (key === 'profile') {
+            navigate(`/${role}/profile`);
+        } else if (key === 'settings') {
+            navigate(`/${role}/settings`);
         }
     };
 
@@ -55,13 +94,11 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
             key: 'profile',
             icon: <UserOutlined />,
             label: 'Profile',
-            onClick: () => navigate(`/${role}/profile`)
         },
         {
             key: 'settings',
             icon: <SettingOutlined />,
             label: 'Settings',
-            onClick: () => navigate(`/${role}/settings`)
         },
         {
             type: 'divider'
@@ -71,7 +108,6 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
             icon: <LogoutOutlined />,
             label: 'Logout',
             danger: true,
-            onClick: logout
         }
     ];
 
@@ -93,7 +129,7 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
     );
 
     return (
-        <Layout className="dashboard-layout">
+        <Layout className="dashboard-layout" hasSider>
             {/* Desktop Sidebar */}
             <Sider
                 trigger={null}
@@ -172,7 +208,7 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                             </>
                         )}
 
-                        <Badge count={2} offset={[-2, 2]} size="small">
+                        <Badge count={notificationCount} offset={[-2, 2]} size="small">
 
                             <Button
                                 type="text"
@@ -183,12 +219,12 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                             />
                         </Badge>
 
-                        <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
+                        <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="bottomRight">
                             <div className="user-profile-trigger">
                                 <Avatar
                                     size="default"
                                     icon={<UserOutlined />}
-                                    src={user?.avatar}
+                                    src={user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}?t=${new Date().getTime()}`) : null}
                                     style={{ backgroundColor: '#1E88E5' }}
                                 />
                                 <span className="username hidden-mobile">{user?.firstName || 'User'}</span>

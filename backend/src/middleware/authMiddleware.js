@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const Role = require("../models/Role");
 
 /**
  * Middleware to verify JWT token and attach user to request
@@ -9,7 +8,7 @@ const protect = async (req, res, next) => {
   try {
     // Get token from header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -22,10 +21,11 @@ const protect = async (req, res, next) => {
     try {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Find user by ID from token and populate role
-      const user = await User.findById(decoded.userId).select('-password').populate('role');
-      
+
+      // Find user by ID from token
+      // NOTE: User.role is a STRING, not a reference to Role collection
+      const user = await User.findById(decoded.userId).select('-password');
+
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -43,10 +43,13 @@ const protect = async (req, res, next) => {
 
       // Attach user to request object
       req.user = {
+        id: user._id,
+        _id: user._id, // Add _id for direct compatibility with models
         userId: user._id,
         email: user.email,
-        role: user.role?.name || 'customer', // Get role name from populated role object
-        pharmacyId: user.pharmacyId
+        role: user.role,
+        pharmacyId: user.pharmacyId,
+        status: user.status
       };
 
       next();
@@ -69,7 +72,7 @@ const protect = async (req, res, next) => {
 
 /**
  * Role-based authorization middleware
- * @param {Array} roles - Array of allowed roles
+ * @param {String|Array} roles - Single role or array of allowed roles
  */
 const authorize = (...roles) => {
   return (req, res, next) => {
@@ -83,7 +86,31 @@ const authorize = (...roles) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: 'You do not have permission to perform this action'
+        message: `Access denied. This action requires one of the following roles: ${roles.join(', ')}`
+      });
+    }
+
+    next();
+  };
+};
+
+/**
+ * Convenience middleware to restrict access to specific role
+ * @param {String} role - Required role
+ */
+const restrictTo = (role) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (req.user.role !== role) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. ${role} role required.`
       });
     }
 
@@ -94,12 +121,17 @@ const authorize = (...roles) => {
 // Alias for backward compatibility
 const authRequired = authorize;
 
-// Basic auth (no role restrictions) for routes like /api/auth/me
+// Basic auth (no role  restrictions) for routes like /api/auth/me
 const authenticate = protect;
+
+// Convenience export for common middleware patterns
+const auth = protect;
 
 module.exports = {
   protect,
   authorize,
   authRequired,
-  authenticate
+  authenticate,
+  restrictTo,
+  auth
 };

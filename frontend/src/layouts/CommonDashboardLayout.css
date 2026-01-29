@@ -5,13 +5,20 @@
     --secondary-color: #43A047;
     --text-main: #2D3748;
     --text-secondary: #718096;
-    --bg-main: #F7FAFC;
-    --border-color: #E2E8F0;
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --bg-main: #ffffff;
+    /* Changed to white for full use */
+    --border-color: #F0F0F0;
+    --card-shadow: none;
+    /* Seamless look */
 }
 
+/* Main Layout Container */
 .dashboard-layout {
     min-height: 100vh;
+    height: 100vh;
+    /* Force full height */
+    overflow: hidden;
+    /* Prevent body scroll */
 }
 
 /* Sidebar */
@@ -19,6 +26,9 @@
     box-shadow: 1px 0 0 0 var(--border-color);
     z-index: 10;
     background: #ffffff !important;
+    height: 100vh;
+    overflow-y: auto;
+    /* Allow sidebar to scroll if menu is long */
 }
 
 .sidebar-logo {
@@ -80,6 +90,14 @@
     flex-direction: column;
 }
 
+/* Layout container for Header + Content */
+.site-layout {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
 /* Header */
 .dashboard-header {
     background: rgba(255, 255, 255, 0.95);
@@ -91,11 +109,12 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     border-bottom: 1px solid var(--border-color);
     height: 80px;
-    position: sticky;
-    top: 0;
+    flex-shrink: 0;
+    /* Header should not shrink */
     z-index: 1001;
 }
 
+/* ... (header styles kept same) ... */
 .header-left {
     display: flex;
     align-items: center;
@@ -135,7 +154,7 @@
 .header-right {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 12px;
 }
 
 .header-location {
@@ -184,8 +203,10 @@
 
 /* Content Area */
 .dashboard-content {
-    margin: 32px;
-    min-height: 280px;
+    background: #ffffff;
+    padding: 32px;
+    min-height: calc(100vh - 80px);
+    overflow-y: auto;
 }
 
 /* Mobile Responsive */

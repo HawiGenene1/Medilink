@@ -37,12 +37,17 @@ const userSchema = new mongoose.Schema({
     default: 'customer'
   },
 
-  // For staff members - link to their pharmacy
+  // Role Definitions & Boundaries:
+  // - pharmacy_admin: Platform-level governance, compliance, and business control.
+  //   Responsibilities: Registration Mgmt, License Verification (6-month threshold), Subscription Mgmt, 
+  //   Status Mgmt (Justified activation/suspension), Monitoring/Reporting.
+  //   NON-ROLE: NO daily operations, medicines, inventory, orders, prescriptions, or payments.
+  // - pharmacy_staff: Operational role for branch staff/operators.
   pharmacyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Pharmacy',
     required: function () {
-      return ['pharmacy_staff', 'pharmacy_admin', 'cashier'].includes(this.role);
+      return ['pharmacy_staff', 'cashier'].includes(this.role);
     }
   },
   // Address for customers and delivery personnel
@@ -90,6 +95,21 @@ const userSchema = new mongoose.Schema({
   verificationTokenExpires: Date,
   lastLogin: {
     type: Date
+  },
+  settings: {
+    notificationsEnabled: {
+      type: Boolean,
+      default: true
+    },
+    complianceEnabled: {
+      type: Boolean,
+      default: true
+    },
+    theme: {
+      type: String,
+      enum: ['light', 'dark'],
+      default: 'light'
+    }
   },
   resetToken: { type: String, default: null },
   resetTokenExpire: { type: Date, default: null },

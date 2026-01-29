@@ -17,6 +17,10 @@ const pharmacySchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
+  licenseExpiryDate: {
+    type: Date,
+    required: false
+  },
   email: {
     type: String,
     required: [true, 'Email is required'],
@@ -29,7 +33,7 @@ const pharmacySchema = new mongoose.Schema({
     required: [true, 'Phone number is required'],
     trim: true
   },
-  
+
   // Address Information
   address: {
     street: {
@@ -54,7 +58,7 @@ const pharmacySchema = new mongoose.Schema({
       default: 'Ethiopia'
     }
   },
-  
+
   // Location for geospatial queries
   location: {
     type: {
@@ -67,7 +71,7 @@ const pharmacySchema = new mongoose.Schema({
       index: '2dsphere'
     }
   },
-  
+
   // References
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -79,11 +83,11 @@ const pharmacySchema = new mongoose.Schema({
     ref: 'Subscription',
     required: false
   },
-  
+
   // Status
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected', 'on_hold'],
     default: 'pending'
   },
   description: {

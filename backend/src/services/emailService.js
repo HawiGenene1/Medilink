@@ -26,26 +26,42 @@ transporter.verify(function (error, success) {
 
 /**
  * Send email with retry logic
- * @param {string} to - Recipient email
- * @param {string} subject - Email subject
- * @param {string} html - Email content in HTML
- * @param {number} retries - Number of retry attempts (default: 3)
+ * @param {string|object} to - Recipient email or options object
+ * @param {string} [subject] - Email subject
+ * @param {string} [content] - Email content (html or text)
+ * @param {number} [retries] - Number of retry attempts (default: 3)
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendEmail(to, subject, html, retries = 3) {
-    const mailOptions = {
-        from: `"Medilink" <${process.env.EMAIL_USER}>`,
-        to,
-        subject,
-        html,
-    };
+async function sendEmail(to, subject, content, retries = 3) {
+    let mailOptions;
+
+    if (typeof to === 'object' && to !== null) {
+        // Handle object argument
+        const options = to;
+        mailOptions = {
+            from: `"Medilink" <${process.env.EMAIL_USER}>`,
+            to: options.to,
+            subject: options.subject,
+            html: options.html || (options.text ? options.text.replace(/\n/g, '<br>') : undefined),
+            text: options.text || (options.html ? options.html.replace(/<[^>]*>?/gm, '') : undefined)
+        };
+        retries = options.retries || 3;
+    } else {
+        // Handle positional arguments
+        mailOptions = {
+            from: `"Medilink" <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            html: content // Assuming html content is passed for backward compatibility
+        };
+    }
 
     let lastError;
 
     for (let i = 0; i < retries; i++) {
         try {
             await transporter.sendMail(mailOptions);
-            logger.info(`Email sent to ${to} (attempt ${i + 1}/${retries})`);
+            logger.info(`Email sent to ${mailOptions.to} (attempt ${i + 1}/${retries})`);
             return { success: true };
         } catch (error) {
             lastError = error;
@@ -55,7 +71,7 @@ async function sendEmail(to, subject, html, retries = 3) {
         }
     }
 
-    logger.error(`Failed to send email to ${to} after ${retries} attempts:`, lastError);
+    logger.error(`Failed to send email to ${mailOptions.to} after ${retries} attempts:`, lastError);
     return {
         success: false,
         error: `Failed to send email after ${retries} attempts: ${lastError.message}`
