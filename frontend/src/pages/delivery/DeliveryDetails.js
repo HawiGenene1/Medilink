@@ -12,6 +12,7 @@ import {
     CarOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
+import api from '../../services/api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './DeliveryDetails.css';
@@ -22,7 +23,9 @@ const DeliveryDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    // Delivery States: assigned -> picked_up -> in_transit -> arrived -> delivered
+    // Delivery States
+    const [order, setOrder] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [status, setStatus] = useState('assigned');
     const [isNear, setIsNear] = useState(false);
     const [showProofModal, setShowProofModal] = useState(false);
@@ -31,29 +34,70 @@ const DeliveryDetails = () => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const courierMarkerRef = useRef(null);
-    const [courierPos, setCourierPos] = useState([9.0227, 38.7460]);
-    const destPos = [9.0300, 38.7500]; // Mock destination
+    const [courierPos, setCourierPos] = useState(null);
+    const [destPos, setDestPos] = useState(null);
+    const [pickupPos, setPickupPos] = useState(null);
+
+    useEffect(() => {
+        fetchOrderDetails();
+    }, [id]);
+
+    const fetchOrderDetails = async () => {
+        try {
+            // Re-using common order fetch or creating a specific one?
+            // Since we need to be authorized as delivery, let's assuming /api/orders/:id works or we created a specific one.
+            // Actually, let's use the public/protected order endpoint if available, but we need full details.
+            // deliveryController.getActiveDeliveries gave us a list. 
+            // We might not have a specific 'get single delivery details' in deliveryController yet.
+            // But we can use the generic order endpoint if it allows the courier to view it.
+            // For now, let's assume we can fetch it via /api/orders/:id if we are the courier.
+            const response = await api.get(`/orders/${id}`);
+            console.log('[DeliveryDetails] API Response:', response.data);
+            if (response.data.success) {
+                const data = response.data.data;
+                console.log('[DeliveryDetails] Order data:', data);
+                console.log('[DeliveryDetails] Address:', data.address);
+                console.log('[DeliveryDetails] Address label:', data.address?.label);
+                setOrder(data);
+                setStatus(data.status);
+
+                // Set Positions from customer delivery address
+                if (data.address?.geojson?.coordinates) {
+                    // GeoJSON format: [longitude, latitude]
+                    setDestPos([data.address.geojson.coordinates[1], data.address.geojson.coordinates[0]]);
+                } else if (data.address?.coordinates) {
+                    setDestPos([data.address.coordinates.latitude, data.address.coordinates.longitude]);
+                }
+                if (data.pharmacy?.location?.coordinates) {
+                    // GeoJSON is [lng, lat]
+                    setPickupPos([data.pharmacy.location.coordinates[1], data.pharmacy.location.coordinates[0]]);
+                }
+                // Courier Pos - ideally get from current location or backend
+                // For now, default to pickup or a known start point if waiting
+                navigator.geolocation.getCurrentPosition(pos => {
+                    setCourierPos([pos.coords.latitude, pos.coords.longitude]);
+                }, () => {
+                    // Fallback
+                    setCourierPos([9.0227, 38.7460]);
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching order:', error);
+            message.error('Failed to load order details');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Initialize Map
     useEffect(() => {
-        if (mapRef.current && !mapInstance.current) {
+        if (!loading && mapRef.current && !mapInstance.current && courierPos) {
             mapInstance.current = L.map(mapRef.current, {
                 zoomControl: false,
                 attributionControl: false
-            }).setView(courierPos, 15);
+            }).setView(courierPos, 14);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
-            mapRef.current.classList.add('soft-blue-map');
-
-            // Destination Marker
-            L.marker(destPos, {
-                icon: L.divIcon({
-                    className: 'destination-marker',
-                    html: '<div style="background: #1E88E5; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.2);"></div>',
-                    iconSize: [20, 20],
-                    iconAnchor: [10, 10]
-                })
-            }).addTo(mapInstance.current).bindPopup('Customer Location');
 
             // Courier Marker
             courierMarkerRef.current = L.marker(courierPos, {
@@ -64,58 +108,72 @@ const DeliveryDetails = () => {
                     iconAnchor: [15, 15]
                 })
             }).addTo(mapInstance.current);
-        }
 
-        return () => {
-            if (mapInstance.current) {
-                mapInstance.current.remove();
-                mapInstance.current = null;
+            // Pickup Marker
+            if (pickupPos) {
+                L.marker(pickupPos, {
+                    icon: L.divIcon({
+                        className: 'pickup-marker',
+                        html: '🏥',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    })
+                }).addTo(mapInstance.current).bindPopup('Pharmacy (Pickup)');
             }
-        };
-    }, []);
 
-    // Simulate Movement & Proximity
-    useEffect(() => {
-        if (status === 'in_transit') {
-            const interval = setInterval(() => {
-                setCourierPos(prev => {
-                    const newLat = prev[0] + 0.0002;
-                    const newLng = prev[1] + 0.0001;
-                    const newPos = [newLat, newLng];
+            // Dropoff Marker
+            if (destPos) {
+                L.marker(destPos, {
+                    icon: L.divIcon({
+                        className: 'destination-marker',
+                        html: '📍',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    })
+                }).addTo(mapInstance.current).bindPopup('Customer (Dropoff)');
+            }
 
-                    if (courierMarkerRef.current) {
-                        courierMarkerRef.current.setLatLng(newPos);
-                    }
-
-                    // Mock Distance check
-                    const dist = Math.sqrt(Math.pow(newLat - destPos[0], 2) + Math.pow(newLng - destPos[1], 2));
-                    if (dist < 0.005) setIsNear(true);
-
-                    return newPos;
-                });
-            }, 3000);
-            return () => clearInterval(interval);
+            // Fit bounds
+            const bounds = L.latLngBounds([courierPos]);
+            if (pickupPos) bounds.extend(pickupPos);
+            if (destPos) bounds.extend(destPos);
+            mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
         }
-    }, [status]);
+    }, [loading, courierPos, pickupPos, destPos]);
 
-    const handleStatusTransition = () => {
-        if (status === 'assigned') setStatus('picked_up');
-        else if (status === 'picked_up') setStatus('in_transit');
-        else if (status === 'in_transit') setShowProofModal(true);
+    const handleAction = async () => {
+        try {
+            if (status === 'confirmed' || status === 'ready' || status === 'preparing' || status === 'pending') {
+                // Confirm Pickup
+                await api.put('/delivery/pickup', { orderId: id });
+                setStatus('in_transit');
+                message.success('Delivery Started');
+            } else if (status === 'in_transit') {
+                setShowProofModal(true);
+            }
+        } catch (error) {
+            message.error('Action failed');
+        }
     };
 
-    const handleProofSubmit = () => {
-        message.success('Delivery Completed Successfully');
-        setStatus('delivered');
-        setShowProofModal(false);
-        setTimeout(() => navigate('/delivery/dashboard'), 2000);
+    const handleProofSubmit = async () => {
+        try {
+            await api.put('/delivery/complete', { orderId: id });
+            setStatus('delivered');
+            message.success('Delivery Completed Successfully');
+            setShowProofModal(false);
+            setTimeout(() => navigate('/delivery/dashboard'), 2000);
+        } catch (error) {
+            message.error('Failed to complete delivery');
+        }
     };
 
     const getButtonText = () => {
-        if (status === 'assigned') return 'Confirm Medicine Pickup';
-        if (status === 'picked_up') return 'Start Delivery Navigation';
+        if (status === 'pending') return 'Start Pickup from Pharmacy';
+        if (status === 'confirmed' || status === 'ready' || status === 'preparing') return 'Confirm Medicine Pickup';
         if (status === 'in_transit') return 'Complete Delivery';
-        return 'Delivery Processed';
+        if (status === 'delivered') return 'Delivery Completed';
+        return 'Process Order';
     };
 
     return (
@@ -175,8 +233,8 @@ const DeliveryDetails = () => {
                             <Avatar size={48} src="https://i.pravatar.cc/150?u=customer" />
                         </Col>
                         <Col flex="auto">
-                            <Text strong block>Abebe Bikila</Text>
-                            <Text type="secondary" style={{ fontSize: '13px' }}>Bole, Edna Mall area • 0.8 km away</Text>
+                            <Text strong block>{order?.customer?.firstName || order?.customer?.name || 'Customer'} {order?.customer?.lastName || ''}</Text>
+                            <Text type="secondary" style={{ fontSize: '13px' }}>{order?.address?.label || 'Delivery location'}</Text>
                         </Col>
                         <Col>
                             <Space>
@@ -193,7 +251,7 @@ const DeliveryDetails = () => {
                             <EnvironmentOutlined style={{ color: '#1E88E5', marginTop: '4px' }} />
                             <div>
                                 <Text strong block>Delivery Address</Text>
-                                <Text type="secondary">Bole, House 456, near Friendship Mall, Addis Ababa</Text>
+                                <Text type="secondary">{order?.address?.label || 'Address not available'}</Text>
                             </div>
                         </div>
                         <Divider style={{ margin: '12px 0' }} />
@@ -201,7 +259,12 @@ const DeliveryDetails = () => {
                             <CheckCircleFilled style={{ color: '#43A047', marginTop: '4px' }} />
                             <div>
                                 <Text strong block>Pharmacy Pickup</Text>
-                                <Text type="secondary">Kenema Pharmacy - Bole Branch</Text>
+                                <Text type="secondary">{order?.pharmacy?.name}</Text>
+                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                    {typeof order?.pharmacy?.address === 'object'
+                                        ? `${order.pharmacy.address.street}, ${order.pharmacy.address.city}`
+                                        : (order?.pharmacy?.address || 'Address not available')}
+                                </Text>
                             </div>
                         </div>
                     </Space>
@@ -213,8 +276,8 @@ const DeliveryDetails = () => {
                         block
                         size="large"
                         className="primary-action-btn"
-                        onClick={handleStatusTransition}
-                        disabled={status === 'delivered'}
+                        onClick={handleAction}
+                        disabled={status === 'delivered' || loading}
                     >
                         {getButtonText()}
                     </Button>
