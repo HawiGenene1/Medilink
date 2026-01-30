@@ -297,9 +297,20 @@ const getOrderTracking = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order tracking not found' });
     }
 
+    // Convert to plain object to add location
+    const orderData = order.toObject();
+
+    // If there's a courier, get their latest location from DeliveryProfile
+    if (order.courier) {
+      const profile = await DeliveryProfile.findOne({ userId: order.courier._id });
+      if (profile && profile.currentLocation) {
+        orderData.courier.location = profile.currentLocation;
+      }
+    }
+
     res.json({
       success: true,
-      data: order
+      data: orderData
     });
   } catch (error) {
     console.error('getOrderTracking error:', error);

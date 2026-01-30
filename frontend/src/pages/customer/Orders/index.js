@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Timeline, Modal, Divider } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Timeline, Modal, Divider, Spin, Result } from 'antd';
 import {
   ClockCircleOutlined,
   EnvironmentOutlined,
@@ -10,56 +10,61 @@ import {
   MedicineBoxOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { ordersAPI } from '../../../services/api/orders';
 import './Orders.css';
 
 const { Title, Text } = Typography;
 
 const Orders = () => {
   const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('1');
 
-  const activeOrders = [
-    {
-      id: 'ORD-1024',
-      pharmacy: 'Kenema Pharmacy No. 4',
-      status: 'Out for Delivery',
-      statusColor: 'processing',
-      itemCount: 3,
-      total: '210 ETB',
-      date: 'Today, 2:30 PM',
-      progress: 75
-    },
-    {
-      id: 'ORD-1022',
-      pharmacy: 'City Central Pharma',
-      status: 'Processing',
-      statusColor: 'warning',
-      itemCount: 1,
-      total: '80 ETB',
-      date: 'Today, 10:15 AM',
-      progress: 30
+  const fetchOrders = async () => {
+    try {
+      const response = await ordersAPI.getMyOrders();
+      if (response.data.success) {
+        setOrders(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const pastOrders = [
-    {
-      id: 'ORD-0950',
-      pharmacy: 'Red Cross Pharmacy',
-      status: 'Delivered',
-      statusColor: 'success',
-      itemCount: 2,
-      total: '450 ETB',
-      date: 'Jan 15, 2026'
-    },
-    {
-      id: 'ORD-0942',
-      pharmacy: 'Kenema Pharmacy',
-      status: 'Delivered',
-      statusColor: 'success',
-      itemCount: 5,
-      total: '1,200 ETB',
-      date: 'Jan 12, 2026'
-    }
-  ];
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'pending': 'warning',
+      'confirmed': 'processing',
+      'preparing': 'processing',
+      'ready': 'processing',
+      'in_transit': 'processing',
+      'delivered': 'success',
+      'cancelled': 'error'
+    };
+    return colors[status] || 'default';
+  };
+
+  const getOrderProgress = (status) => {
+    const progress = {
+      'pending': 10,
+      'confirmed': 25,
+      'preparing': 50,
+      'ready': 75,
+      'in_transit': 90,
+      'delivered': 100
+    };
+    return progress[status] || 0;
+  };
+
+  const activeOrders = orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
+  const pastOrders = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
 
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -76,14 +81,14 @@ const Orders = () => {
           <Space size="middle">
             <Avatar shape="square" size={48} icon={<ShopOutlined />} style={{ background: '#E3F2FD', color: '#1E88E5' }} />
             <div>
-              <Text type="secondary" style={{ fontSize: '12px' }}>Order ID: {order.id}</Text>
-              <Title level={4} style={{ margin: 0 }}>{order.pharmacy}</Title>
+              <Text type="secondary" style={{ fontSize: '12px' }}>Order #: {order.orderNumber}</Text>
+              <Title level={4} style={{ margin: 0 }}>{order.pharmacy?.name || 'Pharmacy'}</Title>
             </div>
           </Space>
         </Col>
         <Col style={{ textAlign: 'right' }}>
-          <Tag color={order.statusColor} style={{ marginRight: 0 }}>{order.status}</Tag>
-          <div style={{ marginTop: '4px' }}><Text type="secondary">{order.date}</Text></div>
+          <Tag color={getStatusColor(order.status)} style={{ marginRight: 0 }}>{(order.status || 'pending').toUpperCase().replace('_', ' ')}</Tag>
+          <div style={{ marginTop: '4px' }}><Text type="secondary">{new Date(order.createdAt).toLocaleDateString()}</Text></div>
         </Col>
       </Row>
 
@@ -91,29 +96,27 @@ const Orders = () => {
         <Col xs={24} md={16}>
           <div className="order-items-preview">
             <Space size="middle">
-              <div className="item-qty-badge">{order.itemCount} Items</div>
-              <Text strong style={{ fontSize: '16px' }}>Total: {order.total}</Text>
+              <div className="item-qty-badge">{order.items?.length || 0} Items</div>
+              <Text strong style={{ fontSize: '16px' }}>Total: {order.finalAmount} ETB</Text>
             </Space>
           </div>
 
           {isActive && (
             <div className="order-track-progress" style={{ marginTop: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <Text strong>{order.status}</Text>
-                <Text>{order.progress}%</Text>
+                <Text strong>{(order.status || 'pending').toUpperCase().replace('_', ' ')}</Text>
+                <Text>{getOrderProgress(order.status)}%</Text>
               </div>
-              <Progress percent={order.progress} strokeColor="#1E88E5" showInfo={false} />
+              <Progress percent={getOrderProgress(order.status)} strokeColor="#1E88E5" showInfo={false} />
             </div>
           )}
         </Col>
         <Col xs={24} md={8} style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '12px' }}>
           <Button block icon={<FileTextOutlined />} onClick={() => handleViewDetails(order)}>View Details</Button>
-          {isActive ? (
-            <Button type="primary" block icon={<EnvironmentOutlined />} onClick={() => navigate(`/customer/orders/track/${order.id}`)}>
+          {(isActive || order.status === 'delivered') && (
+            <Button type="primary" block icon={<EnvironmentOutlined />} onClick={() => navigate(`/customer/orders/track/${order._id}`)}>
               Track Live
             </Button>
-          ) : (
-            <Button type="primary" block icon={<ShoppingCartOutlined />}>Reorder</Button>
           )}
         </Col>
       </Row>
@@ -123,19 +126,19 @@ const Orders = () => {
   const tabsItems = [
     {
       key: '1',
-      label: 'Active Orders',
+      label: `Active Orders (${activeOrders.length})`,
       children: (
         <div className="orders-list-wrapper">
-          {activeOrders.map(order => <OrderCard key={order.id} order={order} isActive={true} />)}
+          {loading ? <Spin /> : activeOrders.length > 0 ? activeOrders.map(order => <OrderCard key={order._id} order={order} isActive={true} />) : <Result status="info" title="No active orders" />}
         </div>
       )
     },
     {
       key: '2',
-      label: 'Order History',
+      label: `Order History (${pastOrders.length})`,
       children: (
         <div className="orders-list-wrapper">
-          {pastOrders.map(order => <OrderCard key={order.id} order={order} isActive={false} />)}
+          {loading ? <Spin /> : pastOrders.length > 0 ? pastOrders.map(order => <OrderCard key={order._id} order={order} isActive={false} />) : <Result status="info" title="No past orders" />}
         </div>
       )
     }

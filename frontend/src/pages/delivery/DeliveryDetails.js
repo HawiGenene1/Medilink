@@ -34,7 +34,11 @@ const DeliveryDetails = () => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const courierMarkerRef = useRef(null);
+    const courierCircleRef = useRef(null);
+    const pickupMarkerRef = useRef(null);
+    const destMarkerRef = useRef(null);
     const [courierPos, setCourierPos] = useState(null);
+    const [courierAccuracy, setCourierAccuracy] = useState(null);
     const [destPos, setDestPos] = useState(null);
     const [pickupPos, setPickupPos] = useState(null);
 
@@ -42,44 +46,147 @@ const DeliveryDetails = () => {
         fetchOrderDetails();
     }, [id]);
 
+    // Initialize Map Once
+    useEffect(() => {
+        if (mapRef.current && !mapInstance.current) {
+            const initialPos = courierPos || [9.0227, 38.7460];
+            mapInstance.current = L.map(mapRef.current, {
+                zoomControl: false,
+                attributionControl: false
+            }).setView(initialPos, 17);
+
+            // Layers
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'ESRI World Imagery'
+            }).addTo(mapInstance.current);
+
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                opacity: 0.8
+            }).addTo(mapInstance.current);
+        }
+
+        return () => {
+            if (mapInstance.current) {
+                mapInstance.current.remove();
+                mapInstance.current = null;
+                courierMarkerRef.current = null;
+                courierCircleRef.current = null;
+                pickupMarkerRef.current = null;
+                destMarkerRef.current = null;
+            }
+        };
+    }, []);
+
+    // Update Markers when positions change
+    useEffect(() => {
+        if (!mapInstance.current) return;
+
+        const markers = [];
+
+        // 1. Courier Marker
+        if (courierPos) {
+            if (courierMarkerRef.current) {
+                courierMarkerRef.current.setLatLng(courierPos);
+            } else {
+                courierMarkerRef.current = L.marker(courierPos, {
+                    icon: L.divIcon({
+                        className: 'courier-pin',
+                        html: '<div style="font-size: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🚗</div>',
+                        iconSize: [35, 35],
+                        iconAnchor: [17, 17]
+                    })
+                }).addTo(mapInstance.current);
+            }
+            markers.push(courierPos);
+        }
+
+        // 2. Pickup Marker
+        if (pickupPos) {
+            if (pickupMarkerRef.current) {
+                pickupMarkerRef.current.setLatLng(pickupPos);
+            } else {
+                pickupMarkerRef.current = L.marker(pickupPos, {
+                    icon: L.divIcon({
+                        className: 'pickup-marker',
+                        html: '<div style="font-size: 28px;">🏥</div>',
+                        iconSize: [35, 35],
+                        iconAnchor: [17, 17]
+                    })
+                }).addTo(mapInstance.current).bindPopup('Pharmacy (Pickup)');
+            }
+            markers.push(pickupPos);
+        }
+
+        // 3. Dropoff Marker
+        if (destPos) {
+            if (destMarkerRef.current) {
+                destMarkerRef.current.setLatLng(destPos);
+            } else {
+                destMarkerRef.current = L.marker(destPos, {
+                    icon: L.divIcon({
+                        className: 'destination-marker',
+                        html: '<div style="font-size: 32px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));">📍</div>',
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 35]
+                    })
+                }).addTo(mapInstance.current).bindPopup('Customer (Dropoff)');
+            }
+            markers.push(destPos);
+        }
+
+        // Fit bounds once when data is available
+        if (!loading && markers.length > 1) {
+            const bounds = L.latLngBounds(markers);
+            mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
+        }
+
+        // 4. Accuracy Circle
+        if (courierPos && courierAccuracy) {
+            if (courierCircleRef.current) {
+                courierCircleRef.current.setLatLng(courierPos);
+                courierCircleRef.current.setRadius(courierAccuracy);
+            } else {
+                courierCircleRef.current = L.circle(courierPos, {
+                    radius: courierAccuracy,
+                    color: '#1E88E5',
+                    fillColor: '#1E88E5',
+                    fillOpacity: 0.1,
+                    weight: 1
+                }).addTo(mapInstance.current);
+            }
+        }
+    }, [loading, courierPos, courierAccuracy, pickupPos, destPos]);
+
     const fetchOrderDetails = async () => {
         try {
-            // Re-using common order fetch or creating a specific one?
-            // Since we need to be authorized as delivery, let's assuming /api/orders/:id works or we created a specific one.
-            // Actually, let's use the public/protected order endpoint if available, but we need full details.
-            // deliveryController.getActiveDeliveries gave us a list. 
-            // We might not have a specific 'get single delivery details' in deliveryController yet.
-            // But we can use the generic order endpoint if it allows the courier to view it.
-            // For now, let's assume we can fetch it via /api/orders/:id if we are the courier.
             const response = await api.get(`/orders/${id}`);
-            console.log('[DeliveryDetails] API Response:', response.data);
             if (response.data.success) {
                 const data = response.data.data;
-                console.log('[DeliveryDetails] Order data:', data);
-                console.log('[DeliveryDetails] Address:', data.address);
-                console.log('[DeliveryDetails] Address label:', data.address?.label);
                 setOrder(data);
                 setStatus(data.status);
 
-                // Set Positions from customer delivery address
+                // Set Positions
                 if (data.address?.geojson?.coordinates) {
-                    // GeoJSON format: [longitude, latitude]
                     setDestPos([data.address.geojson.coordinates[1], data.address.geojson.coordinates[0]]);
                 } else if (data.address?.coordinates) {
                     setDestPos([data.address.coordinates.latitude, data.address.coordinates.longitude]);
                 }
+
                 if (data.pharmacy?.location?.coordinates) {
-                    // GeoJSON is [lng, lat]
                     setPickupPos([data.pharmacy.location.coordinates[1], data.pharmacy.location.coordinates[0]]);
                 }
-                // Courier Pos - ideally get from current location or backend
-                // For now, default to pickup or a known start point if waiting
+
+                // Courier Pos - use high accuracy
                 navigator.geolocation.getCurrentPosition(pos => {
-                    setCourierPos([pos.coords.latitude, pos.coords.longitude]);
+                    const { latitude, longitude, accuracy } = pos.coords;
+                    setCourierPos([latitude, longitude]);
+                    setCourierAccuracy(accuracy);
                 }, () => {
-                    // Fallback
                     setCourierPos([9.0227, 38.7460]);
-                });
+                    setCourierAccuracy(null);
+                }, { enableHighAccuracy: true });
             }
         } catch (error) {
             console.error('Error fetching order:', error);
@@ -88,58 +195,6 @@ const DeliveryDetails = () => {
             setLoading(false);
         }
     };
-
-    // Initialize Map
-    useEffect(() => {
-        if (!loading && mapRef.current && !mapInstance.current && courierPos) {
-            mapInstance.current = L.map(mapRef.current, {
-                zoomControl: false,
-                attributionControl: false
-            }).setView(courierPos, 14);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
-
-            // Courier Marker
-            courierMarkerRef.current = L.marker(courierPos, {
-                icon: L.divIcon({
-                    className: 'courier-pin',
-                    html: '<div style="font-size: 24px;">🚗</div>',
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 15]
-                })
-            }).addTo(mapInstance.current);
-
-            // Pickup Marker
-            if (pickupPos) {
-                L.marker(pickupPos, {
-                    icon: L.divIcon({
-                        className: 'pickup-marker',
-                        html: '🏥',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 15]
-                    })
-                }).addTo(mapInstance.current).bindPopup('Pharmacy (Pickup)');
-            }
-
-            // Dropoff Marker
-            if (destPos) {
-                L.marker(destPos, {
-                    icon: L.divIcon({
-                        className: 'destination-marker',
-                        html: '📍',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 30]
-                    })
-                }).addTo(mapInstance.current).bindPopup('Customer (Dropoff)');
-            }
-
-            // Fit bounds
-            const bounds = L.latLngBounds([courierPos]);
-            if (pickupPos) bounds.extend(pickupPos);
-            if (destPos) bounds.extend(destPos);
-            mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
-        }
-    }, [loading, courierPos, pickupPos, destPos]);
 
     const handleAction = async () => {
         try {

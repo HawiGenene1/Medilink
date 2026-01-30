@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Progress } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Progress, Spin, Result } from 'antd';
 import {
     SearchOutlined,
     ShoppingCartOutlined,
@@ -11,6 +11,7 @@ import {
     RightOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { ordersAPI } from '../../../services/api/orders';
 import MedilinkSkeleton from '../../../components/ui/MedilinkSkeleton';
 import './Dashboard.css';
 
@@ -19,7 +20,43 @@ const { Title, Text } = Typography;
 const CustomerDashboard = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
+    const [viewMode, setViewMode] = useState('list');
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchData = async () => {
+        try {
+            const response = await ordersAPI.getMyOrders();
+            if (response.data.success) {
+                setOrders(response.data.data);
+            }
+        } catch (error) {
+            console.error('Dashboard fetch error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const activeOrders = orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
+    const stats = {
+        activeOrders: activeOrders.length,
+        processing: orders.filter(o => ['confirmed', 'preparing'].includes(o.status)).length,
+        delivery: orders.filter(o => o.status === 'in_transit').length,
+    };
+
+    const recentOrders = orders.slice(0, 3).map(order => ({
+        id: order._id,
+        orderNumber: order.orderNumber,
+        pharmacy: order.pharmacy?.name || 'Pharmacy',
+        amount: `${order.finalAmount} ETB`,
+        status: (order.status || 'pending').replace(/_/g, ' '),
+        progress: order.status === 'delivered' ? 100 : (order.status === 'pending' ? 10 : 50),
+        date: new Date(order.createdAt).toLocaleDateString()
+    }));
 
     // Mock Data for Search Results
     const searchResults = searchQuery ? [
@@ -46,32 +83,6 @@ const CustomerDashboard = () => {
             ]
         }
     ] : [];
-
-    // Mock Data for Dashboard
-    const stats = {
-        activeOrders: 3,
-        processing: 2,
-        delivery: 1,
-    };
-
-    const recentOrders = [
-        {
-            id: '#ORD-1024',
-            pharmacy: 'City Pharmacy',
-            amount: '450 ETB',
-            status: 'In Delivery',
-            progress: 75,
-            date: 'Today, 2:30 PM'
-        },
-        {
-            id: '#ORD-1023',
-            pharmacy: 'Red Cross Pharmacy',
-            amount: '1200 ETB',
-            status: 'Processing',
-            progress: 40,
-            date: 'Today, 10:15 AM'
-        },
-    ];
 
     const nearbyPharmacies = [
         { name: 'Kenema Pharmacy', distance: '0.5 km', status: 'Open', rating: 4.8 },
@@ -276,7 +287,7 @@ const CustomerDashboard = () => {
                         <Col xs={24} lg={14}>
                             <Card title={<Title level={4} style={{ margin: 0 }}>Recent Orders</Title>} extra={<Button type="link" onClick={() => navigate('/customer/orders')}>View All</Button>}>
                                 <List itemLayout="horizontal" dataSource={recentOrders} renderItem={item => (
-                                    <List.Item actions={[<Button type="primary" size="small" key="track" onClick={() => navigate('/customer/orders')}>Track</Button>]}>
+                                    <List.Item actions={[<Button type="primary" size="small" key="track" onClick={() => navigate(`/customer/orders/track/${item.id}`)}>Track</Button>]}>
                                         <List.Item.Meta
                                             avatar={<Avatar shape="square" size={48} icon={<ShopOutlined />} style={{ background: 'rgba(30, 136, 229, 0.1)', color: '#1E88E5' }} />}
                                             title={<Text strong>{item.pharmacy}</Text>}
@@ -287,7 +298,7 @@ const CustomerDashboard = () => {
                                                         <Text strong>{item.amount}</Text>
                                                     </Space>
                                                     <Progress percent={item.progress} size="small" showInfo={false} strokeColor="#1E88E5" style={{ marginTop: '8px' }} />
-                                                    <Text type="secondary" style={{ fontSize: '12px' }}>{item.status}</Text>
+                                                    <Text type="secondary" style={{ fontSize: '12px', textTransform: 'capitalize' }}>{item.status}</Text>
                                                 </div>
                                             }
                                         />

@@ -11,7 +11,7 @@ import {
   InboxOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import api from '../../../services/api';
@@ -126,7 +126,8 @@ const DeliveryDashboard = () => {
           (position) => {
             const loc = {
               latitude: position.coords.latitude,
-              longitude: position.coords.longitude
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy
             };
             setLocation(loc);
             updateStatus(true, loc);
@@ -143,7 +144,7 @@ const DeliveryDashboard = () => {
             console.error('Location error:', err);
             notification.error({ message: 'Location access required. Please enable site permissions.' });
           },
-          { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       } else {
         notification.error({ message: 'Geolocation not supported' });
@@ -202,7 +203,8 @@ const DeliveryDashboard = () => {
         (position) => {
           const loc = {
             latitude: position.coords.latitude,
-            longitude: position.coords.longitude
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
           };
           setLocation(loc);
           // Get the first active order ID if any
@@ -215,7 +217,7 @@ const DeliveryDashboard = () => {
           });
         },
         (error) => console.log('Watch Error:', error),
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
     return () => {
@@ -268,17 +270,31 @@ const DeliveryDashboard = () => {
                 center={mapInitialCenter}
                 zoom={15}
                 style={{ height: '100%', width: '100%' }}
-                zoomAnimation={false} // Disable zoom animations for stability
-                markerZoomAnimation={false}
               >
                 <MapController center={[location?.latitude, location?.longitude]} follow={followMe} />
+
+                {/* High-Resolution Satellite Hybrid Layer (ESRI) */}
                 <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                  attribution="&copy; ESRI World Imagery"
                 />
+                <TileLayer
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+                  opacity={0.7}
+                />
+
                 <Marker position={[location.latitude, location.longitude]}>
                   <Popup>You are here</Popup>
                 </Marker>
+
+                {/* Accuracy Circle */}
+                {location.accuracy && (
+                  <Circle
+                    center={[location.latitude, location.longitude]}
+                    radius={location.accuracy}
+                    pathOptions={{ color: '#1E88E5', fillColor: '#1E88E5', fillOpacity: 0.1, weight: 1 }}
+                  />
+                )}
 
                 {incomingRequest?.pickup?.location?.coordinates && (
                   <Marker position={[incomingRequest.pickup.location.coordinates[1], incomingRequest.pickup.location.coordinates[0]]}>

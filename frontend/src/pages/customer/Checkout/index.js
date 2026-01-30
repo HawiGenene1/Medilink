@@ -10,7 +10,9 @@ import {
     ArrowLeftOutlined,
     CompassOutlined,
     MessageOutlined,
-    ShoppingCartOutlined
+    ShoppingCartOutlined,
+    LoadingOutlined,
+    EditOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
@@ -41,6 +43,7 @@ const Checkout = () => {
     const [mapCenter, setMapCenter] = useState([9.0227, 38.7460]); // Addis Ababa default
     const [locationLabel, setLocationLabel] = useState('Locating...');
     const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
+    const [isLocating, setIsLocating] = useState(false);
     const [deliveryNotes, setDeliveryNotes] = useState('');
     const [selectedAddressCoords, setSelectedAddressCoords] = useState(null);
 
@@ -48,6 +51,10 @@ const Checkout = () => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const geocodeTimeout = useRef(null);
+    const accuracyCircleRef = useRef(null);
+    const isProgrammaticMove = useRef(false);
+    const [isEditingLabel, setIsEditingLabel] = useState(false);
+    const [placedOrderId, setPlacedOrderId] = useState(null);
 
     const steps = [
         { title: 'Location', icon: <EnvironmentOutlined /> },
@@ -61,11 +68,32 @@ const Checkout = () => {
         try {
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
             const data = await response.json();
-            const address = data.display_name.split(',').slice(0, 2).join(',');
-            setLocationLabel(address || 'Unknown Location');
+
+            if (data && data.address) {
+                const a = data.address;
+                // Prioritize specific local descriptors
+                const specific = a.amenity || a.building || a.shop || a.office || a.tourism || a.leisure;
+                const road = a.road || a.street || a.pedestrian;
+                const local = a.neighbourhood || a.suburb || a.subdistrict;
+                const area = a.district || a.city || a.town;
+
+                const parts = [specific, a.house_number, road, local, area].filter(Boolean);
+
+                // If the structured parts are too short, use the display_name which often has landmarks
+                let address = parts.length >= 2 ? parts.join(', ') : data.display_name;
+
+                // Clean up any double-comma or trailing comma issues
+                address = address.split(', ').filter((item, index, self) => self.indexOf(item) === index).join(', ');
+
+                setLocationLabel(address);
+            } else if (data && data.display_name) {
+                setLocationLabel(data.display_name);
+            } else {
+                setLocationLabel(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+            }
         } catch (error) {
             console.error('Geocoding failed:', error);
-            setLocationLabel(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            setLocationLabel(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
         }
     };
 
@@ -75,18 +103,37 @@ const Checkout = () => {
             mapInstance.current = L.map(mapRef.current, {
                 zoomControl: false,
                 attributionControl: false
-            }).setView(mapCenter, 16);
+            }).setView(mapCenter, 17); // Closer initial zoom
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
+            // High-Resolution Satellite Hybrid Layer (ESRI)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'ESRI World Imagery'
+            }).addTo(mapInstance.current);
 
-            // Add Soft Blue Theme class to container
-            mapRef.current.classList.add('soft-blue-map');
+            // Add Road Overlay for Hybrid View
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                opacity: 0.8
+            }).addTo(mapInstance.current);
+
+            // Initial geocode
+            if (mapCenter[0] === 9.0227 && mapCenter[1] === 38.7460) {
+                handleUseCurrentLocation(true);
+            } else {
+                reverseGeocode(mapCenter[0], mapCenter[1]);
+            }
 
             // Handle Map Movement
             mapInstance.current.on('move', () => {
+                if (isProgrammaticMove.current) {
+                    isProgrammaticMove.current = false;
+                    return;
+                }
+
                 const center = mapInstance.current.getCenter();
                 setMapCenter([center.lat, center.lng]);
-                setIsLocationConfirmed(false); // Reset confirmation on move
+                setIsLocationConfirmed(false); // Reset confirmation on manual move
 
                 // Debounced Geocoding
                 if (geocodeTimeout.current) clearTimeout(geocodeTimeout.current);
@@ -95,8 +142,13 @@ const Checkout = () => {
                 }, 800);
             });
 
-            // Initial geocode
-            reverseGeocode(mapCenter[0], mapCenter[1]);
+            // Try to get current location on mount to avoid "mock" feel
+            if (mapCenter[0] === 9.0227 && mapCenter[1] === 38.7460) {
+                handleUseCurrentLocation(true); // silent initialization
+            } else {
+                // Initial geocode
+                reverseGeocode(mapCenter[0], mapCenter[1]);
+            }
         }
 
         return () => {
@@ -151,24 +203,71 @@ const Checkout = () => {
         setIsLocationConfirmed(true);
     };
 
-    const handleUseCurrentLocation = () => {
+    const handleUseCurrentLocation = (isInitial = false) => {
         if ("geolocation" in navigator) {
+            if (!isInitial) setIsLocating(true);
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    const { latitude, longitude } = position.coords;
-                    mapInstance.current.flyTo([latitude, longitude], 17);
+                    const { latitude, longitude, accuracy } = position.coords;
+                    setMapCenter([latitude, longitude]);
+                    setSelectedAddressCoords([latitude, longitude]); // Immediately "save" the real coordinates
+                    setIsLocationConfirmed(true); // Auto-confirm GPS location
+
+                    if (mapInstance.current) {
+                        isProgrammaticMove.current = true;
+                        mapInstance.current.flyTo([latitude, longitude], 18);
+
+                        // Add Accuracy Circle
+                        if (accuracyCircleRef.current) {
+                            mapInstance.current.removeLayer(accuracyCircleRef.current);
+                        }
+
+                        accuracyCircleRef.current = L.circle([latitude, longitude], {
+                            radius: accuracy,
+                            color: accuracy > 100 ? '#FFA000' : '#1E88E5',
+                            fillColor: accuracy > 100 ? '#FFA000' : '#1E88E5',
+                            fillOpacity: 0.1,
+                            weight: 1
+                        }).addTo(mapInstance.current);
+                    }
+
+                    // Immediately trigger geocode for current location
+                    reverseGeocode(latitude, longitude);
+                    setIsLocationConfirmed(true); // Auto-confirm GPS location
+
+                    if (!isInitial) {
+                        setIsLocating(false);
+                        if (accuracy > 150) {
+                            notification.warning({
+                                message: 'Low Precision Detected',
+                                description: 'Your browser is reporting a wide location margin. If you are in Incognito mode, please try a regular window for better GPS accuracy.',
+                                placement: 'bottomRight',
+                                duration: 8
+                            });
+                        } else {
+                            notification.success({
+                                message: 'Precision Location Set',
+                                description: `GPS coordinates verified within ${Math.round(accuracy)} meters.`,
+                                placement: 'bottomRight',
+                                duration: 4
+                            });
+                        }
+                    }
                 },
                 (error) => {
                     console.error('Geolocation error:', error);
-                    notification.error({
-                        message: 'Location Error',
-                        description: 'Could not access your location. Please ensure site permissions are enabled.'
-                    });
+                    if (!isInitial) {
+                        setIsLocating(false);
+                        notification.error({
+                            message: 'Location Error',
+                            description: 'Could not access your location. Please ensure site permissions are enabled.'
+                        });
+                    }
                 },
                 {
-                    enableHighAccuracy: false, // Relaxed for wider compatibility (Wi-Fi/Cell)
-                    timeout: 10000,            // Increased to 10s
-                    maximumAge: 30000          // Use cache up to 30s old
+                    enableHighAccuracy: true, // GPS Precision enabled
+                    timeout: 15000,           // Increased timeout
+                    maximumAge: 0             // Force fresh location, no cache
                 }
             );
         }
@@ -224,6 +323,7 @@ const Checkout = () => {
 
             if (response.data.success) {
                 const newOrder = response.data.data;
+                setPlacedOrderId(newOrder._id);
                 notification.success({
                     message: 'Order Placed',
                     description: `Order #${newOrder.orderNumber} has been successfully placed!`
@@ -311,12 +411,25 @@ const Checkout = () => {
                                     </div>
 
                                     <Button
-                                        icon={<CompassOutlined />}
+                                        icon={isLocating ? <LoadingOutlined /> : <CompassOutlined />}
                                         className="use-current-loc-btn"
-                                        style={{ position: 'absolute', bottom: '16px', right: '16px', zIndex: 1000 }}
-                                        onClick={handleUseCurrentLocation}
+                                        style={{
+                                            position: 'absolute',
+                                            bottom: '16px',
+                                            right: '16px',
+                                            zIndex: 1000,
+                                            height: '45px',
+                                            borderRadius: '22px',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                            border: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px'
+                                        }}
+                                        onClick={() => handleUseCurrentLocation(false)}
+                                        loading={isLocating}
                                     >
-                                        Use My Current Location
+                                        {isLocating ? 'Acquiring GPS...' : 'Use Precise GPS'}
                                     </Button>
                                 </div>
 
@@ -329,9 +442,33 @@ const Checkout = () => {
                                             </div>
                                         </Col>
                                         <Col flex="auto">
-                                            <Text type="secondary" style={{ fontSize: '12px' }}>Deliver to:</Text>
-                                            <div style={{ wordBreak: 'break-all' }}>
-                                                <Text strong style={{ fontSize: '16px' }}>{locationLabel}</Text>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <Text type="secondary" style={{ fontSize: '12px' }}>Deliver to:</Text>
+                                                {isLocationConfirmed && (
+                                                    <Tag color="processing" style={{ borderRadius: '10px', fontSize: '10px', height: '18px', display: 'flex', alignItems: 'center' }}>
+                                                        VERIFIED PRECISION
+                                                    </Tag>
+                                                )}
+                                                <Button
+                                                    type="text"
+                                                    size="small"
+                                                    icon={<EditOutlined style={{ fontSize: '12px' }} />}
+                                                    onClick={() => setIsEditingLabel(!isEditingLabel)}
+                                                />
+                                            </div>
+                                            <div style={{ wordBreak: 'break-all', marginTop: '4px' }}>
+                                                {isEditingLabel ? (
+                                                    <Input
+                                                        value={locationLabel}
+                                                        onChange={(e) => setLocationLabel(e.target.value)}
+                                                        onBlur={() => setIsEditingLabel(false)}
+                                                        onPressEnter={() => setIsEditingLabel(false)}
+                                                        autoFocus
+                                                        size="small"
+                                                    />
+                                                ) : (
+                                                    <Text strong style={{ fontSize: '15px', color: '#1a202c' }}>{locationLabel}</Text>
+                                                )}
                                             </div>
                                         </Col>
                                     </Row>
@@ -539,7 +676,7 @@ const Checkout = () => {
                         title="Order Placed Successfully!"
                         subTitle="Your order is being processed by the pharmacy."
                         extra={[
-                            <Button type="primary" key="track" onClick={() => navigate('/customer/orders/track/ORD-LATEST')}>
+                            <Button type="primary" key="track" onClick={() => navigate(`/customer/orders/track/${placedOrderId}`)}>
                                 Track Order Live
                             </Button>,
                             <Button key="orders" onClick={() => navigate('/customer/orders')}>

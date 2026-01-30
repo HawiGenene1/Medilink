@@ -39,6 +39,8 @@ const OrderTracking = () => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const driverMarkerRef = useRef(null);
+    const pharmacyMarkerRef = useRef(null);
+    const destMarkerRef = useRef(null);
 
     // Live Tracking State
     const [driverPos, setDriverPos] = useState([9.0227, 38.7460]); // Fallback pos
@@ -105,7 +107,7 @@ const OrderTracking = () => {
         };
     }, [socket, id]);
 
-    // Initialize Map
+    // Initialize Map Once
     useEffect(() => {
         if (mapRef.current && !mapInstance.current) {
             mapInstance.current = L.map(mapRef.current, {
@@ -113,107 +115,98 @@ const OrderTracking = () => {
                 attributionControl: false
             }).setView(driverPos, 15);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
+            // Layers
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19
+            }).addTo(mapInstance.current);
 
-            // Apply Theme
-            mapRef.current.classList.add('soft-blue-map');
-
-            // Courier Marker (Pulsing)
-            const courierIcon = L.divIcon({
-                className: 'pulse-marker',
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
-            });
-
-            driverMarkerRef.current = L.marker(driverPos, { icon: courierIcon })
-                .addTo(mapInstance.current)
-                .bindPopup('<b>Courier</b><br/>Heading to your location');
-
-            // Customer Destination Marker
-            const destIcon = L.divIcon({
-                className: 'customer-destination-marker',
-                html: '📍',
-                iconSize: [30, 30],
-                iconAnchor: [15, 30]
-            });
-
-            const markers = []; // Keep track to fit bounds
-
-            // Add Driver Marker
-            markers.push(driverPos);
-
-            if (orderData?.address?.coordinates) {
-                const destPos = [
-                    orderData.address.coordinates.latitude,
-                    orderData.address.coordinates.longitude
-                ] || (orderData.address.geojson?.coordinates ? [orderData.address.geojson.coordinates[1], orderData.address.geojson.coordinates[0]] : null);
-
-                if (destPos) {
-                    markers.push(destPos);
-                    L.marker(destPos, { icon: destIcon })
-                        .addTo(mapInstance.current)
-                        .bindPopup('<b>Delivery Destination</b><br/>You are here');
-                }
-            }
-
-            // ADDED: Pharmacy Marker
-            if (orderData?.pharmacy?.location?.coordinates || orderData?.pharmacy?._id) {
-                const addPharmacyMarker = (lat, lng, name) => {
-                    const pharmacyIcon = L.divIcon({
-                        className: 'pharmacy-marker-icon',
-                        html: '🏥',
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 30]
-                    });
-                    const pPos = [lat, lng];
-                    markers.push(pPos);
-                    L.marker(pPos, { icon: pharmacyIcon })
-                        .addTo(mapInstance.current)
-                        .bindPopup(`<b>${name}</b><br/>Pickup Point`)
-                        .openPopup();
-                };
-
-                // Case 1: Coordinates are populated in orderData
-                if (orderData.pharmacy.location?.coordinates) {
-                    const [plng, plat] = orderData.pharmacy.location.coordinates;
-                    addPharmacyMarker(plat, plng, orderData.pharmacy.name);
-                }
-                // Case 2: Only ID is available (or partial data), fetch full details
-                else if (typeof orderData.pharmacy === 'object' && orderData.pharmacy._id) {
-                    // Since orderData.pharmacy might just be populated with name/address but not location
-                    // We might need to fetch it if location is missing. 
-                    // OR ensure the backend populates it. 
-                    // For now, let's try to fetch if we have an ID but no coordinates
-                    fetch(`http://localhost:5000/api/pharmacy/${orderData.pharmacy._id}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success && data.data.location?.coordinates) {
-                                const [plng, plat] = data.data.location.coordinates;
-                                addPharmacyMarker(plat, plng, data.data.name);
-
-                                // Refit bounds after lazy load
-                                const bounds = L.latLngBounds(markers);
-                                mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
-                            }
-                        })
-                        .catch(err => console.error("Could not load pharmacy loc", err));
-                }
-            }
-
-            // Fit bounds to show all initial markers
-            if (markers.length > 0) {
-                const bounds = L.latLngBounds(markers);
-                mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
-            }
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                opacity: 0.8
+            }).addTo(mapInstance.current);
         }
 
         return () => {
             if (mapInstance.current) {
                 mapInstance.current.remove();
                 mapInstance.current = null;
+                driverMarkerRef.current = null;
+                pharmacyMarkerRef.current = null;
+                destMarkerRef.current = null;
             }
         };
-    }, [orderData]); // Re-run when orderData loads to get coordinates
+    }, []);
+
+    // Update Markers and Bounds
+    useEffect(() => {
+        if (!mapInstance.current || !orderData) return;
+
+        const markers = [];
+
+        // 1. Driver/Courier Marker
+        if (driverMarkerRef.current) {
+            driverMarkerRef.current.setLatLng(driverPos);
+        } else {
+            const courierIcon = L.divIcon({
+                className: 'pulse-marker',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            driverMarkerRef.current = L.marker(driverPos, { icon: courierIcon })
+                .addTo(mapInstance.current)
+                .bindPopup('<b>Courier</b><br/>Heading to your location');
+        }
+        markers.push(driverPos);
+
+        // 2. Destination Marker
+        if (orderData?.address?.coordinates || orderData?.address?.geojson?.coordinates) {
+            const destPos = orderData.address.coordinates ?
+                [orderData.address.coordinates.latitude, orderData.address.coordinates.longitude] :
+                [orderData.address.geojson.coordinates[1], orderData.address.geojson.coordinates[0]];
+
+            if (destMarkerRef.current) {
+                destMarkerRef.current.setLatLng(destPos);
+            } else {
+                const destIcon = L.divIcon({
+                    className: 'customer-destination-marker',
+                    html: '📍',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
+                destMarkerRef.current = L.marker(destPos, { icon: destIcon })
+                    .addTo(mapInstance.current)
+                    .bindPopup('<b>Delivery Destination</b><br/>You are here');
+            }
+            markers.push(destPos);
+        }
+
+        // 3. Pharmacy Marker
+        if (orderData?.pharmacy?.location?.coordinates) {
+            const [plng, plat] = orderData.pharmacy.location.coordinates;
+            const pPos = [plat, plng];
+
+            if (pharmacyMarkerRef.current) {
+                pharmacyMarkerRef.current.setLatLng(pPos);
+            } else {
+                const pharmacyIcon = L.divIcon({
+                    className: 'pharmacy-marker-icon',
+                    html: '🏥',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
+                pharmacyMarkerRef.current = L.marker(pPos, { icon: pharmacyIcon })
+                    .addTo(mapInstance.current)
+                    .bindPopup(`<b>${orderData.pharmacy.name}</b><br/>Pickup Point`);
+            }
+            markers.push(pPos);
+        }
+
+        // Fit bounds once when data is available
+        if (markers.length > 1) {
+            const bounds = L.latLngBounds(markers);
+            mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
+        }
+    }, [orderData, driverPos]);
 
     useEffect(() => {
         fetchTracking(); // Initial fetch
@@ -237,7 +230,7 @@ const OrderTracking = () => {
     };
 
     const timelineItems = (orderData?.statusHistory || []).map((item, index) => {
-        const mappedStatus = statusMapping[item.status] || item.status.replace(/_/g, ' ');
+        const mappedStatus = statusMapping[item.status] || (item.status ? item.status.replace(/_/g, ' ') : 'Unknown');
         const isLatest = index === (orderData?.statusHistory.length - 1);
 
         return {
@@ -304,8 +297,10 @@ const OrderTracking = () => {
                                 <Avatar size={54} icon={<UserOutlined />} style={{ background: '#E3F2FD', color: '#1E88E5' }} />
                             </Col>
                             <Col flex="auto">
-                                <Text strong style={{ fontSize: '16px' }}>Samuel Girma</Text>
-                                <br /><Text type="secondary">MediLink Courier Partner</Text>
+                                <Text strong style={{ fontSize: '16px' }}>
+                                    {orderData?.courier?.firstName} {orderData?.courier?.lastName || ''}
+                                </Text>
+                                <br /><Text type="secondary">MediLink Courier Partner • {orderData?.courier?.phone || 'Carrier'}</Text>
                             </Col>
                         </Row>
                         <Divider style={{ margin: '16px 0' }} />
