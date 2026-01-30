@@ -355,9 +355,48 @@ const verifyEmail = async (req, res) => {
   }
 };
 
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update user profile & settings
+ * @access  Private
+ */
+const updateProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, phone, settings } = req.body;
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (phone) user.phone = phone;
+    if (settings) {
+      user.settings = { ...user.settings, ...settings };
+    }
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: user.toJSON()
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during profile update',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getCurrentUser,
   verifyEmail,
+  updateProfile
 };

@@ -94,4 +94,15 @@ export const cartAPI = {
   clearCart: () => api.delete('/cart'),
 };
 
+// User API
+export const userAPI = {
+  uploadAvatar: (formData) =>
+    api.post('/users/profile-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
+  updateProfile: (profileData) => api.put('/users/profile', profileData),
+};
+
 export default api;

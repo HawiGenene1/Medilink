@@ -41,17 +41,25 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
     // Fetch notifications/alerts count for pharmacy_admin
     useEffect(() => {
         const fetchNotifications = async () => {
-            if (role === 'pharmacy_admin') {
+            if (role === 'pharmacy_admin' || role === 'cashier') {
                 try {
-                    const response = await fetch('http://localhost:5000/api/pharmacy-admin/alerts', {
+                    const endpoint = role === 'pharmacy_admin'
+                        ? 'http://localhost:5000/api/pharmacy-admin/alerts'
+                        : 'http://localhost:5000/api/cashier/alerts';
+
+                    const response = await fetch(endpoint, {
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('token')}`
                         }
                     });
                     const data = await response.json();
                     if (data.success && data.data) {
-                        // Count total alerts
-                        const totalCount = data.data.reduce((sum, alert) => sum + (alert.count || 0), 0);
+                        // For pharmacy_admin, data is an array of alert types with counts
+                        // For cashier, it might be a direct list or similar. 
+                        // Let's handle both gracefully.
+                        const totalCount = Array.isArray(data.data)
+                            ? data.data.reduce((sum, alert) => sum + (alert.count || 1), 0)
+                            : 0;
                         setNotificationCount(totalCount);
                     }
                 } catch (error) {

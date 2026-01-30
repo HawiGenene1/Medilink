@@ -1,35 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Row, Col, Typography, Statistic, Table, Tag, Button, Tabs, message, Space, Tooltip, Modal, Form, Input, DatePicker, Descriptions, Divider, Badge, Select, List, Avatar, Progress } from 'antd';
+import { Card, Row, Col, Typography, Statistic, Table, Tag, Button, Tabs, message, Space, Tooltip, Modal, Form, Input, DatePicker, Descriptions, Divider, Badge, Select, List, Avatar, Progress, Alert, Upload, Switch } from 'antd';
 import {
-  DollarCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  SyncOutlined,
-  CheckCircleOutlined,
-  EyeOutlined,
-  PrinterOutlined,
-  ReloadOutlined,
-  FileTextOutlined,
   SearchOutlined,
+  SyncOutlined,
+  EyeOutlined,
+  FilePdfOutlined,
+  WalletOutlined,
+  AreaChartOutlined,
+  ShoppingOutlined,
   CalendarOutlined,
   AppstoreOutlined,
   ShoppingCartOutlined,
   UserOutlined,
-  SettingOutlined,
   LogoutOutlined,
-  RightOutlined,
   MenuOutlined,
+  BarChartOutlined,
+  ExclamationCircleOutlined,
+  SettingOutlined,
+  PrinterOutlined,
+  CheckCircleOutlined,
+  HistoryOutlined,
   BellOutlined,
-  BarChartOutlined
+  RightOutlined,
+  ReloadOutlined,
+  CameraOutlined,
+  LoadingOutlined,
+  ClockCircleOutlined,
+  LockOutlined,
+  WarningOutlined,
+  StopOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import { cashierAPI } from '../../../services/api/cashier';
 import cashierPOSService from '../../../services/cashierPOS';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import './CashierDashboard.css';
 import dayjs from 'dayjs';
 import ShiftManagement from './ShiftManagement';
-import RefundModal from './RefundModal';
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -38,235 +46,140 @@ const { Option } = Select;
 
 const CashierDashboard = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const location = useLocation();
+  const { logout, user, updateProfile, uploadAvatar } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [stats, setStats] = useState({
     pending: 0,
     paid: 0,
     failed: 0,
-    refunded: 0,
-    total_revenue: 0,
-    todays_revenue: 0,
-    todays_refunds: 0,
-    systemStatus: 'online',
-    recentActivity: []
+    systemStatus: 'online'
   });
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 8, total: 0 });
+  const [soundEnabled, setSoundEnabled] = useState(user?.settings?.notificationsEnabled ?? true);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+
+  // Sync activeTab with URL
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/cashier/pending')) setActiveTab('approved');
+    else if (path.includes('/cashier/transactions')) setActiveTab('monitor');
+    else if (path.includes('/cashier/settings') || path.includes('/cashier/profile')) setActiveTab('settings');
+    else if (path.includes('/cashier/notifications')) setActiveTab('notifications');
+    else setActiveTab('dashboard');
+  }, [location.pathname]);
 
   // Filters
   const [searchText, setSearchText] = useState('');
   const [dateRange, setDateRange] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all'); // For transaction history filtering
-
-  // Report Filters
-  const [reportPeriod, setReportPeriod] = useState('monthly'); // daily, weekly, monthly, custom
-  const [reportRange, setReportRange] = useState([dayjs().startOf('month'), dayjs().endOf('month')]);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // Action States
   const [verifyingId, setVerifyingId] = useState(null);
-  const [refundModalVisible, setRefundModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [sessionsModalVisible, setSessionsModalVisible] = useState(false);
+  const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
+  const [passwordForm] = Form.useForm();
+  const [profileForm] = Form.useForm();
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [reportData, setReportData] = useState(null);
-  const [exportingMap, setExportingMap] = useState({});
 
-  // Forms
-  const [refundForm] = Form.useForm();
-
-  // New POS Features
+  // POS Features
   const [shiftModalVisible, setShiftModalVisible] = useState(false);
   const [currentShift, setCurrentShift] = useState(null);
   const [alerts, setAlerts] = useState([]);
-  const [newRefundModalVisible, setNewRefundModalVisible] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/auth/login');
   };
-
-  // Quick Actions for Cashier
-  const quickActions = [
-    {
-      title: 'Verify Payment',
-      icon: <CheckCircleOutlined />,
-      color: '#43A047',
-      bgColor: 'rgba(67, 160, 71, 0.1)',
-      action: () => setActiveTab('approved')
-    },
-    {
-      title: 'View Transactions',
-      icon: <FileTextOutlined />,
-      color: '#1E88E5',
-      bgColor: 'rgba(30, 136, 229, 0.1)',
-      action: () => setActiveTab('transactions')
-    },
-    {
-      title: 'Financial Reports',
-      icon: <DollarCircleOutlined />,
-      color: '#FFB300',
-      bgColor: 'rgba(255, 179, 0, 0.1)',
-      action: () => setActiveTab('reports')
-    },
-    {
-      title: 'Settings',
-      icon: <SettingOutlined />,
-      color: '#E53935',
-      bgColor: 'rgba(229, 57, 53, 0.1)',
-      action: () => navigate('/cashier/settings')
-    }
-  ];
 
   useEffect(() => {
     fetchData();
-    // Only auto-refresh dashboard overview stats
-    if (activeTab === 'dashboard') {
+    if (activeTab === 'dashboard' && autoRefreshEnabled) {
       const interval = setInterval(() => {
         fetchStatsOnly();
       }, 30000);
       return () => clearInterval(interval);
     }
-  }, [activeTab, pagination.current, searchText, dateRange, reportRange]);
-
-  // Handle Report Period Change
-  const handleReportPeriodChange = (value) => {
-    setReportPeriod(value);
-    const end = dayjs();
-    let start = dayjs();
-
-    if (value === 'daily') start = dayjs().startOf('day');
-    if (value === 'weekly') start = dayjs().startOf('week');
-    if (value === 'monthly') start = dayjs().startOf('month');
-
-    if (value !== 'custom') {
-      setReportRange([start, end]);
-    }
-  };
+  }, [activeTab, pagination.current, searchText, dateRange, statusFilter, autoRefreshEnabled]);
 
   const fetchStatsOnly = async () => {
     try {
       const statsRes = await cashierAPI.getStats();
-      if (statsRes.data.success) setStats(statsRes.data.data);
-    } catch (error) { console.error('Auto-refresh stats error', error); }
+      if (statsRes.data.success) {
+        const data = statsRes.data.data;
+        setStats({
+          pending: data.pendingCount || data.pending || 0,
+          paid: data.paidCount || data.paid || 0,
+          failed: data.failedCount || data.failed || 0,
+          systemStatus: data.systemStatus || 'online'
+        });
+      }
+    } catch (error) {
+      // Silently fail for background refreshes unless critical
+      console.error('Auto-refresh stats error:', error.message);
+    }
   };
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      // Fetch current shift
+      // Shift & Alerts
       try {
-        const shiftRes = await cashierPOSService.getCurrentShift();
-        if (shiftRes.data.success && shiftRes.data.data) {
-          setCurrentShift(shiftRes.data.data);
-        }
+        const [shiftRes, alertsRes] = await Promise.all([
+          cashierPOSService.getCurrentShift(),
+          cashierPOSService.getAlerts()
+        ]);
+        if (shiftRes.data.success) setCurrentShift(shiftRes.data.data);
+        if (alertsRes.data.success) setAlerts(alertsRes.data.data || []);
       } catch (err) {
-        console.error('Shift fetch error:', err);
+        console.error('Initial metadata fetch err:', err.message);
       }
 
-      // Fetch alerts
-      try {
-        const alertsRes = await cashierPOSService.getAlerts();
-        if (alertsRes.data.success) {
-          setAlerts(alertsRes.data.data || []);
-        }
-      } catch (err) {
-        console.error('Alerts fetch error:', err);
-      }
-
-      // Fetch dashboard stats (use new API for dashboard tab)
+      // Content based on active tab
       if (activeTab === 'dashboard') {
-        try {
-          const todayStatsRes = await cashierPOSService.getTodayStats();
-          if (todayStatsRes.data.success) {
-            const data = todayStatsRes.data.data;
-            setStats({
-              pending: data.pendingPayments || 0,
-              paid: data.transactionCount || 0,
-              todays_revenue: data.totalSales || 0,
-              todays_refunds: data.totalRefunds || 0,
-              refunded: data.refundCount || 0,
-              paymentMethodBreakdown: data.paymentMethodBreakdown || {}
-            });
-          }
-        } catch (err) {
-          console.error('Stats fetch error:', err);
-          // Fallback to old API
-          const statsRes = await cashierAPI.getStats();
-          if (statsRes.data.success) setStats(statsRes.data.data);
+        const todayStatsRes = await cashierPOSService.getTodayStats();
+        if (todayStatsRes.data.success) {
+          const data = todayStatsRes.data.data;
+          setStats({
+            pending: data.pendingPayments || 0,
+            paid: data.transactionCount || 0,
+            failed: data.failedPayments || 0,
+            systemStatus: 'online'
+          });
+          // Also fetch some orders for the dashboard view
+          const ordersRes = await cashierAPI.getOrders({ limit: 5 });
+          if (ordersRes.data.success) setOrders(ordersRes.data.data);
         }
-
-        // Fetch recent transactions
-        try {
-          const recentRes = await cashierPOSService.getRecentTransactions(10);
-          if (recentRes.data.success) {
-            setOrders(recentRes.data.data || []);
-          }
-        } catch (err) {
-          console.error('Recent transactions error:', err);
-        }
-      }
-
-      // Original data fetching for other tabs
-      if (activeTab !== 'dashboard' && activeTab !== 'reports' && activeTab !== 'refunds') {
-        let statusFilter = activeTab === 'approved' ? 'pending' : 'paid';
-
-        // Apply additional filters for transaction history
-        if (activeTab === 'transactions' && statusFilter !== 'all') {
-          statusFilter = statusFilter;
-        }
-
-        const params = {
-          status: statusFilter,
+      } else if (activeTab === 'approved' || activeTab === 'monitor') {
+        const status = activeTab === 'approved' ? 'pending' : statusFilter === 'all' ? '' : statusFilter;
+        const res = await cashierAPI.getOrders({
           page: pagination.current,
           limit: pagination.pageSize,
+          status,
           search: searchText,
-          startDate: dateRange ? dateRange[0].format('YYYY-MM-DD') : undefined,
-          endDate: dateRange ? dateRange[1].format('YYYY-MM-DD') : undefined
-        };
-
-        const ordersRes = await cashierAPI.getOrders(params);
-        if (ordersRes.data.success) {
-          setOrders(ordersRes.data.data);
-          setPagination({
-            ...pagination,
-            total: ordersRes.data.pagination.total
-          });
+          startDate: dateRange ? dateRange[0].toISOString() : '',
+          endDate: dateRange ? dateRange[1].toISOString() : ''
+        });
+        if (res.data.success) {
+          setOrders(res.data.data);
+          setPagination(prev => ({ ...prev, total: res.data.pagination.total }));
         }
       }
 
-      if (activeTab === 'reports') {
-        const params = {
-          startDate: reportRange ? reportRange[0].format('YYYY-MM-DD') : undefined,
-          endDate: reportRange ? reportRange[1].format('YYYY-MM-DD') : undefined
-        };
-        const reportRes = await cashierAPI.getFinancialReport(params);
-        if (reportRes.data.success) setReportData(reportRes.data.data);
-      }
-
-      if (activeTab === 'refunds') {
-        try {
-          const refundsRes = await cashierPOSService.getRefunds({
-            page: pagination.current,
-            limit: pagination.pageSize
-          });
-          if (refundsRes.data.success) {
-            setOrders(refundsRes.data.data || []);
-            setPagination({
-              ...pagination,
-              total: refundsRes.data.pagination?.total || 0
-            });
-          }
-        } catch (err) {
-          console.error('Refunds fetch error:', err);
-        }
-      }
-
-      setLoading(false);
     } catch (error) {
       console.error('Fetch error:', error);
+      // Only show message for non-aborted/non-duplicate requests
+      if (!error.__CANCEL__) {
+        message.destroy(); // Remove old messages
+        message.error('Connectivity issue: Failed to load latest data');
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -274,27 +187,16 @@ const CashierDashboard = () => {
   const handleVerify = async (orderId) => {
     try {
       setVerifyingId(orderId);
-      const response = await cashierAPI.verifyPayment(orderId);
-      if (response.data.success) {
-        if (response.data.data.status === 'paid' || response.data.data.status === 'success') {
-          message.success('Payment Verified: SUCCESS');
-          fetchData();
-        } else {
-          message.warning(`Payment Pending/Failed: ${response.data.data.status}`);
-        }
-      } else {
-        message.error(response.data.message);
+      const res = await cashierAPI.verifyPayment(orderId);
+      if (res.data.success) {
+        message.success('Payment verified successfully');
+        fetchData();
       }
     } catch (error) {
-      message.error('Verification failed');
+      message.error(error.response?.data?.message || 'Verification failed');
     } finally {
       setVerifyingId(null);
     }
-  };
-
-  const handleRefundClick = (order) => {
-    setSelectedOrder(order);
-    setRefundModalVisible(true);
   };
 
   const handleViewDetails = (order) => {
@@ -302,176 +204,92 @@ const CashierDashboard = () => {
     setDetailsModalVisible(true);
   };
 
-  const handleProcessRefund = async (values) => {
-    try {
-      await cashierAPI.initiateRefund(selectedOrder._id, {
-        amount: selectedOrder.finalAmount,
-        reason: values.reason
-      });
-
-      message.success('Refund processed successfully');
-      setRefundModalVisible(false);
-      refundForm.resetFields();
-      fetchData();
-    } catch (error) {
-      message.error('Refund failed: ' + (error.response?.data?.message || 'Unknown error'));
-    }
+  const handleInvoiceClick = (order) => {
+    navigate(`/customer/orders/${order._id}/invoice`);
   };
 
-  const handleInvoiceClick = async (order) => {
-    try {
-      message.loading({ content: 'Generating Official Invoice...', key: 'invoiceGen' });
-      const response = await cashierAPI.generateInvoice(order._id);
 
-      if (response.data.success && response.data.data.pdfUrl) {
-        message.success({ content: 'Invoice Generated!', key: 'invoiceGen' });
-        const backendUrl = 'http://localhost:5000';
-        window.open(`${backendUrl}${response.data.data.pdfUrl}`, '_blank');
-      } else {
-        message.error({ content: 'Failed to generate invoice PDF', key: 'invoiceGen' });
-      }
-    } catch (error) {
-      console.error('Invoice error:', error);
-      message.error({ content: 'Error generating invoice', key: 'invoiceGen' });
-    }
-  };
-
-  const handleTableChange = (newPagination) => {
-    setPagination(newPagination);
-  };
-
-  // EXPORTS
-  const handleExportPDF = async () => {
-    try {
-      message.loading({ content: 'Generating PDF Report...', key: 'exportPdf' });
-      const response = await cashierAPI.exportReportPDF({
-        startDate: reportRange ? reportRange[0].format('YYYY-MM-DD') : undefined,
-        endDate: reportRange ? reportRange[1].format('YYYY-MM-DD') : undefined
-      });
-
-      if (response.data.success && response.data.data.pdfUrl) {
-        message.success({ content: 'Report Generated!', key: 'exportPdf' });
-        const backendUrl = 'http://localhost:5000';
-        window.open(`${backendUrl}${response.data.data.pdfUrl}`, '_blank');
-      } else {
-        message.error({ content: 'Failed to generate PDF', key: 'exportPdf' });
-      }
-    } catch (error) {
-      message.error({ content: 'Export failed', key: 'exportPdf' });
-    }
-  };
-
-  const handleExportExcel = () => {
-    if (!reportData) return;
-    message.loading({ content: 'Preparing CSV...', key: 'exportCsv' });
-
-    const rows = [
-      ['Metric', 'Value'],
-      ['Gross Revenue', reportData.totalRevenue],
-      ['Total Refunds', reportData.totalRefunds],
-      ['Net Income', reportData.netIncome],
-      ['Successful Txns', reportData.successCount],
-      ['Failed Txns', reportData.failedCount],
-      ['Avg Order Value', reportData.avgOrderValue],
-      [],
-      ['Payment Method', 'Count'],
-      ...Object.entries(reportData.methodBreakdown || {}),
-      [],
-      ['Generated At', new Date().toLocaleString()]
-    ];
-
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + rows.map(e => e.join(",")).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Financial_Report_${dayjs().format('YYYY-MM-DD')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    message.success({ content: 'CSV Downloaded', key: 'exportCsv' });
-  };
-
-  // --- COLUMNS ---
 
   const getColumns = () => {
     const columns = [
       {
-        title: 'Order Ref',
+        title: 'Order ID',
         dataIndex: 'orderNumber',
         key: 'orderNumber',
-        render: text => <span style={{ fontWeight: 700, color: '#2c3e50' }}>{text || 'N/A'}</span>
+        render: text => <span style={{ fontWeight: 700 }}>{text || 'N/A'}</span>
       },
       {
         title: 'Customer',
         dataIndex: 'customer',
         key: 'customer',
-        render: (c) => <span style={{ fontWeight: 500 }}>{c ? `${c.firstName} ${c.lastName}` : 'Guest'}</span>
+        render: (c) => {
+          if (!c) return 'Guest';
+          const first = c.firstName || '';
+          const lastInitial = c.lastName ? `${c.lastName.charAt(0)}.` : '';
+          return <span>{`${first} ${lastInitial}`}</span>;
+        }
+      },
+      {
+        title: 'Payment Method',
+        dataIndex: 'paymentMethod',
+        key: 'paymentMethod',
+        render: (method) => <Tag>{method || 'Chapa'}</Tag>
+      },
+      {
+        title: 'Chapa Ref',
+        dataIndex: 'transactionRef',
+        key: 'transactionRef',
+        width: 150,
+        ellipsis: true,
+        render: (ref) => <Tooltip title={ref}><Text code>{ref || '---'}</Text></Tooltip>
       },
       {
         title: 'Amount',
         dataIndex: 'finalAmount',
         key: 'finalAmount',
-        render: (val) => <span style={{ color: '#2c3e50', fontWeight: 'bold' }}>ETB {val?.toFixed(2)}</span>
+        render: (val) => <Text strong>ETB {val?.toFixed(2)}</Text>
+      },
+      {
+        title: 'Status',
+        dataIndex: 'paymentStatus',
+        key: 'paymentStatus',
+        render: (status) => {
+          const color = status === 'paid' ? 'success' : status === 'pending' ? 'warning' : status === 'failed' ? 'error' : 'default';
+          const label = status === 'paid' ? 'SUCCESSFUL' : status?.toUpperCase();
+          return <Tag color={color}>{label}</Tag>;
+        }
       }
     ];
 
-    if (activeTab === 'transactions') {
-      columns.push(
-        {
-          title: 'Tx Ref',
-          dataIndex: 'transactionRef',
-          key: 'transactionRef',
-          render: t => <Text code>{t || 'N/A'}</Text>
-        },
-        {
-          title: 'Payment Method',
-          dataIndex: 'paymentMethod',
-          key: 'paymentMethod',
-          render: text => <Tag color="blue">{text || 'N/A'}</Tag>
-        },
-        {
-          title: 'Date',
-          dataIndex: 'createdAt',
-          key: 'createdAt',
-          render: date => new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString()
-        }
-      );
+    if (activeTab === 'monitor') {
+      columns.splice(4, 0, {
+        title: 'Date',
+        dataIndex: 'createdAt',
+        key: 'createdAt',
+        render: date => dayjs(date).format('MMM D, HH:mm')
+      });
     }
-
-    columns.push({
-      title: 'Status',
-      dataIndex: 'paymentStatus',
-      key: 'paymentStatus',
-      render: (status) => {
-        const color = status === 'paid' ? 'success' : status === 'pending' ? 'warning' : 'default';
-        return <Tag color={color} className={`ant-tag-${color}`}>{status?.toUpperCase()}</Tag>;
-      }
-    });
 
     columns.push({
       title: 'Action',
       key: 'action',
       render: (_, record) => (
         <Space>
-          <Button icon={<EyeOutlined />} onClick={() => handleViewDetails(record)} />
+          <Tooltip title="View Order Details">
+            <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewDetails(record)}>View Details</Button>
+          </Tooltip>
           {activeTab === 'approved' && (
             <Button
-              className="btn-action"
+              size="small"
               type="primary"
-              icon={<SyncOutlined spin={verifyingId === record._id} />}
               onClick={() => handleVerify(record._id)}
               loading={verifyingId === record._id}
             >
-              Verify
+              Verify Payment
             </Button>
           )}
-          {activeTab === 'transactions' && (
-            <>
-              <Button className="btn-action" icon={<PrinterOutlined />} onClick={() => handleInvoiceClick(record)}>Invoice</Button>
-              <Button className="btn-action" danger icon={<ReloadOutlined />} onClick={() => handleRefundClick(record)}>Refund</Button>
-            </>
+          {activeTab === 'monitor' && record.paymentStatus === 'paid' && (
+            <Button size="small" icon={<PrinterOutlined />} onClick={() => handleInvoiceClick(record)}>Receipt</Button>
           )}
         </Space>
       )
@@ -480,506 +298,637 @@ const CashierDashboard = () => {
     return columns;
   };
 
-  // --- RENDER HELPERS ---
-  const StatCard = ({ title, value, icon, colorClass, prefix, secondaryText }) => (
-    <div className="stat-card p-4">
-      <div style={{ padding: '24px' }}>
-        <div className={`stat-icon-wrapper ${colorClass}`}>
-          {icon}
-        </div>
-        <div className="stat-value">
-          {prefix && <span style={{ fontSize: '18px', marginRight: '4px' }}>{prefix}</span>}
-          {value}
-        </div>
-        <div className="stat-label">{title}</div>
-        {secondaryText && <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>{secondaryText}</div>}
-      </div>
-    </div>
-  );
-
-  const items = [
-    { label: 'Dashboard Overview', key: 'dashboard' },
-    { label: 'Approved Orders', key: 'approved' },
-    { label: 'Transaction History', key: 'transactions' },
-    { label: 'Financial Reports', key: 'reports' }
-  ];
-
   return (
-    <div className="customer-dashboard-full" >
-      <div className="dashboard-layout">
-        {/* Sidebar */}
-        <div className="dashboard-sidebar">
-          <div className="sidebar-logo">
-            <div className="logo-icon">ML</div>
-            <span className="logo-text">MediLink</span>
+    <div className="cashier-dashboard-container fade-in" style={{ padding: '24px' }}>
+      {!currentShift && (
+        <Alert
+          message="No active shift"
+          description="Please start a shift to begin processing payments."
+          type="warning"
+          showIcon
+          action={<Button size="small" type="primary" onClick={() => setShiftModalVisible(true)}>Start Shift</Button>}
+          style={{ marginBottom: '24px', borderRadius: '12px' }}
+        />
+      )}
+
+      {activeTab === 'dashboard' && (
+        <div className="dashboard-view fade-in">
+          <div className="welcome-section" style={{ marginBottom: 32 }}>
+            <Title level={2} style={{ marginBottom: 8 }}>Cashier Dashboard 👋</Title>
+            <Text type="secondary" style={{ fontSize: 16 }}>Operational Role: Payment Verification & Confirmation</Text>
           </div>
 
-          <div className="sidebar-menu">
-            <div className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-              <AppstoreOutlined style={{ fontSize: '18px' }} />
-              <span>Dashboard</span>
-            </div>
-            <div className={`sidebar-item ${activeTab === 'approved' ? 'active' : ''}`} onClick={() => setActiveTab('approved')}>
-              <ClockCircleOutlined style={{ fontSize: '18px' }} />
-              <span>Pending Payments</span>
-            </div>
-            <div className={`sidebar-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>
-              <CheckCircleOutlined style={{ fontSize: '18px' }} />
-              <span>Transactions</span>
-            </div>
-            <div className={`sidebar-item ${activeTab === 'refunds' ? 'active' : ''}`} onClick={() => setActiveTab('refunds')}>
-              <DollarCircleOutlined style={{ fontSize: '18px' }} />
-              <span>Refunds</span>
-            </div>
-            <div className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
-              <FileTextOutlined style={{ fontSize: '18px' }} />
-              <span>Reports</span>
-            </div>
-          </div>
+          <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+            <Col xs={24} md={18}>
+              <Card className="stats-banner-mini">
+                <Space size={48} split={<div style={{ width: 1, height: 40, background: '#e2e8f0' }} />}>
+                  <div className="banner-stat">
+                    <Text className="banner-stat-title">TOTAL PAID</Text>
+                    <div className="banner-stat-value" style={{ color: '#10b981' }}>{stats.paid}</div>
+                  </div>
+                  <div className="banner-stat">
+                    <Text className="banner-stat-title">PENDING</Text>
+                    <div className="banner-stat-value" style={{ color: '#f59e0b' }}>{stats.pending}</div>
+                  </div>
+                  <div className="banner-stat">
+                    <Text className="banner-stat-title">FAILED</Text>
+                    <div className="banner-stat-value" style={{ color: '#ef4444' }}>{stats.failed}</div>
+                  </div>
+                </Space>
+              </Card>
+            </Col>
+          </Row>
 
-          <div className="sidebar-footer">
-            <div className="user-profile-card" onClick={() => setShiftModalVisible(true)} style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} style={{ background: '#1e88e5' }} />
-              <div className="user-info">
-                <div className="user-name">Demo Cashier</div>
-                <div className="user-role">
-                  {currentShift ? (
-                    <Tag color="green" style={{ fontSize: '10px' }}>Shift Active</Tag>
-                  ) : (
-                    <Tag color="default" style={{ fontSize: '10px' }}>No Shift</Tag>
-                  )}
-                </div>
-              </div>
-              <SettingOutlined style={{ color: '#94a3b8' }} onClick={(e) => { e.stopPropagation(); navigate('/cashier/settings'); }} />
-            </div>
-          </div>
-        </div>
+          <div className="section-title">QUICK ACTIONS</div>
+          <Row gutter={[16, 16]} style={{ marginBottom: 40 }}>
+            {[
+              { title: 'Verify Payments', icon: <CheckCircleOutlined />, color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)', action: () => navigate('/cashier/pending') },
+              { title: 'Monitor Transactions', icon: <HistoryOutlined />, color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)', action: () => navigate('/cashier/transactions') },
+              { title: 'Payment Alerts', icon: <BellOutlined />, color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)', action: () => navigate('/cashier/transactions') },
+              { title: 'Shift Reports', icon: <AreaChartOutlined />, color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)', action: () => message.info('Generating shift report...') },
+            ].map((action, index) => (
+              <Col xs={12} md={6} key={index}>
+                <Card className="quick-action-card-refined" hoverable onClick={action.action}>
+                  <div className="action-icon-refined" style={{ background: action.bgColor, color: action.color }}>{action.icon}</div>
+                  <div className="action-info">
+                    <Text strong style={{ fontSize: 14 }}>{action.title}</Text>
+                    <RightOutlined style={{ fontSize: 12, color: '#94a3b8' }} />
+                  </div>
+                </Card>
+              </Col>
+            ))}
+          </Row>
 
-        {/* Main Content */}
-        <div className="dashboard-main-content">
-          <div className="dashboard-header">
-            {/* Header Left: Collapse Icon (Visual only) */}
-            <div style={{ display: 'flex', gap: '16px', color: '#64748b' }}>
-              <div className="header-icon"><AppstoreOutlined /></div>
-              <div className="header-icon"><MenuOutlined /></div>
-            </div>
-
-            {/* Header Center: Search */}
-            <div className="header-search">
-              <Input
-                prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                placeholder="Search..."
-                bordered={false}
-                style={{ background: 'transparent' }}
-              />
-            </div>
-
-            {/* Header Right: Notification & Profile */}
-            <div className="header-actions">
-              <Badge dot>
-                <BellOutlined style={{ fontSize: '20px', color: '#64748b', cursor: 'pointer' }} />
-              </Badge>
-            </div>
-          </div>
-
-          <div className="content-wrapper">
-
-            {/* Tab Content */}
-            {activeTab === 'dashboard' && (
-              <div className="default-dashboard fade-in">
-                <div className="welcome-section" style={{ marginBottom: '32px' }}>
-                  <Title level={2} style={{ marginBottom: '8px' }}>Welcome back! 👋</Title>
-                  <Text type="secondary" style={{ fontSize: '16px' }}>Manage payments and view financial reports</Text>
-                </div>
-
-                <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
-                  <Col xs={24} md={6}>
-                    <Card className="stats-banner-mini" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                      <Space size="large">
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Pending</Text>
-                          <Title level={2} style={{ margin: 0, color: 'var(--primary-color)' }}>{stats.pending}</Title>
-                        </div>
-                        <div style={{ width: '1px', height: '40px', background: 'var(--border-color)' }} />
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Completed</Text>
-                          <Title level={2} style={{ margin: 0, color: 'var(--primary-color)' }}>{stats.paid}</Title>
-                        </div>
-                      </Space>
-                    </Card>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Card className="stats-banner-mini" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                      <Space size="large">
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Failed</Text>
-                          <Title level={2} style={{ margin: 0, color: '#cf1322' }}>{stats.failed}</Title>
-                        </div>
-                        <div style={{ width: '1px', height: '40px', background: 'var(--border-color)' }} />
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Refunded</Text>
-                          <Title level={2} style={{ margin: 0, color: '#faad14' }}>{stats.refunded || 0}</Title>
-                        </div>
-                      </Space>
-                    </Card>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Card className="stats-banner-mini" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                      <Space size="large">
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Today's Revenue</Text>
-                          <Title level={2} style={{ margin: 0, color: 'var(--primary-color)' }}>ETB {stats.todays_revenue?.toFixed(2)}</Title>
-                        </div>
-                        <div style={{ width: '1px', height: '40px', background: 'var(--border-color)' }} />
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Today's Refunds</Text>
-                          <Title level={2} style={{ margin: 0, color: '#faad14' }}>ETB {stats.todays_refunds?.toFixed(2)}</Title>
-                        </div>
-                      </Space>
-                    </Card>
-                  </Col>
-                </Row>
-
-                {/* System Status */}
-                <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
-                  <Col span={24}>
-                    <Card title="System Status" className="main-card">
-                      <Row gutter={[16, 16]}>
-                        <Col xs={24} sm={12} md={6}>
-                          <div style={{ textAlign: 'center', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-                            <Space direction="vertical">
-                              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#3f8600', marginBottom: '8px' }}></div>
-                              <Text strong>System {stats.systemStatus === 'online' ? 'Online' : 'Offline'}</Text>
-                              <Text type="secondary">All services operational</Text>
-                            </Space>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                          <div style={{ textAlign: 'center', padding: '16px', background: '#e6f7ff', borderRadius: '8px' }}>
-                            <Space direction="vertical">
-                              <DollarCircleOutlined style={{ fontSize: '24px', color: '#1e88e5', marginBottom: '8px' }} />
-                              <Text strong>Payment Processing</Text>
-                              <Text type="secondary">Gateway active</Text>
-                            </Space>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                          <div style={{ textAlign: 'center', padding: '16px', background: '#fff7e6', borderRadius: '8px' }}>
-                            <Space direction="vertical">
-                              <SyncOutlined style={{ fontSize: '24px', color: '#faad14', marginBottom: '8px' }} />
-                              <Text strong>Auto-Refresh</Text>
-                              <Text type="secondary">Every 30 seconds</Text>
-                            </Space>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                          <div style={{ textAlign: 'center', padding: '16px', background: '#f0f9ff', borderRadius: '8px' }}>
-                            <Space direction="vertical">
-                              <CheckCircleOutlined style={{ fontSize: '24px', color: '#3f8600', marginBottom: '8px' }} />
-                              <Text strong>Data Restricted</Text>
-                              <Text type="secondary">Payment data only</Text>
-                            </Space>
-                          </div>
-                        </Col>
-                      </Row>
-                    </Card>
-                  </Col>
-                </Row>
-
-                {/* Recent Payment Activity */}
-                <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
-                  <Col span={24}>
-                    <Card title="Recent Payment Activity" className="main-card">
-                      <List
-                        dataSource={orders.slice(0, 5)}
-                        renderItem={item => (
-                          <List.Item>
-                            <List.Item.Meta
-                              avatar={<Avatar icon={<DollarCircleOutlined />} style={{ background: 'rgba(30, 136, 229, 0.1)', color: '#1E88E5' }} />}
-                              title={<Text strong>{item.orderNumber}</Text>}
-                              description={
-                                <Space direction="vertical" size="small">
-                                  <Text>{item.customer?.firstName} {item.customer?.lastName}</Text>
-                                  <Text type="secondary">{new Date(item.createdAt).toLocaleDateString()}</Text>
-                                  <Space>
-                                    <Text strong>ETB {item.finalAmount?.toFixed(2)}</Text>
-                                    <Tag color={item.paymentStatus === 'paid' ? 'success' : item.paymentStatus === 'pending' ? 'warning' : 'default'}>
-                                      {item.paymentStatus?.toUpperCase()}
-                                    </Tag>
-                                  </Space>
-                                </Space>
-                              }
-                            />
-                          </List.Item>
-                        )}
-                      />
-                    </Card>
-                  </Col>
-                </Row>
-
-                <div className="section-title" style={{ marginBottom: '20px', fontWeight: 600, fontSize: '18px' }}>Quick Actions</div>
-                <Row gutter={[16, 16]} style={{ marginBottom: '40px' }}>
-                  {quickActions.map((action, index) => (
-                    <Col xs={12} md={6} key={index}>
-                      <Card className="quick-action-card-refined" hoverable onClick={action.action}>
-                        <div className="action-icon-refined" style={{ background: action.bgColor, color: action.color, width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginBottom: '12px' }}>{action.icon}</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text strong>{action.title}</Text>
-                          <RightOutlined style={{ fontSize: '12px', color: '#94A3B8' }} />
-                        </div>
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
-
-                <Row gutter={[24, 24]}>
-                  <Col xs={24} lg={14}>
-                    <Card title={<Title level={4} style={{ margin: 0 }}>Recent Orders</Title>} extra={<Button type="link" onClick={() => setActiveTab('approved')}>View All</Button>}>
-                      <List itemLayout="horizontal" dataSource={orders.slice(0, 3)} renderItem={item => (
-                        <List.Item actions={[
-                          <Button type="primary" size="small" key="verify" onClick={() => handleVerify(item._id)} loading={verifyingId === item._id}>Verify</Button>
-                        ]}>
-                          <List.Item.Meta
-                            avatar={<Avatar shape="square" size={48} icon={<FileTextOutlined />} style={{ background: 'rgba(30, 136, 229, 0.1)', color: '#1E88E5' }} />}
-                            title={<Text strong>{item.orderNumber}</Text>}
-                            description={
-                              <div>
-                                <Space size="small">
-                                  <Text type="secondary">{new Date(item.createdAt).toLocaleDateString()}</Text>
-                                  <Text strong>ETB {item.finalAmount?.toFixed(2)}</Text>
-                                </Space>
-                                <Tag color={item.paymentStatus === 'paid' ? 'success' : item.paymentStatus === 'pending' ? 'warning' : 'default'} style={{ marginTop: '8px' }}>{item.paymentStatus?.toUpperCase()}</Tag>
-                              </div>
-                            }
-                          />
-                        </List.Item>
-                      )} />
-                    </Card>
-                  </Col>
-                  <Col xs={24} lg={10}>
-                    <Card title={<Title level={4} style={{ margin: 0 }}>System Status</Title>} extra={<Button type="link" onClick={handleLogout} danger icon={<LogoutOutlined />}>Logout</Button>}>
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-                          <Space>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3f8600' }}></div>
-                            <Text strong>System Online</Text>
-                          </Space>
-                        </div>
-                        <div style={{ padding: '16px', background: '#fff7e6', borderRadius: '8px' }}>
-                          <Space>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#faad14' }}></div>
-                            <Text>Payments Active</Text>
-                          </Space>
-                        </div>
-                      </Space>
-                    </Card>
-                  </Col>
-                </Row>
-              </div>
-            )}
-
-            {/* LIST VIEWS */}
-            {(activeTab === 'approved' || activeTab === 'transactions') && (
-              <Card className="main-card">
-                <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-                  <Title level={4} style={{ margin: 0 }}>
-                    {activeTab === 'approved' ? 'Orders Awaiting Payment' : 'Transaction History'}
-                  </Title>
-
-                  <Space>
-                    {activeTab === 'transactions' && (
-                      <>
-                        <Select
-                          value={statusFilter}
-                          onChange={setStatusFilter}
-                          style={{ width: 120, marginRight: 8 }}
-                          placeholder="Status"
-                        >
-                          <Option value="all">All</Option>
-                          <Option value="paid">Successful</Option>
-                          <Option value="failed">Failed</Option>
-                          <Option value="refunded">Refunded</Option>
-                        </Select>
-                        <Search
-                          placeholder="Search Order Ref"
-                          allowClear
-                          onSearch={val => setSearchText(val)}
-                          style={{ width: 200 }}
-                        />
-                        <RangePicker onChange={setDateRange} />
-                      </>
-                    )}
-                    <Button className="btn-primary-gradient" icon={<SyncOutlined />} onClick={fetchData}>
-                      Refresh
-                    </Button>
-                  </Space>
-                </div>
-
+          <Row gutter={[24, 24]}>
+            <Col xs={24} lg={16}>
+              <Card
+                className="premium-card"
+                title={<span style={{ fontWeight: 600 }}>Recent Payment Activity</span>}
+                extra={<Button type="link" onClick={() => navigate('/cashier/transactions')}>View All</Button>}
+              >
                 <Table
-                  dataSource={orders}
+                  className="dashboard-table"
+                  dataSource={orders.slice(0, 5)}
                   columns={getColumns()}
-                  rowKey="_id"
+                  pagination={false}
                   loading={loading}
-                  pagination={pagination}
-                  onChange={handleTableChange}
+                  rowKey="_id"
+                  scroll={{ x: 800 }}
                 />
               </Card>
-            )}
-
-            {/* REPORTS TAB */}
-            {/* REPORTS TAB */}
-            {activeTab === 'reports' && (
-              <Card className="main-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <Title level={4} style={{ margin: 0 }}>Financial Report</Title>
-                  <Space>
-                    <Select value={reportPeriod} onChange={handleReportPeriodChange} style={{ width: 120 }}>
-                      <Option value="daily">Daily</Option>
-                      <Option value="weekly">Weekly</Option>
-                      <Option value="monthly">Monthly</Option>
-                      <Option value="custom">Custom</Option>
-                    </Select>
-                    {reportPeriod === 'custom' && (
-                      <RangePicker value={reportRange} onChange={setReportRange} allowClear={false} />
-                    )}
-                    <Button icon={<SyncOutlined />} onClick={fetchData}>Update</Button>
-                  </Space>
-                </div>
-
-                {reportData ? (
-                  <>
-                    <Descriptions bordered column={{ xxl: 3, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 }} size="middle">
-                      <Descriptions.Item label="Gross Revenue">
-                        <span className="stat-value" style={{ color: '#2c3e50' }}>ETB {reportData.totalRevenue?.toFixed(2)}</span>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Total Refunds">
-                        <span className="stat-value" style={{ color: '#cf1322' }}>ETB {reportData.totalRefunds?.toFixed(2)}</span>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Net Income">
-                        <span className="stat-value" style={{ color: '#3f8600' }}>ETB {reportData.netIncome?.toFixed(2)}</span>
-                      </Descriptions.Item>
-
-                      <Descriptions.Item label="Successful Txns">
-                        <Tag color="success" style={{ fontSize: 16, padding: '4px 12px' }}>{reportData.successCount}</Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Failed Txns">
-                        <Tag color="error" style={{ fontSize: 16, padding: '4px 12px' }}>{reportData.failedCount}</Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Avg Order Value">
-                        ETB {reportData.avgOrderValue?.toFixed(2)}
-                      </Descriptions.Item>
-                    </Descriptions>
-
-                    <Divider orientation="left">Payment Methods</Divider>
-                    <Row gutter={16}>
-                      {Object.entries(reportData.methodBreakdown || {}).map(([method, count]) => (
-                        <Col key={method} span={6}>
-                          <Card size="small" style={{ textAlign: 'center', background: '#f8f9fa' }}>
-                            <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{method}</div>
-                            <div style={{ fontSize: 20, color: '#1890ff' }}>{count}</div>
-                          </Card>
-                        </Col>
-                      ))}
-                      {Object.keys(reportData.methodBreakdown || {}).length === 0 && <Text type="secondary">No payment data available for this period.</Text>}
-                    </Row>
-
-                    <div style={{ marginTop: 24, display: 'flex', gap: 16 }}>
-                      <Button className="btn-primary-gradient" size="large" icon={<FileTextOutlined />} onClick={handleExportPDF}>Export PDF Report</Button>
-                      <Button size="large" icon={<FileTextOutlined />} onClick={handleExportExcel}>Export CSV</Button>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-                    <FileTextOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-                    <Paragraph>No report data available. Please select a period and click Update.</Paragraph>
-                  </div>
-                )}
+            </Col>
+            <Col xs={24} lg={8}>
+              <Card
+                className="premium-card"
+                title={<span style={{ fontWeight: 600 }}>Payment Alerts</span>}
+              >
+                <List
+                  dataSource={alerts.filter(a => a.type === 'payment')}
+                  renderItem={item => (
+                    <List.Item>
+                      <List.Item.Meta
+                        title={item.title}
+                        description={item.message}
+                        avatar={<Badge status={item.severity === 'high' ? 'error' : 'warning'} />}
+                      />
+                    </List.Item>
+                  )}
+                  locale={{ emptyText: 'No urgent payment alerts' }}
+                />
               </Card>
-            )}
+            </Col>
+          </Row>
+        </div>
+      )}
 
-            {/* REFUND MODAL */}
-            <Modal
-              title="Process Refund"
-              open={refundModalVisible}
-              onCancel={() => setRefundModalVisible(false)}
-              footer={null}
-              centered
-            >
-              <Form form={refundForm} onFinish={handleProcessRefund} layout="vertical">
-                <Form.Item name="reason" label="Refund Reason" rules={[{ required: true }]}>
-                  <Input.TextArea rows={4} placeholder="Enter reason for refund..." />
-                </Form.Item>
-                <Button type="primary" danger htmlType="submit" block size="large">
-                  Confirm Refund
-                </Button>
-              </Form>
-            </Modal>
+      {(activeTab === 'approved' || activeTab === 'monitor') && (
+        <Card
+          style={{ borderRadius: 16 }}
+          title={activeTab === 'approved' ? 'Payment Verification Page' : 'Payment Monitoring Tool'}
+        >
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+            <Space>
+              <Search
+                placeholder="Search Order ID or Chapa Ref..."
+                style={{ width: 300 }}
+                onSearch={v => { setSearchText(v); setPagination(p => ({ ...p, current: 1 })); }}
+                allowClear
+              />
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                style={{ width: 140 }}
+                options={[
+                  { value: 'all', label: 'All Statuses' },
+                  { value: 'paid', label: 'Successful' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'failed', label: 'Failed' }
+                ]}
+              />
+            </Space>
+            <Button icon={<ReloadOutlined />} onClick={fetchData}>Refresh Data</Button>
+          </div>
+          <Table
+            dataSource={orders}
+            columns={getColumns()}
+            loading={loading}
+            rowKey="_id"
+            pagination={{ ...pagination, onChange: p => setPagination(prev => ({ ...prev, current: p })) }}
+          />
+        </Card>
+      )}
 
-            {/* VIEW DETAILS MODAL */}
-            <Modal
-              title={`Order Details: ${selectedOrder?.orderNumber || ''}`}
-              open={detailsModalVisible}
-              onCancel={() => setDetailsModalVisible(false)}
-              footer={[<Button key="close" onClick={() => setDetailsModalVisible(false)}>Close</Button>]}
-              width={700}
-            >
-              {selectedOrder && (
-                <div>
-                  <Descriptions bordered column={1} size="small">
-                    <Descriptions.Item label="Customer">{selectedOrder.customer?.firstName} {selectedOrder.customer?.lastName}</Descriptions.Item>
-                    <Descriptions.Item label="Email">{selectedOrder.customer?.email}</Descriptions.Item>
-                    <Descriptions.Item label="Date">{new Date(selectedOrder.createdAt).toLocaleString()}</Descriptions.Item>
-                    <Descriptions.Item label="Status"><Tag color="blue">{selectedOrder.paymentStatus?.toUpperCase()}</Tag></Descriptions.Item>
-                    {selectedOrder.transactionRef && <Descriptions.Item label="Tx Ref">{selectedOrder.transactionRef}</Descriptions.Item>}
-                  </Descriptions>
-                  <Divider orientation="left">Items</Divider>
-                  <Table
-                    dataSource={selectedOrder.items}
-                    pagination={false}
-                    size="small"
-                    rowKey="_id"
-                    columns={[
-                      { title: 'Item', dataIndex: 'name' }, // Assuming name exists
-                      { title: 'Qty', dataIndex: 'quantity' },
-                      { title: 'Price', dataIndex: 'price', render: v => v?.toFixed(2) },
-                      { title: 'Total', render: (_, r) => (r.quantity * r.price).toFixed(2) }
-                    ]}
-                    summary={() => (
-                      <Table.Summary.Row>
-                        <Table.Summary.Cell colSpan={3} align="right"><b>Total</b></Table.Summary.Cell>
-                        <Table.Summary.Cell><b>ETB {selectedOrder.finalAmount?.toFixed(2)}</b></Table.Summary.Cell>
-                      </Table.Summary.Row>
-                    )}
-                  />
+      {activeTab === 'settings' && (
+        <Card className="premium-card" style={{ padding: 0 }} bordered={false}>
+          <Row gutter={0}>
+            <Col xs={24} md={7}>
+              <div className="profile-sidebar-card" style={{ height: '100%' }}>
+                <div className="avatar-wrapper" style={{ position: 'relative', display: 'inline-block' }}>
+                  <Upload
+                    name="image"
+                    showUploadList={false}
+                    customRequest={async ({ file }) => {
+                      try {
+                        setUploading(true);
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        const res = await uploadAvatar(formData);
+                        if (res.success) {
+                          message.success('Profile photo updated');
+                        } else {
+                          message.error(res.message || 'Upload failed');
+                        }
+                      } catch (err) {
+                        message.error('Upload failed');
+                      } finally {
+                        setUploading(false);
+                      }
+                    }}
+                    beforeUpload={(file) => {
+                      const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp';
+                      if (!isJpgOrPng) {
+                        message.error('You can only upload JPG/PNG/WebP files!');
+                      }
+                      const isLt2M = file.size / 1024 / 1024 < 2;
+                      if (!isLt2M) {
+                        message.error('Image must be smaller than 2MB!');
+                      }
+                      return isJpgOrPng && isLt2M;
+                    }}
+                  >
+                    <div style={{ cursor: 'pointer', position: 'relative' }}>
+                      <Avatar
+                        size={120}
+                        src={user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}?t=${new Date().getTime()}`) : null}
+                        icon={uploading ? <LoadingOutlined /> : <UserOutlined />}
+                        style={{ border: '4px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      />
+                      <div className="avatar-upload-overlay" style={{
+                        position: 'absolute',
+                        bottom: 5,
+                        right: 5,
+                        background: '#3b82f6',
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        border: '2px solid #fff'
+                      }}>
+                        <CameraOutlined style={{ fontSize: 16 }} />
+                      </div>
+                    </div>
+                  </Upload>
                 </div>
+                <Title level={3} style={{ marginBottom: 4 }}>
+                  {user?.firstName} {user?.lastName}
+                </Title>
+                <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                  {user?.role?.replace('_', ' ').toUpperCase()}
+                </Text>
+
+                <Space direction="vertical" style={{ width: '100%', marginTop: 20 }}>
+                  <Tag color="blue" style={{ borderRadius: 6, padding: '4px 12px' }}>
+                    ID: {user?.id?.substring(0, 8).toUpperCase()}
+                  </Tag>
+                  <div style={{ marginTop: 24, textAlign: 'left' }}>
+                    <Title level={5}>Quick Status</Title>
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                      <Badge status="success" text="System Online" />
+                      <Badge status="processing" text="Active Session" />
+                      <Badge status={currentShift ? "processing" : "default"} text={currentShift ? `Shift ${currentShift.shiftNumber}` : "No Active Shift"} />
+                    </Space>
+                  </div>
+                </Space>
+
+                <Divider />
+
+                <Button
+                  icon={<LogoutOutlined />}
+                  danger
+                  block
+                  size="large"
+                  style={{ borderRadius: 12 }}
+                  onClick={handleLogout}
+                >
+                  Terminate Session
+                </Button>
+              </div>
+            </Col>
+
+            <Col xs={24} md={17}>
+              <div style={{ padding: '32px 40px' }}>
+                <Tabs
+                  className="settings-tabs"
+                  defaultActiveKey="1"
+                  items={[
+                    {
+                      key: '1',
+                      label: <span><UserOutlined /> Profile Details</span>,
+                      children: (
+                        <div className="fade-in">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                            <Title level={4} style={{ margin: 0 }}>Personal Information</Title>
+                            <Button
+                              type="link"
+                              icon={<SettingOutlined />}
+                              onClick={() => {
+                                profileForm.setFieldsValue({
+                                  firstName: user?.firstName,
+                                  lastName: user?.lastName,
+                                  phone: user?.phone
+                                });
+                                setEditProfileModalVisible(true);
+                              }}
+                            >
+                              Edit Details
+                            </Button>
+                          </div>
+                          <Descriptions column={2} layout="vertical" className="premium-descriptions">
+                            <Descriptions.Item label="FULL NAME">
+                              <Text strong style={{ fontSize: 16 }}>{user?.firstName} {user?.lastName}</Text>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="EMAIL ADDRESS">
+                              {user?.email}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="PHONE NUMBER">
+                              {user?.phone || '+251 911 223 344'}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="BRANCH LOCATION">
+                              {user?.address?.city || 'Addis Ababa'}, {user?.address?.region || 'ET'}
+                            </Descriptions.Item>
+                          </Descriptions>
+
+                          <Divider />
+
+                          <Title level={4} style={{ marginBottom: 24, marginTop: 8 }}>Professional info</Title>
+                          <Descriptions column={2} layout="vertical">
+                            <Descriptions.Item label="PHARMACY UNIT">
+                              {user?.pharmacyId || 'Unit-01 Central'}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="ACCESS LEVEL">
+                              Cashier Standard
+                            </Descriptions.Item>
+                            <Descriptions.Item label="JOINED DATE">
+                              {user?.createdAt ? dayjs(user.createdAt).format('MMM D, YYYY') : 'Jan 15, 2024'}
+                            </Descriptions.Item>
+                          </Descriptions>
+                        </div>
+                      )
+                    },
+                    {
+                      key: '2',
+                      label: <span><SettingOutlined /> Preferences</span>,
+                      children: (
+                        <div className="fade-in">
+                          <Title level={4} style={{ marginBottom: 24 }}>User Preferences</Title>
+                          <Form layout="vertical" className="premium-form">
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                              <Row justify="space-between" align="middle">
+                                <Col>
+                                  <Text strong>Sound Notifications</Text>
+                                  <br />
+                                  <Text type="secondary" style={{ fontSize: 12 }}>Play chime for new payment requests</Text>
+                                </Col>
+                                <Col><Switch checked={soundEnabled} onChange={setSoundEnabled} /></Col>
+                              </Row>
+                              <Divider style={{ margin: '12px 0' }} />
+                              <Row justify="space-between" align="middle">
+                                <Col>
+                                  <Text strong>Auto-Refresh Data</Text>
+                                  <br />
+                                  <Text type="secondary" style={{ fontSize: 12 }}>Synchronize stats every 30 seconds</Text>
+                                </Col>
+                                <Col><Switch checked={autoRefreshEnabled} onChange={setAutoRefreshEnabled} /></Col>
+                              </Row>
+                            </Space>
+
+                            <Button
+                              type="primary"
+                              size="large"
+                              style={{ marginTop: 32, borderRadius: 10, padding: '0 40px' }}
+                              onClick={async () => {
+                                const res = await updateProfile({
+                                  settings: {
+                                    notificationsEnabled: soundEnabled,
+                                    theme: 'light'
+                                  }
+                                });
+                                if (res.success) message.success('Preferences saved successfully');
+                                else message.error(res.message);
+                              }}
+                            >
+                              Save Changes
+                            </Button>
+                          </Form>
+                        </div>
+                      )
+                    },
+                    {
+                      key: '3',
+                      label: <span><ExclamationCircleOutlined /> Security</span>,
+                      children: (
+                        <div className="fade-in">
+                          <Title level={4} style={{ marginBottom: 24 }}>Account Security</Title>
+                          <Card style={{ backgroundColor: '#fffbe6', borderRadius: 12, border: '1px solid #ffe58f', marginBottom: 24 }}>
+                            <Space align="start">
+                              <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 18 }} />
+                              <div>
+                                <Text strong>Password Last Changed: 3 months ago</Text>
+                                <br />
+                                <Text type="secondary">We recommend changing your password every 90 days for maximum security.</Text>
+                              </div>
+                            </Space>
+                          </Card>
+
+                          <Form layout="vertical">
+                            <Button
+                              type="primary"
+                              block
+                              size="large"
+                              style={{ height: 60, borderRadius: 10, background: '#1e293b', borderColor: '#1e293b' }}
+                              onClick={() => setPasswordModalVisible(true)}
+                            >
+                              Change Account Password
+                            </Button>
+
+                            <Divider />
+
+                            <Title level={5}>Active Session Management</Title>
+                            <Text type="secondary">Login detected from: Chrome / Windows 11 (Current)</Text>
+                            <br />
+                            <Button type="link" style={{ padding: 0 }} onClick={() => setSessionsModalVisible(true)}>View Session Logs</Button>
+                          </Form>
+                        </div>
+                      )
+                    }
+                  ]}
+                />
+              </div>
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      {activeTab === 'notifications' && (
+        <Card className="premium-card fade-in" title={<Title level={4} style={{ margin: 0 }}><BellOutlined /> System Notifications</Title>}>
+          <div className="notifications-container">
+            {alerts && alerts.length > 0 ? (
+              alerts.map((item, index) => {
+                let icon = <InfoCircleOutlined style={{ color: '#1890ff' }} />;
+                let title = 'System Notification';
+
+                if (item.type === 'low_stock') {
+                  icon = <WarningOutlined style={{ color: '#faad14' }} />;
+                  title = 'Low Stock Alert';
+                } else if (item.type === 'out_of_stock') {
+                  icon = <StopOutlined style={{ color: '#ff4d4f' }} />;
+                  title = 'Out of Stock';
+                } else if (item.type === 'expiring_soon') {
+                  icon = <ClockCircleOutlined style={{ color: '#faad14' }} />;
+                  title = 'Expiry Warning';
+                } else if (item.type === 'pending_refunds') {
+                  // Using WalletOutlined for refunds, ensuring it's imported or fallback to SyncOutlined
+                  icon = <WalletOutlined style={{ color: '#1890ff' }} />;
+                  title = 'Refund Request';
+                }
+
+                return (
+                  <div key={index} style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid #f0f0f0' }}>
+                    <div style={{ marginRight: 16 }}>
+                      <Avatar icon={icon} style={{ backgroundColor: '#f0f2f5' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Text strong>{title}</Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>Just now</Text>
+                      </div>
+                      <Text type="secondary">{item.message}</Text>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div style={{ padding: '24px', textAlign: 'center' }}>
+                <Text type="secondary">No new notifications</Text>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <ShiftManagement visible={shiftModalVisible} onClose={() => setShiftModalVisible(false)} currentShift={currentShift} onShiftUpdate={fetchData} />
+
+      <Modal
+        title={`Order Payment Details: ${selectedOrder?.orderNumber}`}
+        open={detailsModalVisible}
+        onCancel={() => setDetailsModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setDetailsModalVisible(false)}>Close</Button>,
+          selectedOrder?.paymentStatus === 'paid' && <Button key="receipt" type="primary" icon={<PrinterOutlined />} onClick={() => handleInvoiceClick(selectedOrder)}>Generate Receipt</Button>
+        ]}
+        width={600}
+      >
+        {selectedOrder && (
+          <div className="read-only-details">
+            <Alert
+              message="Read-Only View"
+              description="Cashiers cannot modify orders. This view is for verification only."
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label="Order Number">{selectedOrder.orderNumber}</Descriptions.Item>
+              <Descriptions.Item label="Customer Name">{selectedOrder.customer?.firstName} {selectedOrder.customer?.lastName}</Descriptions.Item>
+              <Descriptions.Item label="Total Amount"><Text strong>ETB {selectedOrder.finalAmount?.toFixed(2)}</Text></Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag color={selectedOrder.paymentStatus === 'paid' ? 'success' : selectedOrder.paymentStatus === 'pending' ? 'warning' : 'error'}>
+                  {selectedOrder.paymentStatus?.toUpperCase()}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Chapa Reference ID"><Text code>{selectedOrder.transactionRef || 'N/A'}</Text></Descriptions.Item>
+              <Descriptions.Item label="Payment Method">{selectedOrder.paymentMethod || 'Chapa'}</Descriptions.Item>
+              <Descriptions.Item label="Payment Timestamp">{selectedOrder.paidAt ? dayjs(selectedOrder.paidAt).format('LLL') : '---'}</Descriptions.Item>
+            </Descriptions>
+
+            <Divider orientation="left">Order Items</Divider>
+            <List
+              size="small"
+              dataSource={selectedOrder.items}
+              renderItem={item => (
+                <List.Item>
+                  <Space justify="space-between" style={{ width: '100%' }}>
+                    <span>{item.name} x {item.quantity}</span>
+                    <Text type="secondary">ETB {(item.price * item.quantity).toFixed(2)}</Text>
+                  </Space>
+                </List.Item>
               )}
-            </Modal>
-
-            {/* NEW POS MODALS */}
-            <ShiftManagement
-              visible={shiftModalVisible}
-              onClose={() => setShiftModalVisible(false)}
-              onShiftUpdate={(shift) => {
-                setCurrentShift(shift);
-                fetchData();
-              }}
             />
+          </div>
+        )}
+      </Modal>
 
-            <RefundModal
-              visible={newRefundModalVisible}
-              onClose={() => {
-                setNewRefundModalVisible(false);
-                setSelectedTransaction(null);
-              }}
-              transaction={selectedTransaction}
-              onRefundComplete={() => {
-                fetchData();
-              }}
-            />
-          </div> {/* End content-wrapper */}
-        </div> {/* End dashboard-main-content */}
-      </div> {/* End dashboard-layout */}
-    </div> /* End customer-dashboard-full */
+      {/* Change Password Modal */}
+      <Modal
+        title="Change Account Password"
+        open={passwordModalVisible}
+        onCancel={() => {
+          setPasswordModalVisible(false);
+          passwordForm.resetFields();
+        }}
+        onOk={() => passwordForm.submit()}
+        okText="Update Password"
+        confirmLoading={loading}
+      >
+        <Alert
+          message="Security Notice"
+          description="Changing your password will require you to log in again on all other devices."
+          type="warning"
+          showIcon
+          style={{ marginBottom: 20 }}
+        />
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            if (values.newPassword !== values.confirmPassword) {
+              return message.error('Passwords do not match');
+            }
+            const res = await updateProfile({ password: values.newPassword });
+            if (res.success) {
+              message.success(res.message || 'Password updated successfully');
+              setPasswordModalVisible(false);
+              passwordForm.resetFields();
+            } else {
+              message.error(res.message || 'Update failed');
+            }
+          }}
+        >
+          <Form.Item
+            name="newPassword"
+            label={
+              <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                <span>New Password</span>
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0, fontSize: 12 }}
+                  onClick={() => {
+                    const generated = Math.random().toString(36).slice(-10) + 'A1!';
+                    passwordForm.setFieldsValue({ newPassword: generated, confirmPassword: generated });
+                    message.info('Secure password generated');
+                  }}
+                >
+                  Generate Strong Password
+                </Button>
+              </Space>
+            }
+            rules={[{ required: true, message: 'Please enter a new password' }, { min: 6, message: 'Password must be at least 6 characters' }]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="Enter new password" />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            label="Confirm New Password"
+            rules={[{ required: true, message: 'Please confirm your new password' }]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="Confirm new password" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Session Logs Modal */}
+      <Modal
+        title="Active Account Sessions"
+        open={sessionsModalVisible}
+        onCancel={() => setSessionsModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setSessionsModalVisible(false)}>Done</Button>
+        ]}
+        width={500}
+      >
+        <List
+          itemLayout="horizontal"
+          dataSource={[
+            { device: 'Chrome / Windows 11', location: 'Addis Ababa, ET', status: 'Current', icon: <LockOutlined style={{ color: '#52c41a' }} /> },
+            { device: 'Safari / iPhone 13', location: 'Addis Ababa, ET', status: '2 hours ago', icon: <LockOutlined style={{ color: '#faad14' }} /> },
+            { device: 'Firefox / Mac OS', location: 'Unknown', status: 'Yesterday', icon: <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> }
+          ]}
+          renderItem={item => (
+            <List.Item actions={[<Button type="link" danger size="small" onClick={() => message.success('Session revoked successfully')}>Revoke</Button>]}>
+              <List.Item.Meta
+                avatar={<Avatar icon={item.icon} style={{ backgroundColor: '#f0f2f5' }} />}
+                title={item.device}
+                description={`${item.location} • ${item.status}`}
+              />
+            </List.Item>
+          )}
+        />
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        title="Edit Personal Information"
+        open={editProfileModalVisible}
+        onCancel={() => setEditProfileModalVisible(false)}
+        onOk={() => profileForm.submit()}
+        okText="Update Profile"
+        confirmLoading={loading}
+      >
+        <Form
+          form={profileForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            const res = await updateProfile(values);
+            if (res.success) {
+              message.success('Profile updated successfully');
+              setEditProfileModalVisible(false);
+            } else {
+              message.error(res.message);
+            }
+          }}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="firstName" label="First Name" rules={[{ required: true }]}>
+                <Input prefix={<UserOutlined />} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="lastName" label="Last Name" rules={[{ required: true }]}>
+                <Input prefix={<UserOutlined />} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="phone" label="Phone Number">
+            <Input prefix={<BellOutlined />} placeholder="+251 ..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 };
 

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, InputNumber, Button, Statistic, Row, Col, Card, Divider, message, Alert, Space } from 'antd';
-import { DollarOutlined, ClockCircleOutlined, CoffeeOutlined, LogoutOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, CoffeeOutlined, LogoutOutlined } from '@ant-design/icons';
 import cashierPOSService from '../../../services/cashierPOS';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
 
 dayjs.extend(duration);
 
-const ShiftManagement = ({ visible, onClose, onShiftUpdate }) => {
-    const [currentShift, setCurrentShift] = useState(null);
+const ShiftManagement = ({ visible, onClose, onShiftUpdate, currentShift: propShift }) => {
+    const [currentShift, setCurrentShift] = useState(propShift || null);
     const [loading, setLoading] = useState(false);
     const [form] = Form.useForm();
     const [endShiftForm] = Form.useForm();
@@ -16,9 +16,13 @@ const ShiftManagement = ({ visible, onClose, onShiftUpdate }) => {
 
     useEffect(() => {
         if (visible) {
-            fetchCurrentShift();
+            if (propShift) {
+                setCurrentShift(propShift);
+            } else {
+                fetchCurrentShift();
+            }
         }
-    }, [visible]);
+    }, [visible, propShift]);
 
     const fetchCurrentShift = async () => {
         try {
@@ -137,7 +141,7 @@ const ShiftManagement = ({ visible, onClose, onShiftUpdate }) => {
                     <InputNumber
                         style={{ width: '100%' }}
                         size="large"
-                        prefix={<DollarOutlined />}
+                        prefix="ETB "
                         placeholder="Enter opening cash"
                         min={0}
                         step={100}
@@ -185,7 +189,7 @@ const ShiftManagement = ({ visible, onClose, onShiftUpdate }) => {
                         <Statistic
                             title="Opening Cash"
                             value={currentShift.openingCash}
-                            prefix="ETB"
+                            prefix="ETB "
                             valueStyle={{ fontSize: '18px', color: '#1890ff' }}
                         />
                     </Card>
@@ -195,7 +199,7 @@ const ShiftManagement = ({ visible, onClose, onShiftUpdate }) => {
                         <Statistic
                             title="Total Sales"
                             value={currentShift.totalSales || 0}
-                            prefix="ETB"
+                            prefix="ETB "
                             valueStyle={{ fontSize: '18px', color: '#52c41a' }}
                         />
                     </Card>
@@ -272,7 +276,7 @@ const ShiftManagement = ({ visible, onClose, onShiftUpdate }) => {
                             <InputNumber
                                 style={{ width: '100%' }}
                                 size="large"
-                                prefix={<DollarOutlined />}
+                                prefix="ETB "
                                 placeholder="Enter closing cash"
                                 min={0}
                                 step={100}

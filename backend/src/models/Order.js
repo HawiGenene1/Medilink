@@ -16,6 +16,10 @@ const orderSchema = new mongoose.Schema({
     ref: 'Pharmacy',
     required: [true, 'Pharmacy is required']
   },
+  cashier: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   items: [{
     medicine: {
       type: mongoose.Schema.Types.ObjectId,
@@ -157,19 +161,17 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate order number before saving
-orderSchema.pre('save', async function(next) {
+// Generate order number before validation
+orderSchema.pre('validate', async function () {
   if (!this.orderNumber) {
-    const count = await mongoose.model('Order').countDocuments();
+    const count = await this.constructor.countDocuments();
     this.orderNumber = `ORD-${Date.now()}-${(count + 1).toString().padStart(5, '0')}`;
   }
-  next();
 });
 
-// Calculate final amount before saving
-orderSchema.pre('save', function(next) {
-  this.finalAmount = this.totalAmount + this.deliveryFee + this.tax - this.discount;
-  next();
+// Calculate final amount before validation
+orderSchema.pre('validate', function () {
+  this.finalAmount = (this.totalAmount || 0) + (this.deliveryFee || 0) + (this.tax || 0) - (this.discount || 0);
 });
 
 // Index for customer orders

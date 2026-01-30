@@ -30,6 +30,12 @@ const adminRoutes = require('./routes/adminRoutes');
 const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
 const pharmacyRoutes = require('./routes/pharmacyRoutes');
 const userRoutes = require('./routes/userRoutes');
+const cashierRoutes = require('./routes/cashierRoutes');
+// const customerRoutes = require('./routes/customerRoutes');
+const deliveryRoutes = require('./routes/deliveryRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const chapaRoutes = require('./routes/chapaRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
 
 // Import Middleware
 const { authenticate, authorize } = require('./middleware/authMiddleware');
@@ -43,6 +49,20 @@ app.use('/api/pharmacy', pharmacyRoutes);
 
 // Pharmacy Admin Routes (platform-level administration)
 app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
+
+// Cashier Routes
+app.use('/api/cashier', cashierRoutes);
+
+// Customer Routes (Disabled - Currently Empty)
+// app.use('/api/customer', customerRoutes);
+
+// Order & Prescription Routes
+app.use('/api/orders', orderRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+
+// Delivery & Payment Routes
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/chapa', chapaRoutes);
 
 // Admin Routes
 try {

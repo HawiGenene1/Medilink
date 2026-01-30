@@ -1,37 +1,15 @@
-const http = require('http');
+const axios = require('axios');
 
-const data = JSON.stringify({
-    email: 'cashier@medilink.com',
-    password: 'Cashier123'
-});
-
-const options = {
-    hostname: 'localhost',
-    port: 5000,
-    path: '/api/auth/login',
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': data.length
+async function testLogin() {
+    try {
+        const response = await axios.post('http://localhost:5000/api/auth/login', {
+            email: 'cashier@test.com',
+            password: 'password123'
+        });
+        console.log('Login Success:', JSON.stringify(response.data, null, 2));
+    } catch (error) {
+        console.error('Login Failed:', error.response?.data || error.message);
     }
-};
+}
 
-const req = http.request(options, (res) => {
-    console.log(`Status: ${res.statusCode}`);
-
-    let body = '';
-    res.on('data', (chunk) => {
-        body += chunk;
-    });
-
-    res.on('end', () => {
-        console.log('Response:', body);
-    });
-});
-
-req.on('error', (error) => {
-    console.error('Error:', error);
-});
-
-req.write(data);
-req.end();
+testLogin();

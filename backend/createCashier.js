@@ -48,7 +48,8 @@ const createCashier = async () => {
         if (cashier) {
             console.log('Cashier already exists. Updating password...');
             cashier.password = 'Cashier123';
-            cashier.role = role._id;
+            cashier.role = 'cashier';
+            cashier.phone = '+251000000000';
             cashier.pharmacyId = pharmacy._id;
             await cashier.save();
         } else {
@@ -57,10 +58,12 @@ const createCashier = async () => {
                 lastName: 'User',
                 email: 'cashier@medilink.com',
                 password: 'Cashier123',
+                phone: '+251000000000',
                 username: 'cashier',
-                role: role._id,
+                role: 'cashier',
                 pharmacyId: pharmacy._id,
                 isActive: true,
+                status: 'active',
                 isEmailVerified: true
             });
         }

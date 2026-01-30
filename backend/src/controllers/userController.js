@@ -25,6 +25,7 @@ exports.uploadProfileImage = async (req, res) => {
         }
 
         res.json({
+            success: true,
             message: 'Profile image uploaded successfully',
             avatar: user.avatar,
             user: user
@@ -85,6 +86,7 @@ exports.updateUserProfile = async (req, res) => {
         updatedUser.password = undefined;
 
         res.json({
+            success: true,
             message: 'Profile updated successfully',
             user: updatedUser
         });

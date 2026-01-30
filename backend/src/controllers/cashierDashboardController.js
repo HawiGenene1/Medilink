@@ -132,22 +132,22 @@ exports.getAlerts = async (req, res) => {
     try {
         const alerts = [];
 
-        // Low stock alerts (stock < 10)
-        const lowStockMedicines = await Medicine.find({ stock: { $lt: 10, $gt: 0 } })
-            .select('name stock')
+        // Low stock alerts (stockQuantity < 10)
+        const lowStockMedicines = await Medicine.find({ stockQuantity: { $lt: 10, $gt: 0 } })
+            .select('name stockQuantity')
             .limit(10);
 
         lowStockMedicines.forEach(medicine => {
             alerts.push({
                 type: 'low_stock',
-                severity: medicine.stock < 5 ? 'high' : 'medium',
-                message: `${medicine.name} is running low (${medicine.stock} units remaining)`,
+                severity: medicine.stockQuantity < 5 ? 'high' : 'medium',
+                message: `${medicine.name} is running low (${medicine.stockQuantity} units remaining)`,
                 data: medicine
             });
         });
 
         // Out of stock
-        const outOfStockMedicines = await Medicine.find({ stock: 0 })
+        const outOfStockMedicines = await Medicine.find({ stockQuantity: 0 })
             .select('name')
             .limit(10);
 
@@ -169,7 +169,7 @@ exports.getAlerts = async (req, res) => {
                 $gte: new Date(),
                 $lte: thirtyDaysFromNow
             }
-        }).select('name expiryDate stock').limit(10);
+        }).select('name expiryDate stockQuantity').limit(10);
 
         expiringSoon.forEach(medicine => {
             const daysUntilExpiry = Math.floor((medicine.expiryDate - new Date()) / (1000 * 60 * 60 * 24));

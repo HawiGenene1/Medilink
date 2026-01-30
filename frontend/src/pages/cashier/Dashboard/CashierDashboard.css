@@ -1,182 +1,188 @@
-/* Cashier Dashboard Styles - Customer UI Inspired */
+/* Cashier Dashboard Styles - Refined for Global Layout */
 
-.customer-dashboard-full {
-    min-height: 100vh;
-    padding: 0;
-    background: #f3f4f6; /* Lighter background matching screenshot */
-    font-family: 'Inter', sans-serif;
-    overflow: visible;
-    width: 100%;
-}
-
-/* Layout Styles */
-.dashboard-layout {
-    display: flex;
-    height: 100vh;
-    gap: 0;
-    width: 100%;
-    overflow: hidden; /* Prevent body scroll */
-}
-
-.dashboard-sidebar {
-    width: 250px;
-    background: #ffffff;
-    border-right: 1px solid #e5e7eb;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    height: 100vh;
-    z-index: 1000;
-}
-
-.dashboard-main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-    height: 100vh;
-    background: #f8f9fa;
-}
-
-/* Sidebar Styling */
-.sidebar-logo {
-    display: flex;
-    align-items: center;
+.cashier-dashboard-container {
+    min-height: calc(100vh - 64px);
+    background: #f8fafc;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     padding: 24px;
+}
+
+/* Glassmorphism & Premium Cards */
+.premium-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.premium-card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02) !important;
+    transform: translateY(-2px);
+}
+
+.profile-sidebar-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+    border-radius: 20px !important;
+    text-align: center;
+    padding: 32px 24px;
+}
+
+.avatar-wrapper {
+    position: relative;
+    display: inline-block;
+    padding: 4px;
+    background: linear-gradient(45deg, #3b82f6, #60a5fa);
+    border-radius: 50%;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+}
+
+.settings-tabs .ant-tabs-nav::before {
+    border-bottom: none !important;
+}
+
+.settings-tabs .ant-tabs-tab {
+    font-weight: 500;
+    font-size: 15px;
+    padding: 12px 16px !important;
+    color: #64748b !important;
+}
+
+.settings-tabs .ant-tabs-tab-active {
+    color: #3b82f6 !important;
+}
+
+/* Form Styling */
+.premium-form .ant-form-item-label label {
+    font-weight: 600;
+    color: #475569;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.premium-input {
+    border-radius: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 8px 12px !important;
+}
+
+.premium-input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+    .cashier-dashboard-container {
+        padding: 16px !important;
+    }
+}
+
+.premium-button {
+    border-radius: 10px !important;
+    font-weight: 500 !important;
+    height: auto !important;
+    padding: 10px 24px !important;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2) !important;
+}
+
+.dashboard-table .ant-table-thead>tr>th {
+    background: #f8fafc !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    border-bottom: 2px solid #f1f5f9 !important;
+}
+
+.dashboard-table .ant-table-tbody>tr>td {
+    padding: 16px !important;
+}
+
+.dashboard-table .ant-table {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Customer-like Layout Enhancements */
+.stats-banner-mini {
+    padding: 24px;
+    border-radius: 20px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04) !important;
+}
+
+.banner-stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.banner-stat-title {
+    color: #64748b;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.banner-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #3b82f6;
+    line-height: 1;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
     margin-bottom: 20px;
 }
 
-.logo-icon {
-    width: 32px;
-    height: 32px;
-    background: #1e88e5; /* MediLink Blue */
-    border-radius: 8px;
+.quick-action-card-refined {
+    border-radius: 16px !important;
+    border: 1px solid #e2e8f0 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer;
+}
+
+.quick-action-card-refined:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
+    border-color: #3b82f6 !important;
+}
+
+.action-icon-refined {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-weight: bold;
-    font-size: 14px;
-    margin-right: 12px;
+    font-size: 20px;
+    margin-bottom: 12px;
 }
 
-.logo-text {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.sidebar-menu {
-    flex: 1;
-    padding: 0 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.sidebar-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 8px;
-    gap: 12px;
-    font-size: 14px;
-    color: #64748b;
-    font-weight: 500;
-}
-
-.sidebar-item:hover {
-    background: #f1f5f9;
-    color: #1e293b;
-}
-
-.sidebar-item.active {
-    background: #e0f2fe; /* Light blue background like screenshot */
-    color: #0284c7; /* Blue text */
-    font-weight: 600;
-}
-
-/* Sidebar Footer (User Profile) */
-.sidebar-footer {
-    padding: 16px;
-    border-top: 1px solid #e5e7eb;
-}
-
-.user-profile-card {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    border-radius: 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.user-profile-card:hover {
-    background: #f1f5f9;
-}
-
-.user-info {
-    flex: 1;
-    margin-left: 12px;
-    overflow: hidden;
-}
-
-.user-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e293b;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.user-role {
-    font-size: 11px;
-    color: #64748b;
-    font-weight: 500;
-}
-
-/* Header Styles */
-.dashboard-header {
-    height: 64px;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
+.action-info {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 32px;
-    position: sticky;
-    top: 0;
-    z-index: 999;
-}
-
-.header-search {
-    width: 400px;
-    background: #f8fafc;
-    border-radius: 8px;
-}
-
-.header-search input {
-    background: #f8fafc;
-    border: none;
-    box-shadow: none;
-}
-
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-/* Content Area */
-.content-wrapper {
-    padding: 32px;
-    max-width: 1400px;
-    margin: 0 auto;
     width: 100%;
 }

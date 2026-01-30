@@ -70,7 +70,7 @@ const medicineSchema = new Schema({
     required: [true, 'Manufacturer is required'],
     trim: true
   },
-  
+
   // Classification
   category: {
     type: String,
@@ -82,7 +82,7 @@ const medicineSchema = new Schema({
     type: String,
     trim: true
   },
-  
+
   // Composition
   activeIngredients: [activeIngredientSchema],
   dosageForm: {
@@ -98,7 +98,11 @@ const medicineSchema = new Schema({
     type: String,
     required: [true, 'Pack size is required']
   },
-  
+  expiryDate: {
+    type: Date,
+    required: [true, 'Expiry date is required']
+  },
+
   // Pricing & Inventory
   price: priceSchema,
   inStock: {
@@ -115,7 +119,7 @@ const medicineSchema = new Schema({
     default: 1,
     min: 1
   },
-  
+
   // Medical Information
   requiresPrescription: {
     type: Boolean,
@@ -126,7 +130,7 @@ const medicineSchema = new Schema({
     enum: ['I', 'II', 'III', 'IV', 'V', 'OTC', null],
     default: null
   },
-  
+
   // Media & Description
   description: {
     type: String,
@@ -138,7 +142,7 @@ const medicineSchema = new Schema({
     type: String, // URL to the image
     trim: true
   }],
-  
+
   // Location & Availability
   location: {
     type: locationSchema,
@@ -148,7 +152,7 @@ const medicineSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Pharmacy'
   }],
-  
+
   // Search & Metadata
   searchText: String, // For full-text search
   tags: [String],
@@ -156,7 +160,7 @@ const medicineSchema = new Schema({
     type: Boolean,
     default: true
   },
-  
+
   // Audit Fields
   addedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -174,7 +178,7 @@ const medicineSchema = new Schema({
 });
 
 // Virtual for discounted price
-medicineSchema.virtual('discountedPrice').get(function() {
+medicineSchema.virtual('discountedPrice').get(function () {
   return this.price.basePrice * (1 - (this.price.discount / 100));
 });
 
@@ -206,7 +210,7 @@ medicineSchema.index({ requiresPrescription: 1, isActive: 1 });
 medicineSchema.index({ 'price.discount': -1, isActive: 1 });
 
 // Pre-save hook to update searchText
-medicineSchema.pre('save', function(next) {
+medicineSchema.pre('save', function (next) {
   this.searchText = [
     this.name,
     this.genericName,
@@ -220,11 +224,11 @@ medicineSchema.pre('save', function(next) {
 });
 
 // Static method for search
-medicineSchema.statics.search = async function(query, filters = {}) {
+medicineSchema.statics.search = async function (query, filters = {}) {
   const { minPrice, maxPrice, category, requiresPrescription, inStock, sortBy = 'relevance' } = filters;
-  
+
   const pipeline = [];
-  
+
   // Text search stage
   if (query) {
     pipeline.push({
@@ -233,7 +237,7 @@ medicineSchema.statics.search = async function(query, filters = {}) {
         isActive: true
       }
     });
-    
+
     // Add text score for sorting
     pipeline.push({
       $addFields: {
@@ -245,39 +249,39 @@ medicineSchema.statics.search = async function(query, filters = {}) {
       $match: { isActive: true }
     });
   }
-  
+
   // Filter stages
   const matchStage = {};
-  
+
   if (minPrice || maxPrice) {
     matchStage['price.basePrice'] = {};
     if (minPrice) matchStage['price.basePrice'].$gte = Number(minPrice);
     if (maxPrice) matchStage['price.basePrice'].$lte = Number(maxPrice);
   }
-  
+
   if (category) matchStage.category = category;
   if (requiresPrescription !== undefined) matchStage.requiresPrescription = requiresPrescription === 'true';
   if (inStock === 'true') matchScope.stockQuantity = { $gt: 0 };
-  
+
   if (Object.keys(matchStage).length > 0) {
     pipeline.push({ $match: matchStage });
   }
-  
+
   // Sorting
   const sortStage = {};
   if (query) {
     sortStage.score = { $meta: 'textScore' };
   }
-  
+
   if (sortBy === 'price-asc') sortStage['price.basePrice'] = 1;
   else if (sortBy === 'price-desc') sortStage['price.basePrice'] = -1;
   else if (sortBy === 'newest') sortStage.createdAt = -1;
   else if (sortBy === 'discount') sortStage['price.discount'] = -1;
-  
+
   if (Object.keys(sortStage).length > 0) {
     pipeline.push({ $sort: sortStage });
   }
-  
+
   return this.aggregate(pipeline);
 };
 

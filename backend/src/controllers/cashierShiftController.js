@@ -29,6 +29,7 @@ exports.startShift = async (req, res) => {
         // Create new shift
         const shift = new CashierShift({
             cashier: cashierId,
+            pharmacy: req.user.pharmacyId,
             openingCash: openingCash || 0,
             status: 'active'
         });
@@ -172,6 +173,7 @@ exports.endShift = async (req, res) => {
         // Calculate shift totals from transactions
         const shiftTransactions = await Order.find({
             cashier: cashierId,
+            pharmacy: shift.pharmacy,
             createdAt: { $gte: shift.startTime }
         });
 

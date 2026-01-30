@@ -5,7 +5,7 @@ import {
     DashboardOutlined,
     CarOutlined,
     HistoryOutlined,
-    DollarOutlined,
+    WalletOutlined,
     UserOutlined,
     SettingOutlined
 } from '@ant-design/icons';
@@ -29,7 +29,7 @@ const DeliveryLayout = () => {
         },
         {
             key: '/delivery/earnings', // Placeholder route
-            icon: <DollarOutlined />,
+            icon: <WalletOutlined />,
             label: 'Earnings',
         },
         {

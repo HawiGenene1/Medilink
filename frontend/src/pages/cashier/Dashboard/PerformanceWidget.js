@@ -3,7 +3,6 @@ import { Card, Row, Col, Statistic, Progress } from 'antd';
 import {
     RiseOutlined,
     FallOutlined,
-    DollarOutlined,
     ShoppingOutlined,
     ClockCircleOutlined,
     CheckCircleOutlined
@@ -33,7 +32,7 @@ const PerformanceWidget = ({ stats = {} }) => {
                             title="Avg Transaction"
                             value={averageTransactionValue}
                             precision={2}
-                            prefix="ETB"
+                            prefix="ETB "
                             valueStyle={{ fontSize: '18px', color: '#1890ff' }}
                         />
                     </Card>

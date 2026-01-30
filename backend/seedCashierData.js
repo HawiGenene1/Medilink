@@ -24,15 +24,51 @@ async function seedCashierTestData() {
     try {
         console.log('🌱 Starting to seed cashier test data...\n');
 
+        // Clear existing test data
+        await User.deleteMany({ email: { $in: ['owner@test.com', 'customer@test.com', 'cashier@test.com'] } });
+        await Pharmacy.deleteMany({ name: 'Test Pharmacy' });
+        await Order.deleteMany({ orderNumber: { $regex: /^TEST-/ } });
+        await Payment.deleteMany({ transactionId: { $regex: /^TEST-/ } });
+        console.log('🗑️  Cleared old test data\n');
+
+        // Create test owner if not exists
+        let owner = await User.findOne({ email: 'owner@test.com' });
+        if (!owner) {
+            owner = await User.create({
+                firstName: 'Pharmacy',
+                lastName: 'Owner',
+                email: 'owner@test.com',
+                password: 'password123',
+                phone: '0911000000',
+                role: 'pharmacy_admin',
+                isActive: true,
+                status: 'active'
+            });
+            console.log('✅ Created test owner');
+        }
+
         // Create test pharmacy
         let pharmacy = await Pharmacy.findOne({ name: 'Test Pharmacy' });
         if (!pharmacy) {
             pharmacy = await Pharmacy.create({
                 name: 'Test Pharmacy',
+                ownerName: 'Pharmacy Owner',
                 licenseNumber: 'PH-2026-001',
                 email: 'pharmacy@test.com',
                 phone: '0911223344',
-                address: 'Bole, Addis Ababa',
+                address: {
+                    street: 'Bole Road',
+                    city: 'Addis Ababa',
+                    state: 'Addis Ababa',
+                    zipCode: '1000',
+                    country: 'Ethiopia'
+                },
+                location: {
+                    type: 'Point',
+                    coordinates: [38.7578, 8.9806] // Addis Ababa [long, lat]
+                },
+                owner: owner._id,
+                status: 'approved',
                 isActive: true,
                 isVerified: true
             });
@@ -45,12 +81,14 @@ async function seedCashierTestData() {
         let customer = await User.findOne({ email: 'customer@test.com' });
         if (!customer) {
             customer = await User.create({
-                name: 'John Doe',
+                firstName: 'John',
+                lastName: 'Doe',
                 email: 'customer@test.com',
-                password: 'password123', // Will be hashed by model
+                password: 'password123',
                 phone: '0912345678',
                 role: 'customer',
                 isActive: true,
+                status: 'active',
                 isEmailVerified: true
             });
             console.log('✅ Created test customer');
@@ -62,13 +100,15 @@ async function seedCashierTestData() {
         let cashier = await User.findOne({ email: 'cashier@test.com' });
         if (!cashier) {
             cashier = await User.create({
-                name: 'Test Cashier',
+                firstName: 'Test',
+                lastName: 'Cashier',
                 email: 'cashier@test.com',
                 password: 'password123',
                 phone: '0923456789',
                 role: 'cashier',
-                pharmacy: pharmacy._id,
+                pharmacyId: pharmacy._id,
                 isActive: true,
+                status: 'active',
                 isEmailVerified: true
             });
             console.log('✅ Created test cashier');
@@ -76,10 +116,6 @@ async function seedCashierTestData() {
             console.log('✓ Test cashier already exists');
         }
 
-        // Clear existing test data
-        await Order.deleteMany({ orderNumber: { $regex: /^TEST-/ } });
-        await Payment.deleteMany({ transactionId: { $regex: /^TEST-/ } });
-        console.log('🗑️  Cleared old test data\n');
 
         // Create test orders with different statuses
         const testOrders = [
@@ -89,14 +125,14 @@ async function seedCashierTestData() {
                 pharmacy: pharmacy._id,
                 items: [
                     {
-                        medicine: new mongoose.Types.ObjectId(),
+                        medicine: new mongoose.Types.ObjectId().toString(),
                         name: 'Paracetamol 500mg',
                         quantity: 2,
                         price: 50,
                         subtotal: 100
                     },
                     {
-                        medicine: new mongoose.Types.ObjectId(),
+                        medicine: new mongoose.Types.ObjectId().toString(),
                         name: 'Ibuprofen 400mg',
                         quantity: 1,
                         price: 80,
@@ -105,10 +141,13 @@ async function seedCashierTestData() {
                 ],
                 totalAmount: 180,
                 finalAmount: 180,
-                status: 'CONFIRMED',
+                status: 'confirmed',
                 paymentStatus: 'pending',
                 paymentMethod: 'card',
-                deliveryAddress: 'Bole, Addis Ababa',
+                deliveryAddress: {
+                    street: 'Bole, Addis Ababa',
+                    city: 'Addis Ababa'
+                },
                 createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
             },
             {
@@ -117,7 +156,7 @@ async function seedCashierTestData() {
                 pharmacy: pharmacy._id,
                 items: [
                     {
-                        medicine: new mongoose.Types.ObjectId(),
+                        medicine: new mongoose.Types.ObjectId().toString(),
                         name: 'Amoxicillin 500mg',
                         quantity: 3,
                         price: 150,
@@ -126,10 +165,13 @@ async function seedCashierTestData() {
                 ],
                 totalAmount: 450,
                 finalAmount: 450,
-                status: 'CONFIRMED',
+                status: 'confirmed',
                 paymentStatus: 'pending',
                 paymentMethod: 'cash',
-                deliveryAddress: 'Kazanchis, Addis Ababa',
+                deliveryAddress: {
+                    street: 'Kazanchis, Addis Ababa',
+                    city: 'Addis Ababa'
+                },
                 createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // 1 day ago
             },
             {
@@ -138,7 +180,7 @@ async function seedCashierTestData() {
                 pharmacy: pharmacy._id,
                 items: [
                     {
-                        medicine: new mongoose.Types.ObjectId(),
+                        medicine: new mongoose.Types.ObjectId().toString(),
                         name: 'Vitamin C 1000mg',
                         quantity: 1,
                         price: 200,
@@ -147,10 +189,13 @@ async function seedCashierTestData() {
                 ],
                 totalAmount: 200,
                 finalAmount: 200,
-                status: 'CONFIRMED',
+                status: 'confirmed',
                 paymentStatus: 'pending',
                 paymentMethod: 'mobile_money',
-                deliveryAddress: 'Merkato, Addis Ababa',
+                deliveryAddress: {
+                    street: 'Merkato, Addis Ababa',
+                    city: 'Addis Ababa'
+                },
                 createdAt: new Date()
             }
         ];
@@ -169,7 +214,7 @@ async function seedCashierTestData() {
                 customer: customer._id,
                 pharmacy: pharmacy._id,
                 items: [{
-                    medicine: new mongoose.Types.ObjectId(),
+                    medicine: new mongoose.Types.ObjectId().toString(),
                     name: `Medicine ${i + 1}`,
                     quantity: 1,
                     price: 100 + (i * 50),
@@ -177,9 +222,13 @@ async function seedCashierTestData() {
                 }],
                 totalAmount: 100 + (i * 50),
                 finalAmount: 100 + (i * 50),
-                status: 'PREPARING',
+                status: 'preparing',
                 paymentStatus: 'paid',
-                paymentMethod: 'card'
+                paymentMethod: 'card',
+                deliveryAddress: {
+                    street: `Street ${i + 1}`,
+                    city: 'Addis Ababa'
+                }
             });
 
             const payment = await Payment.create({

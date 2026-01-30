@@ -6,6 +6,11 @@ const cashierShiftSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    pharmacy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Pharmacy',
+        required: true
+    },
     shiftNumber: {
         type: String,
         required: true,
@@ -120,30 +125,34 @@ const cashierShiftSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Generate shift number before saving
-cashierShiftSchema.pre('save', async function (next) {
+// Generate shift number before validation
+cashierShiftSchema.pre('validate', async function () {
     if (!this.shiftNumber) {
-        const date = new Date();
-        const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
-        const count = await mongoose.model('CashierShift').countDocuments({
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+        const count = await this.constructor.countDocuments({
             createdAt: {
-                $gte: new Date(date.setHours(0, 0, 0, 0)),
-                $lt: new Date(date.setHours(23, 59, 59, 999))
+                $gte: startOfDay,
+                $lt: endOfDay
             }
         });
+
+        const dateStr = now.getFullYear() +
+            String(now.getMonth() + 1).padStart(2, '0') +
+            String(now.getDate()).padStart(2, '0');
         this.shiftNumber = `SH-${dateStr}-${String(count + 1).padStart(4, '0')}`;
     }
-    next();
 });
 
-// Calculate net amount before saving
-cashierShiftSchema.pre('save', function (next) {
-    this.netAmount = this.totalSales - this.totalRefunds;
-    if (this.closingCash && this.openingCash) {
-        this.expectedCash = this.openingCash + this.netAmount;
-        this.cashVariance = this.closingCash - this.expectedCash;
+// Calculate net amount before validation
+cashierShiftSchema.pre('validate', function () {
+    this.netAmount = (this.totalSales || 0) - (this.totalRefunds || 0);
+    if (this.closingCash !== undefined && this.openingCash !== undefined) {
+        this.expectedCash = (this.openingCash || 0) + this.netAmount;
+        this.cashVariance = (this.closingCash || 0) - this.expectedCash;
     }
-    next();
 });
 
 // Indexes

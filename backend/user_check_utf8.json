@@ -1,0 +1,26 @@
+[dotenv@17.2.3] injecting env (10) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+User Data: {
+  "currentLocation": {
+    "lastUpdated": "2026-01-30T11:00:36.287Z"
+  },
+  "settings": {
+    "notificationsEnabled": true,
+    "complianceEnabled": true,
+    "theme": "light"
+  },
+  "_id": "697c8f54ab02b1be4e7268cc",
+  "firstName": "Test",
+  "lastName": "Cashier",
+  "email": "cashier@test.com",
+  "phone": "0923456789",
+  "role": "cashier",
+  "pharmacyId": "697c8f54ab02b1be4e7268c3",
+  "avatar": "",
+  "isActive": true,
+  "status": "active",
+  "isEmailVerified": true,
+  "resetToken": null,
+  "resetTokenExpire": null,
+  "createdAt": "2026-01-30T11:00:36.287Z",
+  "updatedAt": "2026-01-30T11:00:36.287Z"
+}

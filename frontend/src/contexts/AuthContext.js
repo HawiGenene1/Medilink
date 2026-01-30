@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       api.get('/auth/me')
         .then(response => {
-          setUser(response.data.user); 
+          setUser(response.data.user);
           setIsAuthenticated(true);
         })
         .catch(() => {
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);
-    navigate('/'); // Redirect to home on logout
+    navigate('/auth/login'); // Redirect to login on logout
   };
 
   // Check if user has required role
@@ -100,6 +100,40 @@ export const AuthProvider = ({ children }) => {
     return roles.includes(user.role);
   };
 
+  // Update profile function
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await api.put('/users/profile', profileData);
+      if (response.data.success) {
+        setUser(response.data.user);
+        return { success: true, message: response.data.message };
+      }
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      console.error('Update profile failed:', error);
+      return { success: false, message: error.response?.data?.message || 'Update failed' };
+    }
+  };
+
+  // Upload avatar function
+  const uploadAvatar = async (formData) => {
+    try {
+      const response = await api.post('/users/profile-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      if (response.data.success || response.data.avatar) {
+        setUser(prev => ({ ...prev, avatar: response.data.avatar }));
+        return { success: true, avatar: response.data.avatar, message: response.data.message || 'Image uploaded' };
+      }
+      return { success: false, message: 'Upload failed' };
+    } catch (error) {
+      console.error('Avatar upload failed:', error);
+      return { success: false, message: error.response?.data?.message || 'Upload failed' };
+    }
+  };
+
   const value = {
     user,
     isAuthenticated,
@@ -108,7 +142,9 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     hasRole,
-    hasAnyRole
+    hasAnyRole,
+    updateProfile,
+    uploadAvatar
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, InputNumber, Button, Steps, List, Card, message, Alert, Select, Checkbox, Space, Descriptions, Tag } from 'antd';
-import { DollarOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import cashierPOSService from '../../../services/cashierPOS';
 
 const { Step } = Steps;

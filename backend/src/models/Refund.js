@@ -171,31 +171,35 @@ const refundSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Generate refund number before saving
-refundSchema.pre('save', async function (next) {
+// Generate refund number before validation
+refundSchema.pre('validate', async function () {
     if (!this.refundNumber) {
-        const date = new Date();
-        const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
-        const count = await mongoose.model('Refund').countDocuments({
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+        const count = await this.constructor.countDocuments({
             createdAt: {
-                $gte: new Date(date.setHours(0, 0, 0, 0)),
-                $lt: new Date(date.setHours(23, 59, 59, 999))
+                $gte: startOfDay,
+                $lt: endOfDay
             }
         });
+
+        const dateStr = now.getFullYear() +
+            String(now.getMonth() + 1).padStart(2, '0') +
+            String(now.getDate()).padStart(2, '0');
         this.refundNumber = `REF-${dateStr}-${String(count + 1).padStart(5, '0')}`;
     }
-    next();
 });
 
-// Calculate refund amount before saving
-refundSchema.pre('save', function (next) {
+// Calculate refund amount before validation
+refundSchema.pre('validate', function () {
     if (this.refundItems && this.refundItems.length > 0) {
         this.refundAmount = this.refundItems.reduce((total, item) => {
-            item.subtotal = item.quantity * item.price;
+            item.subtotal = (item.quantity || 0) * (item.price || 0);
             return total + item.subtotal;
         }, 0);
     }
-    next();
 });
 
 // Add workflow step method

@@ -5,7 +5,8 @@ const {
   register,
   login,
   getCurrentUser,
-  verifyEmail
+  verifyEmail,
+  updateProfile
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
 const {
@@ -78,5 +79,10 @@ router.post("/request-reset", requestPasswordReset);
 // @route   POST /api/auth/reset-password/:token
 // @access  Public
 router.post("/reset-password/:token", resetPassword);
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+router.put('/profile', authenticate, updateProfile);
 
 module.exports = router;
