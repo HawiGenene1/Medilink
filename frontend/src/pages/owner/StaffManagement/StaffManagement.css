@@ -1,0 +1,46 @@
+.staff-management {
+    padding: 8px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+}
+
+.staff-table-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.permissions-section {
+    background-color: #f9f9f9;
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.permission-group {
+    margin-bottom: 20px;
+}
+
+.permission-group:last-child {
+    margin-bottom: 0;
+}
+
+.permission-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.staff-management .ant-table-thead>tr>th {
+    background-color: #fafafa;
+    font-weight: 600;
+}
+
+.staff-management .ant-form-item {
+    margin-bottom: 16px;
+}
