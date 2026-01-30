@@ -12,6 +12,8 @@ import ProtectedRoute from './ProtectedRoute';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import PharmacyRegister from '../pages/auth/PharmacyRegister';
+import OwnerLogin from '../pages/auth/OwnerLogin';
+import OwnerRegister from '../pages/auth/OwnerRegister';
 
 // Pages
 import Home from '../pages/Home';
@@ -31,18 +33,17 @@ import CustomerFavorites from '../pages/customer/Favorites';
 import MedicineList from '../pages/medicines/MedicineList';
 import MedicineDetail from '../pages/medicines/MedicineDetail';
 
-// Pharmacy Pages
-import PharmacyLayout from '../layouts/PharmacyLayout';
-import Inventory from '../pages/pharmacy-staff/Inventory';
-import PharmacyDashboard from '../pages/pharmacy-admin/Dashboard';
-import PharmacyStaffDashboard from '../pages/pharmacy-staff/Dashboard/Dashboard';
-import PharmacyStaffMedicines from '../pages/pharmacy-staff/Medicines/Medicines';
-import PharmacyStaffOrders from '../pages/pharmacy-staff/Orders/Orders';
-import InventoryAlerts from '../pages/pharmacy-staff/InventoryAlerts/InventoryAlerts';
-
 // Admin & Other Pages
 import AdminLayout from '../layouts/AdminLayout';
+import OwnerLayout from '../layouts/OwnerLayout';
 import AdminDashboard from '../pages/admin/Dashboard';
+import OwnerDashboard from '../pages/owner/Dashboard';
+import StaffManagement from '../pages/owner/StaffManagement';
+import PharmacyDetails from '../pages/owner/PharmacyDetails';
+import OwnerProfile from '../pages/owner/Profile';
+import OwnerSettings from '../pages/owner/Settings';
+import Subscription from '../pages/owner/Subscription';
+import Reports from '../pages/owner/Reports';
 import CashierDashboard from '../pages/cashier/Dashboard';
 import DeliveryDashboard from '../pages/delivery/Dashboard';
 
@@ -62,6 +63,8 @@ const AppRouter = () => {
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/pharmacy/register" element={<PharmacyRegister />} />
+        <Route path="/auth/owner/login" element={<OwnerLogin />} />
+        <Route path="/auth/owner/register" element={<OwnerRegister />} />
       </Route>
 
       {/* Protected Routes - Customer */}
@@ -85,18 +88,6 @@ const AppRouter = () => {
         </Route>
       </Route>
 
-      {/* Protected Routes - Pharmacy */}
-      <Route element={<ProtectedRoute allowedRoles={['pharmacy_admin', 'pharmacy_staff']} />}>
-        <Route element={<PharmacyLayout />}>
-          <Route path="/pharmacy-staff/inventory" element={<Inventory />} />
-          <Route path="/pharmacy-staff/dashboard" element={<PharmacyStaffDashboard />} />
-          <Route path="/pharmacy-staff/medicines" element={<PharmacyStaffMedicines />} />
-          <Route path="/pharmacy-staff/orders" element={<PharmacyStaffOrders />} />
-          <Route path="/pharmacy-staff/inventory-alerts" element={<InventoryAlerts />} />
-          <Route path="/pharmacy-admin/dashboard" element={<PharmacyDashboard />} />
-        </Route>
-      </Route>
-
 
       {/* Protected Routes - Cashier */}
       <Route element={<ProtectedRoute allowedRoles={['cashier']} />}>
@@ -115,6 +106,18 @@ const AppRouter = () => {
         <Route element={<AdminLayout />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           {/* <Route path="/admin/users" element={<UserManagement />} /> */}
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={['PHARMACY_OWNER']} />}>
+        <Route element={<OwnerLayout />}>
+          <Route path="/owner/dashboard" element={<OwnerDashboard />} />
+          <Route path="/owner/staff" element={<StaffManagement />} />
+          <Route path="/owner/pharmacy" element={<PharmacyDetails />} />
+          <Route path="/owner/subscription" element={<Subscription />} />
+          <Route path="/owner/reports" element={<Reports />} />
+          <Route path="/owner/profile" element={<OwnerProfile />} />
+          <Route path="/owner/settings" element={<OwnerSettings />} />
         </Route>
       </Route>
       {/* Redirects & Fallbacks */}

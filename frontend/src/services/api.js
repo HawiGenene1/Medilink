@@ -28,9 +28,19 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
+      // In development mode with mock tokens, don't auto-logout
+      const token = localStorage.getItem('token');
+      const isMockToken = token && token.startsWith('header.');
+
+      if (process.env.NODE_ENV === 'development' && isMockToken) {
+        // Don't redirect, just reject the error - mock mode doesn't use real API
+        console.warn('Development mode: API call returned 401 with mock token');
+        return Promise.reject(error);
+      }
+
+      // Handle unauthorized access in production
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/auth/login';
     }
     return Promise.reject(error);
   }
@@ -103,6 +113,25 @@ export const cartAPI = {
     api.patch(`/cart/items/${itemId}`, { quantity }),
   removeItem: (itemId) => api.delete(`/cart/items/${itemId}`),
   clearCart: () => api.delete('/cart'),
+};
+
+// Pharmacy Owner API
+export const pharmacyOwnerAPI = {
+  register: (ownerData) => api.post('/pharmacy-owner/register', ownerData),
+  login: (email, password) => api.post('/pharmacy-owner/login', { email, password }),
+  getDashboard: () => api.get('/pharmacy-owner/dashboard'),
+  getProfile: () => api.get('/pharmacy-owner/profile'),
+  updateProfile: (data) => api.put('/pharmacy-owner/profile', data),
+  updatePassword: (data) => api.put('/pharmacy-owner/profile/password', data),
+  getSubscription: () => api.get('/pharmacy-owner/subscription'),
+  getReports: () => api.get('/pharmacy-owner/reports'),
+  getPharmacy: () => api.get('/pharmacy-owner/pharmacy'),
+  updatePharmacy: (data) => api.put('/pharmacy-owner/pharmacy', data),
+  // Staff Management
+  getStaff: () => api.get('/pharmacy-owner/staff'),
+  createStaff: (data) => api.post('/pharmacy-owner/staff', data),
+  updateStaff: (id, data) => api.put(`/pharmacy-owner/staff/${id}`, data),
+  deleteStaff: (id) => api.delete(`/pharmacy-owner/staff/${id}`),
 };
 
 export default api;
