@@ -9,7 +9,10 @@ import {
     TeamOutlined,
     CalendarOutlined,
     ArrowUpOutlined,
-    ArrowDownOutlined
+    ArrowDownOutlined,
+    AlertOutlined,
+    StopOutlined,
+    DeleteOutlined
 } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
@@ -25,6 +28,20 @@ const MOCK_STAFF_TRENDS = [
     { key: '1', period: 'January 2026', totalStaff: 12, newJoiners: 2, turnover: 0 },
     { key: '2', period: 'December 2025', totalStaff: 10, newJoiners: 1, turnover: 1 },
     { key: '3', period: 'November 2025', totalStaff: 10, newJoiners: 0, turnover: 0 },
+];
+
+const MOCK_INVENTORY_ALERTS = {
+    lowStock: 15,
+    outOfStock: 4,
+    expired: 2
+};
+
+const MOCK_RECENT_ORDERS = [
+    { key: '1', orderNumber: 'ORD-2026-001', customer: 'Abebe Bikila', amount: 1250, status: 'delivered', date: '2026-01-30' },
+    { key: '2', orderNumber: 'ORD-2026-002', customer: 'Mulu Tesfaye', amount: 840, status: 'processing', date: '2026-01-30' },
+    { key: '3', orderNumber: 'ORD-2026-003', customer: 'Kebede Kassa', amount: 2100, status: 'pending', date: '2026-01-29' },
+    { key: '4', orderNumber: 'ORD-2026-004', customer: 'Selam Desta', amount: 450, status: 'completed', date: '2026-01-29' },
+    { key: '5', orderNumber: 'ORD-2026-005', customer: 'Tadesse Girma', amount: 3200, status: 'cancelled', date: '2026-01-28' },
 ];
 
 const Reports = () => {
@@ -150,10 +167,114 @@ const Reports = () => {
                 </Col>
             </Row>
 
+
+
+            <Divider orientation="left">Inventory Alerts</Divider>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                <Col xs={24} sm={8}>
+                    <Card bordered={false} className="report-card">
+                        <Statistic
+                            title="Low Stock Items"
+                            value={MOCK_INVENTORY_ALERTS.lowStock}
+                            valueStyle={{ color: '#faad14' }}
+                            prefix={<AlertOutlined />}
+                        />
+                        <div style={{ marginTop: 8 }}>
+                            <Text type="secondary">Reorder recommended</Text>
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={8}>
+                    <Card bordered={false} className="report-card">
+                        <Statistic
+                            title="Out of Stock"
+                            value={MOCK_INVENTORY_ALERTS.outOfStock}
+                            valueStyle={{ color: '#cf1322' }}
+                            prefix={<StopOutlined />}
+                        />
+                        <div style={{ marginTop: 8 }}>
+                            <Text type="secondary">Immediate action required</Text>
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={8}>
+                    <Card bordered={false} className="report-card">
+                        <Statistic
+                            title="Expired Products"
+                            value={MOCK_INVENTORY_ALERTS.expired}
+                            valueStyle={{ color: '#520339' }}
+                            prefix={<DeleteOutlined />}
+                        />
+                        <div style={{ marginTop: 8 }}>
+                            <Text type="secondary">Remove from shelves</Text>
+                        </div>
+                    </Card>
+                </Col>
+            </Row>
+
+            <Divider orientation="left">Recent Orders (Oversight)</Divider>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                <Col span={24}>
+                    <Card title={<Space><ShoppingOutlined /> Order Activity</Space>}>
+                        <Table
+                            dataSource={MOCK_RECENT_ORDERS}
+                            pagination={false}
+                            size="middle"
+                            columns={[
+                                {
+                                    title: 'Order ID',
+                                    dataIndex: 'orderNumber',
+                                    key: 'orderNumber',
+                                    render: (text) => <Text copyable>{text}</Text>
+                                },
+                                {
+                                    title: 'Customer',
+                                    dataIndex: 'customer',
+                                    key: 'customer',
+                                },
+                                {
+                                    title: 'Amount',
+                                    dataIndex: 'amount',
+                                    key: 'amount',
+                                    render: (val) => <Text strong>ETB {val.toLocaleString()}</Text>
+                                },
+                                {
+                                    title: 'Status',
+                                    dataIndex: 'status',
+                                    key: 'status',
+                                    render: (status) => {
+                                        const colors = {
+                                            delivered: 'green',
+                                            completed: 'green',
+                                            processing: 'blue',
+                                            pending: 'gold',
+                                            cancelled: 'volcano'
+                                        };
+                                        return <Tag color={colors[status]}>{status.toUpperCase()}</Tag>;
+                                    }
+                                },
+                                {
+                                    title: 'Date',
+                                    dataIndex: 'date',
+                                    key: 'date',
+                                }
+                            ]}
+                        />
+                        <div style={{ marginTop: 16, padding: 12, background: '#f0f2f5', borderRadius: 4 }}>
+                            <Text type="secondary">
+                                <AlertOutlined /> This is a read-only view. Order processing is managed by staff or via Settings → Operational Access.
+                            </Text>
+                        </div>
+                    </Card>
+                </Col>
+            </Row>
+
             <Divider orientation="left">Operational Performance</Divider>
 
             <Row gutter={[24, 24]}>
-                <Col xs={24} xl={14}>
+                <Col span={24}>
                     <Card title={<Space><BarChartOutlined /> Monthly Sales Summary</Space>} loading={loading}>
                         <Table
                             dataSource={MOCK_SALES_TRENDS}
@@ -163,7 +284,7 @@ const Reports = () => {
                         />
                     </Card>
                 </Col>
-                <Col xs={24} xl={10}>
+                <Col span={24}>
                     <Card title={<Space><TeamOutlined /> Staff Count Trend</Space>} loading={loading}>
                         <Table
                             dataSource={MOCK_STAFF_TRENDS}
@@ -180,7 +301,7 @@ const Reports = () => {
                     </Card>
                 </Col>
             </Row>
-        </div>
+        </div >
     );
 };
 
