@@ -125,6 +125,8 @@ export const pharmacyOwnerAPI = {
   updatePassword: (data) => api.put('/pharmacy-owner/profile/password', data),
   getSubscription: () => api.get('/pharmacy-owner/subscription'),
   getReports: () => api.get('/pharmacy-owner/reports'),
+  getAnalytics: () => api.get('/pharmacy-owner/analytics'),
+  getPharmacy: () => api.get('/pharmacy-owner/pharmacy'),
   getPharmacy: () => api.get('/pharmacy-owner/pharmacy'),
   updatePharmacy: (data) => api.put('/pharmacy-owner/pharmacy', data),
   // Staff Management

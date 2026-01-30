@@ -7,6 +7,7 @@ import {
     SettingOutlined,
     CreditCardOutlined,
     BarChartOutlined,
+    LineChartOutlined,
 } from '@ant-design/icons';
 
 export const OWNER_ROLES = {
@@ -41,6 +42,11 @@ export const OWNER_MENU_ITEMS = [
         key: '/owner/reports',
         icon: BarChartOutlined,
         label: 'Reports',
+    },
+    {
+        key: '/owner/analytics',
+        icon: LineChartOutlined,
+        label: 'Analytics',
     },
     {
         key: '/owner/profile',
