@@ -44,6 +44,8 @@ import OwnerProfile from '../pages/owner/Profile';
 import OwnerSettings from '../pages/owner/Settings';
 import Subscription from '../pages/owner/Subscription';
 import Reports from '../pages/owner/Reports';
+import Analytics from '../pages/owner/Analytics';
+import OwnerInventory from '../pages/owner/Inventory';
 import CashierDashboard from '../pages/cashier/Dashboard';
 import DeliveryDashboard from '../pages/delivery/Dashboard';
 
@@ -113,9 +115,11 @@ const AppRouter = () => {
         <Route element={<OwnerLayout />}>
           <Route path="/owner/dashboard" element={<OwnerDashboard />} />
           <Route path="/owner/staff" element={<StaffManagement />} />
+          <Route path="/owner/inventory" element={<OwnerInventory />} />
           <Route path="/owner/pharmacy" element={<PharmacyDetails />} />
           <Route path="/owner/subscription" element={<Subscription />} />
           <Route path="/owner/reports" element={<Reports />} />
+          <Route path="/owner/analytics" element={<Analytics />} />
           <Route path="/owner/profile" element={<OwnerProfile />} />
           <Route path="/owner/settings" element={<OwnerSettings />} />
         </Route>
