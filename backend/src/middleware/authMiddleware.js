@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const PharmacyOwner = require("../models/PharmacyOwner");
 
 /**
  * Middleware to verify JWT token and attach user to request
@@ -43,6 +44,28 @@ const protect = async (req, res, next) => {
     try {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Check for Pharmacy Owner
+      if (decoded.role === 'PHARMACY_OWNER') {
+        const owner = await PharmacyOwner.findById(decoded.ownerId || decoded.id);
+        if (!owner) {
+          return res.status(401).json({ success: false, message: 'Owner not found' });
+        }
+        if (!owner.isActive) {
+          return res.status(403).json({ success: false, message: 'Account deactivated' });
+        }
+        req.owner = owner;
+        // Also set req.user for compatibility with some shared utilities
+        req.user = {
+          id: owner._id,
+          userId: owner._id,
+          email: owner.email,
+          role: 'PHARMACY_OWNER',
+          pharmacyId: owner.pharmacyId,
+          isOwner: true
+        };
+        return next();
+      }
 
       // Find user by ID from token
       const user = await User.findById(decoded.userId).select('-password');
