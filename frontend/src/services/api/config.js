@@ -17,11 +17,15 @@ apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
+      console.log('[API Interceptor] Token found, adding to headers.');
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.log('[API Interceptor] No token found in localStorage.');
     }
     return config;
   },
   (error) => {
+    console.error('[API Interceptor] Request error:', error);
     return Promise.reject(error);
   }
 );
@@ -35,10 +39,11 @@ apiClient.interceptors.response.use(
     if (error.response) {
       // Handle specific error status codes
       if (error.response.status === 401) {
+        console.warn('[API] 401 Unauthorized detected. Redirecting to login. URL:', error.config.url);
         // Unauthorized - clear token and redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        window.location.href = '/auth/login';
       }
     }
     return Promise.reject(error);

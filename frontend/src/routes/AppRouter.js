@@ -42,6 +42,10 @@ import DeliveryLayout from '../layouts/DeliveryLayout';
 import DeliveryDashboard from '../pages/delivery/Dashboard';
 import DeliveryDetails from '../pages/delivery/DeliveryDetails';
 import DeliveryProfile from '../pages/delivery/Profile';
+import ActiveDeliveries from '../pages/delivery/ActiveDeliveries';
+import DeliveryHistory from '../pages/delivery/DeliveryHistory';
+import DeliveryEarnings from '../pages/delivery/DeliveryEarnings';
+import DeliverySettings from '../pages/delivery/DeliverySettings';
 
 // Pharmacy Pages
 import PharmacyLayout from '../layouts/PharmacyLayout';
@@ -114,8 +118,12 @@ const AppRouter = () => {
       <Route element={<ProtectedRoute allowedRoles={['delivery']} />}>
         <Route element={<DeliveryLayout />}>
           <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
+          <Route path="/delivery/active" element={<ActiveDeliveries />} />
+          <Route path="/delivery/history" element={<DeliveryHistory />} />
+          <Route path="/delivery/earnings" element={<DeliveryEarnings />} />
           <Route path="/delivery/details/:id" element={<DeliveryDetails />} />
           <Route path="/delivery/profile" element={<DeliveryProfile />} />
+          <Route path="/delivery/settings" element={<DeliverySettings />} />
         </Route>
       </Route>
 
