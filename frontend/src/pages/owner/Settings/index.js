@@ -21,7 +21,9 @@ import {
     BellOutlined,
     SafetyCertificateOutlined,
     ArrowRightOutlined,
-    CreditCardOutlined
+
+    CreditCardOutlined,
+    ToolOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { pharmacyOwnerAPI } from '../../../services/api';
@@ -64,6 +66,38 @@ const OwnerSettings = () => {
             }
         } catch (error) {
             message.error(error.response?.data?.message || 'Failed to update password');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onOperationsUpdate = async (values) => {
+        try {
+            // Validate: require exactly one permission to be enabled
+            const enabledCount = Object.values(values).filter(v => v === true).length;
+
+            if (enabledCount === 0) {
+                message.warning('Please enable at least one operational permission');
+                return;
+            }
+
+            if (enabledCount === 2) {
+                message.warning('Please choose only one operational permission at a time');
+                return;
+            }
+
+            setLoading(true);
+            // values comes as { manageInventory: true, prepareOrders: false }
+            // we need to wrap it in operationalPermissions object
+            const response = await pharmacyOwnerAPI.updateProfile({
+                operationalPermissions: values
+            });
+            if (response.data.success) {
+                message.success('Operational permissions updated');
+                if (updateUser) updateUser(response.data.owner);
+            }
+        } catch (error) {
+            message.error('Failed to update operational permissions');
         } finally {
             setLoading(false);
         }
@@ -215,6 +249,50 @@ const OwnerSettings = () => {
                         </Form.Item>
                         <Button type="primary" danger htmlType="submit" loading={loading}>
                             Update Password
+                        </Button>
+                    </Form>
+                </Card>
+            )
+        },
+        {
+            key: 'operations',
+            label: <Space><ToolOutlined />Operational Access (Advanced)</Space>,
+            children: (
+                <Card bordered={false}>
+                    <Title level={4}>Advanced Operational Access</Title>
+                    <Paragraph type="secondary">
+                        By default, owners have <b>Oversight</b> (read-only) access. Enable these options only if you need to perform daily staff operational tasks.
+                    </Paragraph>
+                    <Alert
+                        message="Warning: Operational Mode"
+                        description="Enabling these features grants staff-level write access (e.g., packing orders, modifying stock). This is not required for management oversight."
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: '24px' }}
+                    />
+                    <Form
+                        layout="vertical"
+                        initialValues={{
+                            ...user?.operationalPermissions
+                        }}
+                        onFinish={onOperationsUpdate}
+                    >
+                        <Form.Item name="manageInventory" valuePropName="checked" label="Inventory Operations (Optional Access)">
+                            <Switch checkedChildren="Management" unCheckedChildren="Read-Only" />
+                        </Form.Item>
+                        <Paragraph type="secondary" style={{ marginTop: '-10px', marginBottom: '24px' }}>
+                            Enable to modify stock levels and product details. This provides optional access to staff-level functions and does not guarantee full operational capability.
+                        </Paragraph>
+
+                        <Form.Item name="prepareOrders" valuePropName="checked" label="Order Oversight (Optional Access)">
+                            <Switch checkedChildren="Active" unCheckedChildren="ReadOnly" />
+                        </Form.Item>
+                        <Paragraph type="secondary" style={{ marginTop: '-10px', marginBottom: '24px' }}>
+                            Default: <b>Read-Only Oversight</b> (View order status, track workflow progress, monitor delays).
+                        </Paragraph>
+
+                        <Button type="primary" htmlType="submit" loading={loading} style={{ background: '#faad14', borderColor: '#faad14' }}>
+                            Save Operational Settings
                         </Button>
                     </Form>
                 </Card>
