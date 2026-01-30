@@ -8,6 +8,7 @@ import {
     CreditCardOutlined,
     BarChartOutlined,
     LineChartOutlined,
+    ShopOutlined
 } from '@ant-design/icons';
 
 export const OWNER_ROLES = {
@@ -29,8 +30,13 @@ export const OWNER_MENU_ITEMS = [
         label: 'Staff Management',
     },
     {
-        key: '/owner/pharmacy',
+        key: '/owner/inventory',
         icon: MedicineBoxOutlined,
+        label: 'Inventory',
+    },
+    {
+        key: '/owner/pharmacy',
+        icon: ShopOutlined,
         label: 'Pharmacy Details',
     },
     {
