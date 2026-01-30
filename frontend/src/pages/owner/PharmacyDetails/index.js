@@ -29,46 +29,80 @@ import { pharmacyOwnerAPI } from '../../../services/api';
 const { Title, Text, Paragraph } = Typography;
 
 const PharmacyDetails = () => {
+    const isDev = process.env.NODE_ENV === 'development';
     const [form] = Form.useForm();
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!isDev);
     const [saving, setSaving] = useState(false);
 
+    const mockDetails = {
+        name: 'MediLink Central Pharmacy',
+        licenseNumber: 'PHA-2023-8892',
+        email: 'contact@medilink-central.com',
+        phone: '+251 116 678 901',
+        description: 'Primary pharmacy location serving the Addis Ababa metropolitan area with 24/7 prescription services and medical consultations.',
+        address: {
+            street: 'Bole Road, Near Friendship Mall',
+            city: 'Addis Ababa',
+            state: 'Addis Ababa',
+            zipCode: '1000'
+        },
+        openingHours: {
+            monday: { open: '08:00', close: '22:00', isClosed: false },
+            tuesday: { open: '08:00', close: '22:00', isClosed: false },
+            wednesday: { open: '08:00', close: '22:00', isClosed: false },
+            thursday: { open: '08:00', close: '22:00', isClosed: false },
+            friday: { open: '08:00', close: '22:00', isClosed: false },
+            saturday: { open: '09:00', close: '20:00', isClosed: false },
+            sunday: { open: '09:00', close: '18:00', isClosed: false }
+        }
+    };
+
     useEffect(() => {
+        if (isDev) {
+            setFields(mockDetails);
+        }
         fetchPharmacyDetails();
     }, []);
 
+    const setFields = (pharmacy) => {
+        // Format opening hours for TimePicker
+        const formattedHours = {};
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+        days.forEach(day => {
+            const hours = pharmacy.openingHours?.[day] || { isClosed: true };
+            formattedHours[day] = {
+                open: hours.open ? dayjs(hours.open, 'HH:mm') : null,
+                close: hours.close ? dayjs(hours.close, 'HH:mm') : null,
+                isClosed: hours.isClosed
+            };
+        });
+
+        form.setFieldsValue({
+            name: pharmacy.name,
+            licenseNumber: pharmacy.licenseNumber,
+            email: pharmacy.email,
+            phone: pharmacy.phone,
+            street: pharmacy.address?.street,
+            city: pharmacy.address?.city,
+            state: pharmacy.address?.state,
+            zipCode: pharmacy.address?.zipCode,
+            description: pharmacy.description,
+            openingHours: formattedHours
+        });
+    };
+
     const fetchPharmacyDetails = async () => {
         try {
-            setLoading(true);
+            if (!isDev) setLoading(true);
             const response = await pharmacyOwnerAPI.getPharmacy();
             if (response.data.success) {
-                const pharmacy = response.data.data;
-
-                // Format opening hours for TimePicker
-                const formattedHours = {};
-                Object.keys(pharmacy.openingHours || {}).forEach(day => {
-                    formattedHours[day] = {
-                        open: pharmacy.openingHours[day].open ? dayjs(pharmacy.openingHours[day].open, 'HH:mm') : null,
-                        close: pharmacy.openingHours[day].close ? dayjs(pharmacy.openingHours[day].close, 'HH:mm') : null,
-                        isClosed: pharmacy.openingHours[day].isClosed
-                    };
-                });
-
-                form.setFieldsValue({
-                    name: pharmacy.name,
-                    licenseNumber: pharmacy.licenseNumber,
-                    email: pharmacy.email,
-                    phone: pharmacy.phone,
-                    street: pharmacy.address?.street,
-                    city: pharmacy.address?.city,
-                    state: pharmacy.address?.state,
-                    zipCode: pharmacy.address?.zipCode,
-                    description: pharmacy.description,
-                    openingHours: formattedHours
-                });
+                setFields(response.data.data);
             }
         } catch (error) {
-            message.error('Failed to load pharmacy details');
+            if (!isDev && error.response?.status !== 401) {
+                message.error('Failed to load pharmacy details');
+            }
         } finally {
             setLoading(false);
         }
