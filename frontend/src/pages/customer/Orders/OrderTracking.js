@@ -14,6 +14,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ordersAPI } from '../../../services/api/orders';
+import { useSocket } from '../../../contexts/SocketContext';
+import { notification } from 'antd';
 import './OrderTracking.css';
 
 // Fix Leaflet icons
@@ -41,16 +43,18 @@ const OrderTracking = () => {
     // Live Tracking State
     const [driverPos, setDriverPos] = useState([9.0227, 38.7460]); // Fallback pos
 
+    const socket = useSocket();
+
     const fetchTracking = async () => {
         try {
             const response = await ordersAPI.getTracking(id);
             if (response.data?.success) {
                 const tracking = response.data.data;
                 setOrderData(tracking);
-                if (tracking.courier?.location) {
+                if (tracking.courier?.location?.coordinates) {
                     const newPos = [
-                        tracking.courier.location.latitude,
-                        tracking.courier.location.longitude
+                        tracking.courier.location.coordinates[1], // lat
+                        tracking.courier.location.coordinates[0]  // lng
                     ];
                     setDriverPos(newPos);
 
@@ -67,6 +71,39 @@ const OrderTracking = () => {
             setLoading(false);
         }
     };
+
+    // Socket.io Listener
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.emit('track_order', id);
+
+        const handleLocationUpdate = (coords) => {
+            // coords might be { latitude, longitude } or [lng, lat] depending on source
+            // The backend sends { latitude, longitude } in `update_location` event in socket.js
+            if (coords && coords.latitude && coords.longitude) {
+                const newPos = [coords.latitude, coords.longitude];
+                setDriverPos(newPos);
+                if (driverMarkerRef.current) {
+                    driverMarkerRef.current.setLatLng(newPos);
+                }
+                setLastSync(new Date().toLocaleTimeString());
+            }
+        };
+
+        socket.on('driver_location_update', handleLocationUpdate);
+
+        socket.on('order_status_update', (data) => {
+            // Refresh full data on status change
+            fetchTracking();
+            notification.info({ message: `Order Status Updated: ${data.status}` });
+        });
+
+        return () => {
+            socket.off('driver_location_update', handleLocationUpdate);
+            socket.off('order_status_update');
+        };
+    }, [socket, id]);
 
     // Initialize Map
     useEffect(() => {
@@ -105,15 +142,18 @@ const OrderTracking = () => {
             // Add Driver Marker
             markers.push(driverPos);
 
-            if (orderData?.deliveryAddress?.coordinates) {
+            if (orderData?.address?.coordinates) {
                 const destPos = [
-                    orderData.deliveryAddress.coordinates.latitude,
-                    orderData.deliveryAddress.coordinates.longitude
-                ];
-                markers.push(destPos);
-                L.marker(destPos, { icon: destIcon })
-                    .addTo(mapInstance.current)
-                    .bindPopup('<b>Delivery Destination</b><br/>You are here');
+                    orderData.address.coordinates.latitude,
+                    orderData.address.coordinates.longitude
+                ] || (orderData.address.geojson?.coordinates ? [orderData.address.geojson.coordinates[1], orderData.address.geojson.coordinates[0]] : null);
+
+                if (destPos) {
+                    markers.push(destPos);
+                    L.marker(destPos, { icon: destIcon })
+                        .addTo(mapInstance.current)
+                        .bindPopup('<b>Delivery Destination</b><br/>You are here');
+                }
             }
 
             // ADDED: Pharmacy Marker

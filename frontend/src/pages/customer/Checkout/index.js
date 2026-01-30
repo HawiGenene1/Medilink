@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Result, Tag, Alert, Input } from 'antd';
+import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Result, Tag, Alert, Input, notification } from 'antd';
 import {
     EnvironmentOutlined,
     SafetyCertificateOutlined,
@@ -9,10 +9,13 @@ import {
     MedicineBoxOutlined,
     ArrowLeftOutlined,
     CompassOutlined,
-    MessageOutlined
+    MessageOutlined,
+    ShoppingCartOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
+import { ordersAPI } from '../../../services/api/orders';
+import api from '../../../services/api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Checkout.css';
@@ -32,6 +35,7 @@ const Checkout = () => {
     const { cartItems, subtotal, clearCart } = useCart();
     const [currentStep, setCurrentStep] = useState(0);
     const [paymentMethod, setPaymentMethod] = useState('telebirr');
+    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
     // Location State
     const [mapCenter, setMapCenter] = useState([9.0227, 38.7460]); // Addis Ababa default
@@ -149,23 +153,123 @@ const Checkout = () => {
 
     const handleUseCurrentLocation = () => {
         if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                const { latitude, longitude } = position.coords;
-                mapInstance.current.flyTo([latitude, longitude], 17);
-            });
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    mapInstance.current.flyTo([latitude, longitude], 17);
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    notification.error({
+                        message: 'Location Error',
+                        description: 'Could not access your location. Please ensure site permissions are enabled.'
+                    });
+                },
+                {
+                    enableHighAccuracy: false, // Relaxed for wider compatibility (Wi-Fi/Cell)
+                    timeout: 10000,            // Increased to 10s
+                    maximumAge: 30000          // Use cache up to 30s old
+                }
+            );
         }
     };
     const handlePrev = () => setCurrentStep(prev => prev - 1);
 
     const handlePlaceOrder = async () => {
+        if (!selectedAddressCoords) {
+            notification.warning({ message: 'Missing Location', description: 'Please confirm your delivery location first.' });
+            setCurrentStep(0);
+            return;
+        }
+
+        setIsPlacingOrder(true);
         try {
-            const mockOrderId = `ORD-${Date.now()}`;
-            clearCart();
-            setCurrentStep(4);
+            if (!cartItems || cartItems.length === 0) {
+                notification.error({
+                    message: 'Cart Empty',
+                    description: 'Please add items to your cart before placing an order.'
+                });
+                setIsPlacingOrder(false);
+                return;
+            }
+
+            const orderData = {
+                pharmacyId: cartItems[0]?.pharmacyId || cartItems[0]?.pharmacy?._id || cartItems[0]?.pharmacy,
+                items: cartItems.map(item => ({
+                    medicine: item._id || item.id,
+                    quantity: item.quantity,
+                    price: item.priceValue
+                })),
+                totalAmount: subtotal,
+                serviceFee: 50,
+                finalAmount: subtotal + 50,
+                address: {
+                    label: locationLabel,
+                    notes: deliveryNotes,
+                    coordinates: {
+                        latitude: selectedAddressCoords[0],
+                        longitude: selectedAddressCoords[1]
+                    },
+                    geojson: {
+                        type: 'Point',
+                        coordinates: [selectedAddressCoords[1], selectedAddressCoords[0]] // [long, lat]
+                    }
+                },
+                paymentMethod: paymentMethod
+            };
+
+            console.log('[Checkout] Placing Order with data:', JSON.stringify(orderData, null, 2));
+
+            const response = await ordersAPI.createOrder(orderData);
+
+            if (response.data.success) {
+                const newOrder = response.data.data;
+                notification.success({
+                    message: 'Order Placed',
+                    description: `Order #${newOrder.orderNumber} has been successfully placed!`
+                });
+
+                // Set success state before clearing cart to avoid "Cart Empty" jump
+                setCurrentStep(4);
+                clearCart();
+
+                // We stay on step 4 to show the result. User can click "Track" from there.
+            } else {
+                notification.error({
+                    message: 'Order Failed',
+                    description: response.data.message || 'Something went wrong while placing your order.'
+                });
+            }
         } catch (error) {
             console.error('Order failed', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to connect to the server. Please try again later.';
+            notification.error({
+                message: 'Order Error',
+                description: errorMessage
+            });
+        } finally {
+            setIsPlacingOrder(false);
         }
     };
+
+    if (currentStep < 4 && (!cartItems || cartItems.length === 0)) {
+        return (
+            <div className="checkout-container">
+                <Card className="checkout-main-card" style={{ textAlign: 'center', padding: '100px 40px' }}>
+                    <Result
+                        icon={<ShoppingCartOutlined style={{ color: '#E2E8F0', fontSize: '72px' }} />}
+                        title="Your cart is empty"
+                        subTitle="You need to add medicines to your cart before you can place an order."
+                        extra={[
+                            <Button type="primary" size="large" key="shop" onClick={() => navigate('/customer/medicines')}>
+                                Browse Medicines
+                            </Button>
+                        ]}
+                    />
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="checkout-container">
@@ -395,7 +499,15 @@ const Checkout = () => {
                                     Continue
                                 </Button>
                             ) : (
-                                <Button type="primary" size="large" onClick={handlePlaceOrder} block className="place-order-btn">
+                                <Button
+                                    type="primary"
+                                    size="large"
+                                    onClick={handlePlaceOrder}
+                                    block
+                                    className="place-order-btn"
+                                    loading={isPlacingOrder}
+                                    disabled={isPlacingOrder}
+                                >
                                     Place Order
                                 </Button>
                             )}
