@@ -10,6 +10,7 @@ import {
     UserOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import { pharmacyOwnerAPI } from '../../../services/api';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -34,23 +35,31 @@ const PLAN_THEMES = {
 };
 
 const Subscription = () => {
-    const [loading, setLoading] = useState(false);
-    const [subscription, setSubscription] = useState(null);
+    const isDev = process.env.NODE_ENV === 'development';
+    const [loading, setLoading] = useState(!isDev);
+    const [subscription, setSubscription] = useState(isDev ? MOCK_SUBSCRIPTION : null);
     const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
     const { user } = useAuth();
-    const isDev = process.env.NODE_ENV === 'development';
 
     useEffect(() => {
         fetchSubscription();
     }, []);
 
     const fetchSubscription = async () => {
-        setLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            setSubscription(MOCK_SUBSCRIPTION);
+        try {
+            if (!isDev) setLoading(true);
+            const response = await pharmacyOwnerAPI.getSubscription();
+            if (response.data.success) {
+                setSubscription(response.data.data);
+            }
+        } catch (error) {
+            console.error('Fetch Subscription Error:', error);
+            if (!isDev && error.response?.status !== 401) {
+                message.error('Failed to load subscription details');
+            }
+        } finally {
             setLoading(false);
-        }, 500);
+        }
     };
 
     const handleUpgrade = () => {
