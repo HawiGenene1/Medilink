@@ -32,8 +32,8 @@ const Reports = () => {
     const isDev = process.env.NODE_ENV === 'development';
 
     useEffect(() => {
-        setLoading(true);
-        setTimeout(() => setLoading(false), 500);
+        // Immediate load for mock data
+        setLoading(false);
     }, []);
 
     const salesColumns = [

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { register, login } = require('../controllers/pharmacyOwnerController');
-const { getDashboardStats, getProfile, updateProfile, updatePassword, getSubscriptionDetails, getReports, getPharmacy, updatePharmacy } = require('../controllers/pharmacyOwnerDashboardController');
+const { getDashboardStats, getProfile, updateProfile, updatePassword, getSubscriptionDetails, getReports, getPharmacy, updatePharmacy, getAnalytics } = require('../controllers/pharmacyOwnerDashboardController');
 const { createStaff, getStaff, updateStaff, deleteStaff } = require('../controllers/pharmacyOwnerStaffController');
 const { protectPharmacyOwner } = require('../middleware/pharmacyOwnerAuthMiddleware');
 const {
@@ -26,6 +26,7 @@ router.put('/profile', validateProfileUpdate, updateProfile);
 router.put('/profile/password', updatePassword);
 router.get('/subscription', getSubscriptionDetails);
 router.get('/reports', getReports);
+router.get('/analytics', getAnalytics);
 router.get('/pharmacy', getPharmacy);
 router.put('/pharmacy', updatePharmacy);
 

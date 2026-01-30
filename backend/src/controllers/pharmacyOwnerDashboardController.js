@@ -286,6 +286,83 @@ const updatePharmacy = asyncHandler(async (req, res, next) => {
     });
 });
 
+/**
+ * @desc    Get In-depth Analytics for Pharmacy Owner
+ * @route   GET /api/pharmacy-owner/analytics
+ * @access  Private (Pharmacy Owner only)
+ */
+const getAnalytics = asyncHandler(async (req, res, next) => {
+    const pharmacyId = req.owner.pharmacyId;
+
+    if (!pharmacyId) {
+        return next(new ErrorResponse('No pharmacy associated with this owner', 400));
+    }
+
+    // 1. Aggregate Total Revenue and Total Orders
+    const salesStats = await Order.aggregate([
+        {
+            $match: {
+                pharmacy: new mongoose.Types.ObjectId(pharmacyId),
+                status: { $in: ['delivered', 'completed'] }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalRevenue: { $sum: '$finalAmount' },
+                totalOrders: { $sum: 1 }
+            }
+        }
+    ]);
+
+    // 2. Count Active Staff
+    const staffCount = await PharmacyStaff.countDocuments({
+        pharmacy: pharmacyId,
+        isActive: true
+    });
+
+    // 3. Sales Trend for last 6 months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const salesTrend = await Order.aggregate([
+        {
+            $match: {
+                pharmacy: new mongoose.Types.ObjectId(pharmacyId),
+                status: { $in: ['delivered', 'completed'] },
+                createdAt: { $gte: sixMonthsAgo }
+            }
+        },
+        {
+            $group: {
+                _id: {
+                    year: { $year: '$createdAt' },
+                    month: { $month: '$createdAt' }
+                },
+                total: { $sum: '$finalAmount' }
+            }
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Format results to be "safe" (empty arrays/zeros if no data)
+    const stats = salesStats.length > 0 ? salesStats[0] : { totalRevenue: 0, totalOrders: 0 };
+
+    res.json({
+        success: true,
+        data: {
+            summary: {
+                totalRevenue: stats.totalRevenue,
+                totalOrders: stats.totalOrders,
+                staffCount
+            },
+            trends: {
+                salesOverTime: salesTrend
+            }
+        }
+    });
+});
+
 module.exports = {
     getDashboardStats,
     getProfile,
@@ -294,5 +371,6 @@ module.exports = {
     getSubscriptionDetails,
     getReports,
     getPharmacy,
-    updatePharmacy
+    updatePharmacy,
+    getAnalytics
 };
