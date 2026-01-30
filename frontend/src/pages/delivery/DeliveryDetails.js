@@ -37,6 +37,7 @@ const DeliveryDetails = () => {
     const courierCircleRef = useRef(null);
     const pickupMarkerRef = useRef(null);
     const destMarkerRef = useRef(null);
+    const routeLineRef = useRef(null);
     const [courierPos, setCourierPos] = useState(null);
     const [courierAccuracy, setCourierAccuracy] = useState(null);
     const [destPos, setDestPos] = useState(null);
@@ -157,6 +158,21 @@ const DeliveryDetails = () => {
                 }).addTo(mapInstance.current);
             }
         }
+
+        // 5. Route Line (Pharmacy to Customer)
+        if (pickupPos && destPos) {
+            if (routeLineRef.current) {
+                routeLineRef.current.setLatLngs([pickupPos, destPos]);
+            } else {
+                routeLineRef.current = L.polyline([pickupPos, destPos], {
+                    color: 'white',
+                    weight: 4,
+                    dashArray: '10, 15',
+                    opacity: 0.6,
+                    lineJoin: 'round'
+                }).addTo(mapInstance.current);
+            }
+        }
     }, [loading, courierPos, courierAccuracy, pickupPos, destPos]);
 
     const fetchOrderDetails = async () => {
@@ -223,6 +239,27 @@ const DeliveryDetails = () => {
         }
     };
 
+    const handleOpenNavigation = () => {
+        // Determine destination based on status
+        // If not in_transit, next stop is pharmacy
+        // If in_transit, next stop is customer
+        let destination = null;
+        if (status === 'in_transit') {
+            destination = destPos;
+        } else {
+            destination = pickupPos;
+        }
+
+        if (destination) {
+            const [lat, lng] = destination;
+            // Open Google Maps directions from current position to destination
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+            window.open(url, '_blank');
+        } else {
+            message.warning('Destination coordinates not found');
+        }
+    };
+
     const getButtonText = () => {
         if (status === 'pending') return 'Start Pickup from Pharmacy';
         if (status === 'confirmed' || status === 'ready' || status === 'preparing') return 'Confirm Medicine Pickup';
@@ -262,6 +299,7 @@ const DeliveryDetails = () => {
                     type="primary"
                     icon={<SendOutlined />}
                     className="delivery-nav-btn"
+                    onClick={handleOpenNavigation}
                 />
             </div>
 
