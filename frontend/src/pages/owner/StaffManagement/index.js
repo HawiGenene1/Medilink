@@ -83,25 +83,24 @@ const StaffManagement = () => {
         const token = localStorage.getItem('token');
         const isMock = isDev && token && token.startsWith('header.');
         setIsDevMock(isMock);
-        if (!isDev) fetchStaff(isMock);
-    }, []);
+        fetchStaff();
+    }, [isDev]);
 
-    const fetchStaff = async (isMock = isDevMock) => {
+    const fetchStaff = async () => {
         try {
             setLoading(true);
-            if (isMock) {
-                // Use mock data in development
-                console.log('Using mock staff data in dev mode');
-                setStaff(MOCK_STAFF_DATA);
-            } else {
-                const response = await pharmacyOwnerAPI.getStaff();
-                if (response.data.success) {
-                    setStaff(response.data.data);
-                }
+            const response = await pharmacyOwnerAPI.getStaff();
+            if (response.data.success) {
+                setStaff(response.data.data);
             }
         } catch (error) {
             console.error('Fetch Staff Error:', error);
-            message.error('Failed to load staff list');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('API failed, falling back to mock data');
+                setStaff(MOCK_STAFF_DATA);
+            } else {
+                message.error('Failed to load staff list');
+            }
         } finally {
             setLoading(false);
         }
@@ -110,20 +109,12 @@ const StaffManagement = () => {
     const ownerPermissions = user?.permissions || [];
 
     const handleAdd = () => {
-        if (isDevMock) {
-            message.info('Staff creation is disabled in mock mode');
-            return;
-        }
         setEditingStaff(null);
         form.resetFields();
         setIsModalOpen(true);
     };
 
     const handleEdit = (record) => {
-        if (isDevMock) {
-            message.info('Staff editing is disabled in mock mode');
-            return;
-        }
         setEditingStaff(record);
         // Flatten permissions for form initial values
         const formValues = {
@@ -140,10 +131,6 @@ const StaffManagement = () => {
     };
 
     const handleDelete = async (id) => {
-        if (isDevMock) {
-            message.info('Staff deletion is disabled in mock mode');
-            return;
-        }
         try {
             const response = await pharmacyOwnerAPI.deleteStaff(id);
             if (response.data.success) {
@@ -156,6 +143,7 @@ const StaffManagement = () => {
     };
 
     const onFinish = async (values) => {
+        console.log('Submission Values:', values);
         try {
             let response;
             if (editingStaff) {
@@ -214,20 +202,17 @@ const StaffManagement = () => {
                         icon={<EditOutlined />}
                         onClick={() => handleEdit(record)}
                         type="text"
-                        disabled={isDevMock}
                     />
                     <Popconfirm
                         title="Are you sure you want to delete this staff member?"
                         onConfirm={() => handleDelete(record._id)}
                         okText="Yes"
                         cancelText="No"
-                        disabled={isDevMock}
                     >
                         <Button
                             icon={<DeleteOutlined />}
                             danger
                             type="text"
-                            disabled={isDevMock}
                         />
                     </Popconfirm>
                 </Space>
@@ -252,7 +237,6 @@ const StaffManagement = () => {
                     icon={<PlusOutlined />}
                     size="large"
                     onClick={handleAdd}
-                    disabled={isDevMock}
                 >
                     Add New Staff
                 </Button>
@@ -268,7 +252,35 @@ const StaffManagement = () => {
             </Card>
 
             <Modal
-                title={editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
+                title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '32px' }}>
+                        <span>{editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}</span>
+                        {isDev && !editingStaff && (
+                            <Button
+                                size="small"
+                                type="dashed"
+                                onClick={() => {
+                                    const mockEmail = `staff-${Math.floor(Math.random() * 1000)}@test.com`;
+                                    form.setFieldsValue({
+                                        firstName: 'Staff',
+                                        lastName: 'Member',
+                                        email: mockEmail,
+                                        phone: '+251911223344',
+                                        password: 'password123',
+                                        role: 'pharmacist',
+                                        permissions: {
+                                            inventory: { view: true, add: true, edit: true, delete: false },
+                                            orders: { view: true, process: true, cancel: false },
+                                            customers: { view: true, add: true, edit: true }
+                                        }
+                                    });
+                                }}
+                            >
+                                Dev: Auto-fill
+                            </Button>
+                        )}
+                    </div>
+                }
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 footer={null}
@@ -280,7 +292,7 @@ const StaffManagement = () => {
                     layout="vertical"
                     onFinish={onFinish}
                     initialValues={{
-                        role: 'technician',
+                        role: 'cashier',
                         isActive: true,
                         permissions: {
                             inventory: { view: true, add: false, edit: false, delete: false },
@@ -324,15 +336,13 @@ const StaffManagement = () => {
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            {!editingStaff && (
-                                <Form.Item
-                                    name="password"
-                                    label="Password"
-                                    rules={[{ required: true, message: 'Please input password' }]}
-                                >
-                                    <Input.Password placeholder="******" />
-                                </Form.Item>
-                            )}
+                            <Form.Item
+                                name="phone"
+                                label="Phone Number"
+                                rules={[{ required: true, message: 'Please input phone number' }]}
+                            >
+                                <Input placeholder="+251 911 22 33 44" />
+                            </Form.Item>
                         </Col>
                     </Row>
 
@@ -345,22 +355,30 @@ const StaffManagement = () => {
                             >
                                 <Select>
                                     <Option value="pharmacist">Pharmacist</Option>
-                                    <Option value="technician">Technician</Option>
-                                    <Option value="assistant">Assistant</Option>
-                                    <Option value="admin">System Admin</Option>
+                                    <Option value="cashier">Cashier</Option>
                                 </Select>
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item
-                                name="isActive"
-                                label="Account Status"
-                                valuePropName="checked"
-                            >
-                                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-                            </Form.Item>
+                            {!editingStaff && (
+                                <Form.Item
+                                    name="password"
+                                    label="Password"
+                                    rules={[{ required: true, message: 'Please input password' }]}
+                                >
+                                    <Input.Password placeholder="******" />
+                                </Form.Item>
+                            )}
                         </Col>
                     </Row>
+
+                    <Form.Item
+                        name="isActive"
+                        label="Account Status"
+                        valuePropName="checked"
+                    >
+                        <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
+                    </Form.Item>
 
                     <Divider orientation="left">
                         <Space>
@@ -394,7 +412,7 @@ const StaffManagement = () => {
                         {/* Order Permissions */}
                         {checkPermissionArea('orders') && (
                             <div className="permission-group">
-                                <Text strong>Order Processing</Text>
+                                <Text strong>Order Oversight & Processing</Text>
                                 <div className="permission-checks">
                                     <Form.Item name={['permissions', 'orders', 'view']} valuePropName="checked" noStyle>
                                         <Checkbox>View Orders</Checkbox>
