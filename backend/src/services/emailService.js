@@ -2,26 +2,24 @@ const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
 // Create reusable transporter object
+// Create reusable transporter object
 const transporter = nodemailer.createTransport({
     service: process.env.EMAIL_SERVICE || 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
     },
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
-    rateDelta: 1000,
-    rateLimit: 5,
+    pool: false, // Disable pooling to prevent timeouts
     // Add connection timeout and debug options
-    connectionTimeout: 60000,
-    greetingTimeout: 30000,
-    socketTimeout: 60000,
-    debug: true,
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
+    debug: false,
     logger: true
 });
 
 // Verify connection configuration
+/*
 transporter.verify(function (error, success) {
     if (error) {
         logger.error('Email server connection error:', error);
@@ -29,6 +27,7 @@ transporter.verify(function (error, success) {
         logger.info('Email server is ready to take our messages');
     }
 });
+*/
 
 /**
  * Send email with retry logic
@@ -39,11 +38,22 @@ transporter.verify(function (error, success) {
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function sendEmail(to, subject, html, retries = 3) {
+    // Handle both positional arguments and options object
+    let mailTo = to;
+    let mailSubject = subject;
+    let mailHtml = html;
+
+    if (typeof to === 'object' && to !== null) {
+        mailTo = to.to;
+        mailSubject = to.subject;
+        mailHtml = to.html || to.text;
+    }
+
     const mailOptions = {
         from: `"Medilink" <${process.env.EMAIL_USER}>`,
-        to,
-        subject,
-        html,
+        to: mailTo,
+        subject: mailSubject,
+        html: mailHtml,
     };
 
     let lastError;

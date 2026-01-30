@@ -4,37 +4,27 @@ const { authenticate, authorize } = require('../middleware/authMiddleware');
 const {
   createOrder,
   getMyOrders,
-  getOrderDetails,
+  getOrderById,
   cancelOrder,
   getOrderTracking
 } = require('../controllers/orderController');
 
-// Development bypass middleware
-const devAuth = (req, res, next) => {
-  if (process.env.NODE_ENV === 'development') {
-    req.user = {
-      userId: 'dev-user-123',
-      email: 'dev@example.com',
-      role: 'customer'
-    };
-    return next();
-  }
-  return authenticate(req, res, next);
-};
+// Basic authentication middleware
+const authenticateUser = authenticate;
 
 // Public route for creating orders
-router.post('/', devAuth, createOrder);
+router.post('/', authenticateUser, createOrder);
 
 // Protected route for customers to get their orders
-router.get('/', devAuth, getMyOrders);
+router.get('/', authenticateUser, getMyOrders);
 
 // Protected route for getting specific order
-router.get('/:id', devAuth, getOrderDetails);
+router.get('/:id', authenticateUser, getOrderById);
 
 // Protected route for canceling order
-router.patch('/:id/cancel', devAuth, cancelOrder);
+router.patch('/:id/cancel', authenticateUser, cancelOrder);
 
 // Live tracking route
-router.get('/:id/tracking', devAuth, getOrderTracking);
+router.get('/:id/tracking', authenticateUser, getOrderTracking);
 
 module.exports = router;
