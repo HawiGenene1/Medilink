@@ -306,10 +306,32 @@ const OrderTracking = () => {
                         <Divider style={{ margin: '16px 0' }} />
                         <Row gutter={12}>
                             <Col span={12}>
-                                <Button block icon={<PhoneOutlined />} type="default">Call</Button>
+                                <Button
+                                    block
+                                    icon={<PhoneOutlined />}
+                                    type="default"
+                                    onClick={() => {
+                                        if (orderData?.courier?.phone) {
+                                            window.location.href = `tel:${orderData.courier.phone}`;
+                                        }
+                                    }}
+                                >
+                                    Call
+                                </Button>
                             </Col>
                             <Col span={12}>
-                                <Button block icon={<MessageOutlined />} type="primary">Message</Button>
+                                <Button
+                                    block
+                                    icon={<MessageOutlined />}
+                                    type="primary"
+                                    onClick={() => {
+                                        if (orderData?.courier?.phone) {
+                                            window.location.href = `sms:${orderData.courier.phone}`;
+                                        }
+                                    }}
+                                >
+                                    Message
+                                </Button>
                             </Col>
                         </Row>
                     </Card>
