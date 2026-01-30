@@ -20,17 +20,22 @@ const protect = async (req, res, next) => {
 
     try {
       // Verify token
+      console.log(`[Auth] Verifying token...`);
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log(`[Auth] Token verified for userId: ${decoded.userId}`);
 
       // Find user by ID from token
       const user = await User.findById(decoded.userId).select('-password');
 
       if (!user) {
+        console.warn(`[Auth] User not found for ID: ${decoded.userId}`);
         return res.status(401).json({
           success: false,
           message: 'User not found. Token is invalid.'
         });
       }
+
+      console.log(`[Auth] Authenticated user: ${user.email} (${user.role})`);
 
       // Check if user is active
       if (!user.isActive) {

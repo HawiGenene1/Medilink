@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Row, Col, Card, Statistic, Tag, Button, Typography, Alert, List, Avatar } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Statistic, Tag, Button, Typography, Alert, List, Avatar, message } from 'antd';
 import {
   UserOutlined,
   ShopOutlined,
@@ -14,52 +13,64 @@ import {
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
+import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 
 const AdminDashboard = () => {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activePharmacies: 0,
+    ordersToday: 0,
+    revenueMonth: 0,
+    healthScore: 100
+  });
 
-  // Mock Data for Widgets
-  const stats = {
-    totalUsers: 12543,
-    activePharmacies: 142,
-    ordersToday: 345,
-    revenueMonth: 1258000, // in Birr
-    healthScore: 98
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/admin/dashboard/stats');
+      if (response.data.success) {
+        setStats(response.data.data.stats);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+      message.error('Failed to load real-time statistics');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock Data for Charts
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  // Mock Data for Charts (Keep for visual trend until analytics engine is built)
   const userGrowthData = [
-    { name: 'Jan', users: 4000 },
-    { name: 'Feb', users: 4500 },
-    { name: 'Mar', users: 5000 },
-    { name: 'Apr', users: 6200 },
-    { name: 'May', users: 7800 },
-    { name: 'Jun', users: 9000 },
-    { name: 'Jul', users: 12543 },
+    { name: 'Jan', users: 10 },
+    { name: 'Feb', users: 20 },
+    { name: 'Mar', users: 30 },
+    { name: 'Apr', users: 40 },
+    { name: 'May', users: 50 },
+    { name: 'Jun', users: 60 },
+    { name: 'Today', users: stats.totalUsers },
   ];
 
   const revenueData = [
-    { name: 'Mon', revenue: 45000 },
-    { name: 'Tue', revenue: 52000 },
-    { name: 'Wed', revenue: 49000 },
-    { name: 'Thu', revenue: 63000 },
-    { name: 'Fri', revenue: 58000 },
-    { name: 'Sat', revenue: 71000 },
-    { name: 'Sun', revenue: 65000 },
+    { name: 'Trend', revenue: stats.revenueMonth / 4 },
+    { name: 'Target', revenue: stats.revenueMonth / 2 },
+    { name: 'Month', revenue: stats.revenueMonth },
   ];
 
   const orderStatusData = [
-    { name: 'Completed', value: 2400 },
-    { name: 'Pending', value: 450 },
-    { name: 'Cancelled', value: 120 },
+    { name: 'Today', value: stats.ordersToday },
   ];
 
-  // Mock Data for Alerts
+  // Mock Data for Alerts (Static for now)
   const securityAlerts = [
-    { type: 'error', message: 'Multiple failed login attempts detected from IP 192.168.1.1', time: '10 mins ago' },
-    { type: 'warning', message: 'High latency observed in Payment Gateway Service', time: '45 mins ago' },
-    { type: 'info', message: 'New Pharmacy "Bole Meds" request awaiting approval', time: '1 hour ago' },
+    { type: 'info', message: 'System performing within normal parameters.', time: 'Just now' },
+    { type: 'info', message: 'Database backup completed successfully.', time: '1 hour ago' },
   ];
 
   return (

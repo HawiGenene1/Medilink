@@ -194,13 +194,13 @@ const medicineSchema = new Schema({
       default: 0
     }
   },
-  
+
   // Add location reference
   location: {
     type: locationSchema,
     index: '2dsphere' // For geospatial queries
   },
-  
+
   // Add text index for search
   searchText: String // Will contain searchable text
 }, {
@@ -224,9 +224,9 @@ medicineSchema.index({
 });
 
 // Pre-save hook to update searchText
-medicineSchema.pre('save', function(next) {
-  this.searchText = `${this.name} ${this.manufacturer} ${this.activeIngredients.map(i => i.name).join(' ')}`;
-  next();
+medicineSchema.pre('save', function () {
+  const ingredients = (this.activeIngredients || []).map(i => i.name).join(' ');
+  this.searchText = `${this.name || ''} ${this.manufacturer || ''} ${this.brand || ''} ${ingredients}`.trim();
 });
 
 module.exports = mongoose.model('Medicine', medicineSchema);

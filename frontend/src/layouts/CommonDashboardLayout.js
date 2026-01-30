@@ -16,6 +16,23 @@ import './CommonDashboardLayout.css';
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
+const SidebarContent = ({ collapsed, navigate, location, menuItems, handleMenuClick }) => (
+    <div className="sidebar-container">
+        <div className="sidebar-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+            <div className="logo-icon-box">ML</div>
+            {!collapsed && <span className="logo-text">MediLink</span>}
+        </div>
+        <Menu
+            theme="light"
+            mode="inline"
+            selectedKeys={[location.pathname]}
+            onClick={handleMenuClick}
+            items={menuItems}
+            className="sidebar-menu"
+        />
+    </div>
+);
+
 const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
     const [collapsed, setCollapsed] = useState(false);
     const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -64,23 +81,6 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
         }
     ];
 
-    const SidebarContent = () => (
-        <div className="sidebar-container">
-            <div className="sidebar-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-                <div className="logo-icon-box">ML</div>
-                {!collapsed && <span className="logo-text">MediLink</span>}
-            </div>
-            <Menu
-                theme="light"
-                mode="inline"
-                selectedKeys={[location.pathname]}
-                onClick={handleMenuClick}
-                items={menuItems}
-                className="sidebar-menu"
-            />
-        </div>
-    );
-
     return (
         <Layout className="dashboard-layout">
             {/* Desktop Sidebar */}
@@ -92,7 +92,13 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                 width={260}
                 theme="light"
             >
-                <SidebarContent />
+                <SidebarContent
+                    collapsed={collapsed}
+                    navigate={navigate}
+                    location={location}
+                    menuItems={menuItems}
+                    handleMenuClick={handleMenuClick}
+                />
             </Sider>
 
             {/* Mobile Drawer Sidebar */}
@@ -105,7 +111,13 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                 closable={false}
             >
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <SidebarContent />
+                    <SidebarContent
+                        collapsed={collapsed}
+                        navigate={navigate}
+                        location={location}
+                        menuItems={menuItems}
+                        handleMenuClick={handleMenuClick}
+                    />
                 </div>
             </Drawer>
 

@@ -9,6 +9,7 @@ const { Option } = Select;
 
 const DeliveryRegister = () => {
     const [loading, setLoading] = useState(false);
+    const [vehicleType, setVehicleType] = useState(null);
     const { register } = useAuth();
     const navigate = useNavigate();
 
@@ -36,8 +37,8 @@ const DeliveryRegister = () => {
             const result = await register(userData);
 
             if (result.success) {
-                message.success('Account created! Let\'s complete your delivery profile.');
-                navigate('/auth/delivery/onboarding');
+                message.success('Registration successful! Please check your email for your password.');
+                navigate('/auth/login');
             } else {
                 if (result.errors && Array.isArray(result.errors)) {
                     result.errors.forEach(err => {
@@ -115,29 +116,7 @@ const DeliveryRegister = () => {
 
                     <div className="form-section-title" style={{ marginTop: '24px' }}>Vehicle Information</div>
                     <Row gutter={16}>
-                        <Col xs={24} md={12}>
-                            <Form.Item
-                                label="Vehicle Type"
-                                name="vehicleType"
-                                rules={[{ required: true, message: 'Please select vehicle type!' }]}
-                            >
-                                <Select placeholder="Select vehicle" size="large">
-                                    <Option value="motorcycle">Motorcycle</Option>
-                                    <Option value="car">Car</Option>
-                                    <Option value="bicycle">Bicycle</Option>
-                                    <Option value="scooter">Scooter</Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} md={12}>
-                            <Form.Item
-                                label="License Plate"
-                                name="licensePlate"
-                                rules={[{ required: true, message: 'Please input license plate!' }]}
-                            >
-                                <Input prefix={<IdcardOutlined />} placeholder="License Plate Number" size="large" />
-                            </Form.Item>
-                        </Col>
+
                     </Row>
 
                     <Form.Item style={{ marginTop: '12px' }}>

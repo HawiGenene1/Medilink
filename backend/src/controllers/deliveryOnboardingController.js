@@ -39,6 +39,7 @@ const saveOnboardingStep = async (req, res) => {
     try {
         const { step } = req.body;
         const userId = req.user.userId || req.user.id;
+        console.log(`[Onboarding] Saving step ${step} for user ${userId}`);
 
         let profile = await DeliveryProfile.findOne({ userId });
         if (!profile) {
@@ -102,25 +103,17 @@ const saveOnboardingStep = async (req, res) => {
                 }
                 break;
 
-            case 7: // Orientation
-                profile.training = {
-                    completed: stepData.completed,
-                    completedAt: stepData.completed ? new Date() : undefined
-                };
-                break;
-
-            case 8: // Inspection
+            case 7: // Inspection & Submission
                 if (req.files && req.files.inspectionPhotos) {
                     profile.inspection.inspectionPhotos = req.files.inspectionPhotos.map(f => f.path);
                     profile.inspection.status = 'pending';
                 }
-                break;
 
-            case 9: // Submission
+                // Mark as submitted
                 profile.onboardingStatus = 'pending_review';
                 profile.submittedAt = new Date();
 
-                // Update User status if needed
+                // Ensure user status is pending
                 await User.findByIdAndUpdate(userId, { status: 'pending' });
                 break;
 
@@ -129,7 +122,8 @@ const saveOnboardingStep = async (req, res) => {
         }
 
         // Update current step if the submitted step is greater or equal
-        if (parseInt(step) >= profile.currentStep && parseInt(step) < 9) {
+        // Max step is now 7 (Inspection), leading to Review (8 in DB, index 7 in FE)
+        if (parseInt(step) >= profile.currentStep && parseInt(step) < 8) {
             profile.currentStep = parseInt(step) + 1;
         }
 

@@ -20,6 +20,16 @@ const Login = () => {
 
         // Redirect based on user role
         const role = result.user.role;
+        const status = result.user.status;
+
+        console.log('[Login Debug] Role:', role, 'Status:', status);
+
+        // Pending delivery users explicitly goto onboarding
+        if (role === 'delivery' && status === 'pending') {
+          navigate('/auth/delivery/onboarding');
+          return;
+        }
+
         switch (role) {
           case 'customer':
             navigate('/customer/home');
@@ -34,7 +44,8 @@ const Login = () => {
             navigate('/cashier/dashboard');
             break;
           case 'delivery':
-            navigate('/auth/delivery/onboarding');
+            // Active delivery users go to dashboard
+            navigate('/delivery/dashboard');
             break;
           case 'admin':
             navigate('/admin/dashboard');

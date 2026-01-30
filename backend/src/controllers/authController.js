@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const PendingPharmacy = require('../models/PendingPharmacy');
-const PendingDeliveryPerson = require('../models/PendingDeliveryPerson');
+const DeliveryProfile = require('../models/DeliveryProfile');
 const { generateToken } = require('../config/jwt');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
@@ -90,7 +90,7 @@ const register = async (req, res) => {
       username,
       phone,
       role: userRole,
-      status: userRole === 'customer' ? 'active' : 'pending',
+      status: userRole === 'customer' ? 'active' : 'pending', // Delivery/Pharmacy MUST be pending
       isEmailVerified: userRole === 'customer',
       password,
       verificationToken,
@@ -119,20 +119,21 @@ const register = async (req, res) => {
         status: 'pending'
       });
       await pendingPharmacy.save();
-    } else if (userRole === 'delivery' && additionalData) {
-      const pendingDelivery = new PendingDeliveryPerson({
+    } else if (userRole === 'delivery') {
+      const deliveryProfile = new DeliveryProfile({
         userId: user._id,
-        personalInfo: {
+        personalDetails: {
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
-          phone: user.phone,
-          address: additionalData.address
+          phone: user.phone
         },
-        vehicleInfo: additionalData.vehicleInfo || vehicleInfo,
-        status: 'pending'
+        vehicleDetails: {
+          type: vehicleInfo?.type || (additionalData && additionalData.vehicleInfo?.type),
+          licensePlate: vehicleInfo?.licensePlate || (additionalData && additionalData.vehicleInfo?.licensePlate)
+        }
       });
-      await pendingDelivery.save();
+      await deliveryProfile.save();
     }
 
     // Non-blocking welcome email delivery with verification token
@@ -152,6 +153,7 @@ const register = async (req, res) => {
       }
     };
 
+    // Generate token for customer only (others must verify email/login manually)
     if (userRole === 'customer') {
       const token = generateToken({
         userId: user._id,
@@ -166,7 +168,7 @@ const register = async (req, res) => {
       message: userRole === 'customer'
         ? 'User registered successfully. Please check your email for your generated password.'
         : 'Registration submitted successfully. Your account is pending admin approval.',
-      data: resultData
+      ...resultData
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -306,9 +308,27 @@ const verifyEmail = async (req, res) => {
       verificationTokenExpires: { $gt: now }
     });
 
+    // Check if the token belongs to an already verified user (idempotency)
+    const verifiedUser = await User.findOne({ verificationToken: token });
+    if (verifiedUser && verifiedUser.isEmailVerified) {
+      return res.json({
+        success: true,
+        message: 'Account is already verified. You can log in.',
+      });
+    }
+
     if (!user) {
       console.warn(`Verification failed for token: ${token}`);
       const expiredUser = await User.findOne({ verificationToken: token });
+
+      // Check if user is already verified but token was not cleared (unlikely but safe)
+      if (expiredUser && expiredUser.isEmailVerified) {
+        return res.json({
+          success: true,
+          message: 'Account is already verified. You can log in.',
+        });
+      }
+
       if (expiredUser) {
         return res.status(400).json({
           success: false,
@@ -322,7 +342,12 @@ const verifyEmail = async (req, res) => {
     }
 
     user.isEmailVerified = true;
-    user.status = 'active';
+
+    // Only auto-activate customers. Delivery/Pharmacy must complete onboarding/approval.
+    if (user.role === 'customer') {
+      user.status = 'active';
+    }
+
     user.verificationToken = undefined;
     user.verificationTokenExpires = undefined;
     await user.save();

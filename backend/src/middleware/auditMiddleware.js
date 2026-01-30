@@ -12,18 +12,23 @@ const logAdminAction = (action, resourceType) => {
             // Only log successful actions that modify state
             if (res.statusCode >= 200 && res.statusCode < 300) {
                 const logEntry = new AuditLog({
-                    actor: req.user ? req.user._id : null,
+                    user: req.user ? req.user.userId : null,
+                    userEmail: req.user ? req.user.email : 'system',
+                    userRole: req.user ? req.user.role : 'system',
                     action: action,
-                    resourceType: resourceType,
-                    resourceId: req.params.id || null,
+                    entityType: resourceType,
+                    entityId: req.params.id || null,
+                    description: `${action} performed on ${resourceType}: ${req.params.id || 'N/A'}`,
                     ipAddress: req.ip,
                     userAgent: req.get('User-Agent'),
                     details: {
                         method: req.method,
                         url: req.originalUrl,
                         status: res.statusCode,
-                        // Avoid logging sensitive data or large bodies
-                        body: req.method !== 'GET' ? JSON.parse(JSON.stringify(req.body)) : undefined
+                        body: req.method !== 'GET' ? (() => {
+                            try { return JSON.parse(JSON.stringify(req.body)); }
+                            catch (e) { return { error: 'Parse failed' }; }
+                        })() : undefined
                     }
                 });
 

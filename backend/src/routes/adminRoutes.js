@@ -10,7 +10,8 @@ const {
   approveRegistration,
   rejectRegistration,
   bulkExportData,
-  createDeliveryPerson
+  createDeliveryPerson,
+  getDashboardStats
 } = require('../controllers/adminController');
 const { logAdminAction } = require('../middleware/auditMiddleware');
 
@@ -26,6 +27,9 @@ router.get('/check', (req, res) => {
     }
   });
 });
+
+// Dashboard Stats
+router.get('/dashboard/stats', getDashboardStats);
 
 // User Management
 router.get('/users', getAllUsers);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, Button, Tag, Space, Tabs, InputNumber, Divider, Alert, Avatar, Spin, Empty } from 'antd';
+import { Row, Col, Card, Typography, Button, Tag, Space, Tabs, InputNumber, Divider, Alert, Avatar, Spin, Empty, notification } from 'antd';
 import api from '../../../services/api';
 import {
     ShoppingCartOutlined,
@@ -38,7 +38,7 @@ const MedicineDetail = () => {
             setLoading(true);
             try {
                 const response = await api.get(`/medicines/${id}`);
-                setMedicine(response.data);
+                setMedicine(response.data.data);
             } catch (err) {
                 console.error('Error fetching medicine details:', err);
                 setError('Failed to load medicine details.');
@@ -49,24 +49,24 @@ const MedicineDetail = () => {
         fetchMedicine();
     }, [id]);
 
+    if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>;
+    if (error) return <Alert message="Error" description={error} type="error" showIcon style={{ margin: '24px' }} />;
+    if (!medicine) return <Empty description="Medicine not found" style={{ margin: '48px' }} />;
+
     const PharmaciesList = () => (
         <div className="pharmacies-tab-list">
-            {[
-                { name: 'Kenema Pharmacy', distance: '0.5 km', price: '120 ETB', rating: 4.8, available: true },
-                { name: 'Abyssinia Pharmacy', distance: '1.2 km', price: '125 ETB', rating: 4.5, available: true },
-                { name: 'Red Cross Pharmacy', distance: '2.5 km', price: '118 ETB', rating: 4.9, available: false },
-            ].map((ph, idx) => (
-                <div key={idx} className="pharmacy-row">
+            {medicine.pharmacy ? (
+                <div className="pharmacy-row">
                     <Row justify="space-between" align="middle" gutter={16}>
                         <Col flex="auto">
                             <Space size="middle">
                                 <Avatar shape="square" icon={<ShopOutlined />} style={{ color: '#1E88E5', background: '#E3F2FD' }} />
                                 <div>
-                                    <Text strong>{ph.name}</Text>
+                                    <Text strong>{medicine.pharmacy.name}</Text>
                                     <div style={{ fontSize: '12px', color: '#6B7280' }}>
                                         <Space split={<span>•</span>}>
-                                            <span>⭐ {ph.rating}</span>
-                                            <span>{ph.distance} away</span>
+                                            <span>⭐ {medicine.pharmacy.rating || 4.5}</span>
+                                            <span>{medicine.pharmacy.address?.city || 'Addis Ababa'}</span>
                                         </Space>
                                     </div>
                                 </div>
@@ -74,15 +74,17 @@ const MedicineDetail = () => {
                         </Col>
                         <Col style={{ textAlign: 'right' }}>
                             <div style={{ marginBottom: '8px' }}>
-                                <Text strong style={{ color: '#1E88E5', fontSize: '16px' }}>{ph.price}</Text>
+                                <Text strong style={{ color: '#1E88E5', fontSize: '16px' }}>{medicine.price.toFixed(2)} ETB</Text>
                             </div>
-                            <Button size="small" type={ph.available ? "primary" : "default"} disabled={!ph.available}>
-                                {ph.available ? 'Select' : 'Out of Stock'}
+                            <Button size="small" type={medicine.quantity > 0 ? "primary" : "default"} disabled={medicine.quantity <= 0}>
+                                {medicine.quantity > 0 ? 'Select' : 'Out of Stock'}
                             </Button>
                         </Col>
                     </Row>
                 </div>
-            ))}
+            ) : (
+                <Empty description="No pharmacy information available" />
+            )}
         </div>
     );
 
@@ -92,10 +94,10 @@ const MedicineDetail = () => {
             label: 'Overview',
             children: (
                 <div className="detail-tab-pane">
-                    <Title level={5}>Clinical Indication</Title>
-                    <Paragraph type="secondary">{medicine.usage}</Paragraph>
+                    <Title level={5}>Description</Title>
+                    <Paragraph type="secondary">{medicine.description}</Paragraph>
                     <Title level={5}>Category</Title>
-                    <Tag>{medicine.category}</Tag>
+                    <Tag>{medicine.category?.name || medicine.category || 'General'}</Tag>
                 </div>
             ),
         },
@@ -105,10 +107,10 @@ const MedicineDetail = () => {
             children: (
                 <div className="detail-tab-pane">
                     <Title level={5}>Instructions</Title>
-                    <Paragraph type="secondary">{medicine.dosage}</Paragraph>
+                    <Paragraph type="secondary">{medicine.usageInstructions || medicine.dosage}</Paragraph>
                     <Space size="large" style={{ marginTop: '16px' }}>
-                        <div><Text type="secondary">Storage:</Text><br /><Text strong>{medicine.storage}</Text></div>
-                        <div><Text type="secondary">Expiry:</Text><br /><Text strong>{medicine.expiry}</Text></div>
+                        <div><Text type="secondary">Storage:</Text><br /><Text strong>{medicine.storageConditions?.temperature || medicine.storage}</Text></div>
+                        <div><Text type="secondary">Expiry:</Text><br /><Text strong>{medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : medicine.expiry}</Text></div>
                     </Space>
                 </div>
             ),
@@ -137,10 +139,6 @@ const MedicineDetail = () => {
             children: <PharmaciesList />,
         },
     ];
-
-    if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>;
-    if (error) return <Alert message="Error" description={error} type="error" showIcon style={{ margin: '24px' }} />;
-    if (!medicine) return <Empty description="Medicine not found" style={{ margin: '48px' }} />;
 
     return (
         <div className="medicine-detail-container fade-in">
@@ -213,7 +211,7 @@ const MedicineDetail = () => {
                             <Text type="secondary">Price per unit</Text>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                                 <Title level={2} style={{ margin: 0, color: '#1E88E5' }}>
-                                    {(medicine.price?.basePrice || 0).toFixed(2)}
+                                    {(medicine.price || 0).toFixed(2)}
                                 </Title>
                                 <Text type="secondary">ETB</Text>
                             </div>
@@ -225,7 +223,7 @@ const MedicineDetail = () => {
                             <Text strong>Quantity</Text>
                             <InputNumber
                                 min={1}
-                                max={medicine.stockQuantity || 10}
+                                max={medicine.quantity || 1}
                                 value={quantity}
                                 onChange={setQuantity}
                                 className="clinical-input-number"
@@ -235,7 +233,7 @@ const MedicineDetail = () => {
                         <div className="total-preview-row">
                             <Text>Order Total:</Text>
                             <Text strong style={{ fontSize: '18px' }}>
-                                {((medicine.price?.basePrice || 0) * quantity).toFixed(2)} ETB
+                                {((medicine.price || 0) * quantity).toFixed(2)} ETB
                             </Text>
                         </div>
 
@@ -265,8 +263,8 @@ const MedicineDetail = () => {
                                 className="add-to-cart-btn"
                                 disabled={medicine.requiresPrescription && !rxUploaded}
                                 onClick={() => {
-                                    addToCart({ ...medicine, id }, quantity);
-                                    navigate('/customer/checkout');
+                                    addToCart({ ...medicine, id: medicine._id, priceValue: medicine.price, pharmacyId: medicine.pharmacy?._id }, quantity, medicine.pharmacy?.name || 'Pharmacy');
+                                    notification.success({ message: 'Added to cart' });
                                 }}
                             >
                                 {medicine.requiresPrescription && !rxUploaded ? 'Upload Rx First' : 'Add to Cart'}
@@ -279,7 +277,7 @@ const MedicineDetail = () => {
                                 icon={<ArrowRightOutlined />}
                                 disabled={medicine.requiresPrescription && !rxUploaded}
                                 onClick={() => {
-                                    addToCart({ ...medicine, id }, quantity);
+                                    addToCart({ ...medicine, id: medicine._id, priceValue: medicine.price, pharmacyId: medicine.pharmacy?._id }, quantity, medicine.pharmacy?.name || 'Pharmacy');
                                     navigate('/customer/checkout');
                                 }}
                             >

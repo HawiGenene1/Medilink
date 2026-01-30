@@ -1,25 +1,35 @@
 const express = require('express');
 const router = express.Router();
+const { protect, authorize } = require('../middleware/authMiddleware');
 const {
-    registerDeliveryPerson,
-    getAllApplications,
-    getApplicationDetails,
-    approveApplication,
-    rejectApplication
+    findNearbyDrivers,
+    requestDelivery,
+    acceptOrder,
+    updateDriverStatus,
+    startDelivery,
+    completeDelivery,
+    getActiveDeliveries,
+    getDeliveryHistory,
+    getEarningsStats,
+    getAvailableRequests
 } = require('../controllers/deliveryController');
-const { protect, authorize } = require('../middleware/authMiddleware'); // Assuming these exist
-// Note: You might need to check if authMiddleware path is correct. Usually it is in ../middleware/authMiddleware.js
 
-// Public routes
-router.post('/register', registerDeliveryPerson);
-
-// Admin routes
+// All routes here should be protected
 router.use(protect);
-router.use(authorize('admin'));
 
-router.get('/admin/applications', getAllApplications);
-router.get('/admin/applications/:id', getApplicationDetails);
-router.post('/admin/applications/:id/approve', approveApplication);
-router.post('/admin/applications/:id/reject', rejectApplication);
+router.get('/nearby', findNearbyDrivers);
+router.post('/request', requestDelivery);
+router.get('/requests/available', authorize('delivery'), getAvailableRequests);
+router.put('/accept', authorize('delivery'), acceptOrder);
+router.put('/status', authorize('delivery'), updateDriverStatus);
+
+// Status Actions
+router.put('/pickup', authorize('delivery'), startDelivery);
+router.put('/complete', authorize('delivery'), completeDelivery);
+
+// Metrics & Dashboard
+router.get('/active', authorize('delivery'), getActiveDeliveries);
+router.get('/history', authorize('delivery'), getDeliveryHistory);
+router.get('/earnings', authorize('delivery'), getEarningsStats);
 
 module.exports = router;

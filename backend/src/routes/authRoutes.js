@@ -46,10 +46,10 @@ router.post(
   login
 );
 
-// @desc    Get current admin
+// @desc    Get current user profile
 // @route   GET /api/auth/me
 // @access  Private
-router.get('/me', protect, authorize('admin'), getCurrentUser);
+router.get('/me', protect, getCurrentUser);
 
 // Password reset routes
 router.post('/request-password-reset', requestPasswordReset);

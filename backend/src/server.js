@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -14,6 +13,13 @@ connectDB();
 // Middleware
 app.use(cors()); // Allow all CORS for now, restrict later
 app.use(express.json()); // parse JSON requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] Incoming Request: ${req.method} ${req.url}`);
+  if (req.method === 'POST') {
+    console.log('Request Body:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use("/api/test", require("./routes/testRoutes"));
@@ -36,13 +42,15 @@ try {
 
 app.use('/api/admin', protectAdmin, adminRoutes);
 app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
+app.use('/api/delivery/onboarding', require('./routes/deliveryOnboardingRoutes'));
 app.use('/api/delivery', require('./routes/deliveryRoutes'));
+app.use('/api/orders', require('./routes/orderRoutes'));
 
 // Test route
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Medilink Admin Backend is running!',
+    message: 'Medilink Admin Backend is running! (V1.0.1)',
     version: '1.0.0'
   });
 });
@@ -66,8 +74,14 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
+const http = require('http');
+const { init } = require('./socket');
+
+const server = http.createServer(app);
+init(server);
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

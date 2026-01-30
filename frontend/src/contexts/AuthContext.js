@@ -64,6 +64,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/register', userData);
       const { token, user } = response.data;
       localStorage.setItem('token', token);
+      console.log(`[AuthContext] Token stored: ${token ? 'YES' : 'NO'} (length: ${token?.length})`);
       setUser(user);
       setIsAuthenticated(true);
       return { success: true, user };

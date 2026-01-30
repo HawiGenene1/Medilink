@@ -1,6 +1,3 @@
-const express = require('express');
-const router = express.Router();
-const medicineController = require('../controllers/medicineController');
 const { createClient } = require('redis');
 const { promisify } = require('util');
 const mongoose = require('mongoose');
@@ -58,7 +55,7 @@ if (!redisClient) {
   redisClient = {
     get: () => Promise.resolve(null),
     set: () => Promise.resolve('OK'),
-    on: () => {},
+    on: () => { },
     connect: () => Promise.resolve(),
     isReady: false
   };
@@ -119,16 +116,16 @@ const buildSearchQuery = (searchTerm) => {
 
   // For very short terms (1-2 characters), use prefix search
   if (searchTerms.some(term => term.length <= 2)) {
-    const termRegex = searchTerms.map(term => 
+    const termRegex = searchTerms.map(term =>
       new RegExp(term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i')
     );
-    
+
     return {
       $or: [
-        { name: { $in: termRegex }},
-        { 'activeIngredients.name': { $in: termRegex }},
-        { manufacturer: { $in: termRegex }},
-        { searchText: { $in: termRegex }}
+        { name: { $in: termRegex } },
+        { 'activeIngredients.name': { $in: termRegex } },
+        { manufacturer: { $in: termRegex } },
+        { searchText: { $in: termRegex } }
       ]
     };
   }
@@ -137,17 +134,17 @@ const buildSearchQuery = (searchTerm) => {
   if (searchTerms.some(term => term.length <= 4)) {
     return {
       $or: [
-        { name: { $regex: searchTerms.join('|'), $options: 'i' }},
-        { 'activeIngredients.name': { $in: searchTerms.map(term => new RegExp(term, 'i')) }},
-        { manufacturer: { $in: searchTerms.map(term => new RegExp(term, 'i')) }},
-        { searchText: { $regex: searchTerms.join('|'), $options: 'i' }}
+        { name: { $regex: searchTerms.join('|'), $options: 'i' } },
+        { 'activeIngredients.name': { $in: searchTerms.map(term => new RegExp(term, 'i')) } },
+        { manufacturer: { $in: searchTerms.map(term => new RegExp(term, 'i')) } },
+        { searchText: { $regex: searchTerms.join('|'), $options: 'i' } }
       ]
     };
   }
 
   // For longer terms, use text search with better relevance
   return {
-    $text: { 
+    $text: {
       $search: searchTerms.map(term => `"${term}"`).join(' '),
       $caseSensitive: false,
       $diacriticSensitive: false,
@@ -169,7 +166,7 @@ const buildFilterQuery = (filters = {}) => {
     brand,
     location,
     radius = 10000, // Default 10km radius in meters
-    pharmacyId
+    pharmacy // Changed from pharmacyId to match common query param
   } = filters;
 
   const query = {};
@@ -196,7 +193,7 @@ const buildFilterQuery = (filters = {}) => {
 
   // In-stock filter
   if (inStock === 'true' || inStock === true) {
-    query.stock = { $gt: 0 };
+    query.quantity = { $gt: 0 };
   }
 
   // Prescription filter
@@ -221,7 +218,7 @@ const buildFilterQuery = (filters = {}) => {
   if (brand) {
     const brandList = Array.isArray(brand) ? brand : [brand];
     if (brandList.length > 0) {
-      query.manufacturer = { 
+      query.manufacturer = {
         $in: brandList.map(b => new RegExp(b, 'i'))
       };
     }
@@ -244,8 +241,12 @@ const buildFilterQuery = (filters = {}) => {
   }
 
   // Filter by pharmacy
-  if (pharmacyId) {
-    query.pharmacyId = mongoose.Types.ObjectId(pharmacyId);
+  if (pharmacy) {
+    try {
+      query.pharmacy = new mongoose.Types.ObjectId(pharmacy);
+    } catch (e) {
+      // If not a valid ObjectId, ignore or handle accordingly
+    }
   }
 
   return query;
@@ -275,14 +276,14 @@ const buildSortOptions = (sort, hasSearch = false) => {
 // Get medicines with enhanced search, filtering, and pagination
 const getMedicines = async (req, res) => {
   const startTime = Date.now();
-  
+
   try {
     // Parse and validate query parameters
-    const { 
-      search, 
+    const {
+      search,
       categories,
-      minPrice, 
-      maxPrice, 
+      minPrice,
+      maxPrice,
       inStock,
       requiresPrescription,
       minRating,
@@ -299,7 +300,7 @@ const getMedicines = async (req, res) => {
 
     // Build search query
     const searchQuery = buildSearchQuery(search);
-    
+
     // Build filter query
     const filterQuery = buildFilterQuery({
       categories,
@@ -314,17 +315,21 @@ const getMedicines = async (req, res) => {
       radius,
       pharmacyId: req.query.pharmacyId
     });
-    
+
     // Combine queries
-    const query = { 
-      ...searchQuery, 
+    const query = {
+      ...searchQuery,
       ...filterQuery,
-      deletedAt: { $exists: false }
+      isActive: { $ne: false } // Only show active medicines
     };
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Medicine Search Query:', JSON.stringify(query, null, 2));
+    }
 
     // Build sort options
     const sortOptions = buildSortOptions(sort, !!search);
-    
+
     // Handle cursor-based pagination
     if (cursor) {
       return handleCursorPagination(req, res, query, sortOptions, cursor, prevCursor);
@@ -334,8 +339,8 @@ const getMedicines = async (req, res) => {
     return handleOffsetPagination(req, res, query, sortOptions, pageParam, limitParam, startTime);
   } catch (error) {
     console.error('getMedicines error:', error);
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: 'Server error fetching medicines',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -368,9 +373,9 @@ const handleCursorPagination = async (req, res, query, sortOptions, cursor, prev
   }
 
   // Generate next and previous cursors
-  const nextCursor = items.length > 0 ? 
+  const nextCursor = items.length > 0 ?
     Buffer.from(JSON.stringify(items[items.length - 1]._id)).toString('base64') : null;
-  const prevCursorValue = items.length > 0 ? 
+  const prevCursorValue = items.length > 0 ?
     Buffer.from(JSON.stringify(items[0]._id)).toString('base64') : null;
 
   return res.json({
@@ -390,24 +395,27 @@ const handleOffsetPagination = async (req, res, query, sortOptions, pageParam, l
   const page = Math.max(1, parseInt(pageParam) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(limitParam) || 20));
   const skip = (page - 1) * limit;
-  
+
   // Optimized projection
   const projection = {
     name: 1,
     price: 1,
-    stock: 1,
+    quantity: 1,
     category: 1,
     requiresPrescription: 1,
     rating: 1,
     manufacturer: 1,
+    images: 1,
     imageUrl: 1,
     type: 1,
+    pharmacy: 1,
     ...(req.query.search && { score: { $meta: 'textScore' } })
   };
 
   // Execute queries in parallel
   const [items, total] = await Promise.all([
     Medicine.find(query, projection)
+      .populate('pharmacy', 'name location address phone')
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
@@ -415,17 +423,17 @@ const handleOffsetPagination = async (req, res, query, sortOptions, pageParam, l
       .maxTimeMS(5000), // 5 second timeout
     Medicine.countDocuments(query)
   ]);
-  
+
   // Calculate execution time
   const executionTime = Date.now() - startTime;
-  
+
   // Set cache and performance headers
   res.set({
     'Cache-Control': 'public, max-age=300',
     'X-Query-Time': `${executionTime}ms`,
     'X-Total-Count': total
   });
-  
+
   return res.json({
     success: true,
     data: items,
@@ -447,7 +455,7 @@ const handleOffsetPagination = async (req, res, query, sortOptions, pageParam, l
 const getFilterOptions = async (req, res) => {
   try {
     const cacheKey = 'medicine:filters';
-    
+
     try {
       const cachedData = await redisClient.get(cacheKey);
       if (cachedData) {
@@ -459,7 +467,7 @@ const getFilterOptions = async (req, res) => {
 
     // Get all distinct categories
     const categories = await Medicine.distinct('category');
-    
+
     // Get price range
     const priceRange = await Medicine.aggregate([
       {
@@ -473,10 +481,10 @@ const getFilterOptions = async (req, res) => {
 
     // Get all distinct manufacturers
     const manufacturers = await Medicine.distinct('manufacturer');
-    
+
     // Get all distinct types
     const types = await Medicine.distinct('type');
-    
+
     const result = {
       success: true,
       data: {
@@ -497,16 +505,50 @@ const getFilterOptions = async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('getFilterOptions error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Error fetching filter options',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
 
+// Get single medicine by ID
+const getMedicineById = async (req, res) => {
+  try {
+    const medicine = await Medicine.findById(req.params.id)
+      .populate('category', 'name')
+      .populate('pharmacy', 'name address phone location');
+
+    if (!medicine) {
+      return res.status(404).json({
+        success: false,
+        message: 'Medicine not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: medicine
+    });
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(404).json({
+        success: false,
+        message: 'Medicine not found'
+      });
+    }
+    console.error('getMedicineById error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
 module.exports = {
   getMedicines,
+  getMedicineById,
   getFilterOptions,
   cacheMiddleware
 };

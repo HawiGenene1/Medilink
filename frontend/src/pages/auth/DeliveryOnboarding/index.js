@@ -37,7 +37,6 @@ const DeliveryOnboarding = () => {
         { title: 'Documents', icon: <FileTextOutlined /> },
         { title: 'Background', icon: <SafetyOutlined /> },
         { title: 'Payment', icon: <BankOutlined /> },
-        { title: 'Orientation', icon: <BookOutlined /> },
         { title: 'Inspection', icon: <CameraOutlined /> },
         { title: 'Review', icon: <CheckCircleOutlined /> },
     ];
@@ -193,37 +192,60 @@ const DeliveryOnboarding = () => {
                     <Form layout="vertical" onFinish={next}>
                         <Title level={4}>Vehicle Details</Title>
                         <Form.Item label="Delivery Mode" name="type" rules={[{ required: true }]}>
-                            <Select size="large" placeholder="Select your vehicle type">
+                            <Select size="large" placeholder="Select your vehicle type" onChange={(val) => {
+                                // Force re-render to update conditional fields if needed
+                                form.setFieldsValue({ type: val });
+                                // We might need component state to trigger re-render if form instance doesn't automatically
+                                // But AntD form usually handles dependencies or we use shouldUpdate
+                                // For simplicity, let's just rely on re-render. 
+                                // Actually, better to use Form.useWatch or setState.
+                                // Let's use setState for simplicity in this specific file context
+                                setProfile(prev => ({ ...prev, vehicleDetails: { ...prev?.vehicleDetails, type: val } })); // Pseudo-update to trigger render
+                            }}>
                                 <Option value="car">🚗 Car</Option>
                                 <Option value="motorcycle">🛵 Motorcycle / Scooter</Option>
                                 <Option value="bicycle">🚴 Bicycle</Option>
                                 <Option value="van">🛻 Van</Option>
                             </Select>
                         </Form.Item>
-                        <Row gutter={16}>
-                            <Col xs={24} md={12}>
-                                <Form.Item label="Make" name="make" rules={[{ required: true }]}>
-                                    <Input placeholder="e.g. Toyota, Honda" size="large" />
-                                </Form.Item>
-                            </Col>
-                            <Col xs={24} md={12}>
-                                <Form.Item label="Model" name="model" rules={[{ required: true }]}>
-                                    <Input placeholder="e.g. Corolla, Click" size="large" />
-                                </Form.Item>
-                            </Col>
-                        </Row>
-                        <Row gutter={16}>
-                            <Col xs={24} md={12}>
-                                <Form.Item label="License Plate" name="licensePlate" rules={[{ required: true }]}>
-                                    <Input placeholder="AA-12345" size="large" />
-                                </Form.Item>
-                            </Col>
-                            <Col xs={24} md={12}>
-                                <Form.Item label="Color" name="color">
-                                    <Input placeholder="e.g. White, Black" size="large" />
-                                </Form.Item>
-                            </Col>
-                        </Row>
+
+                        {/* Conditional Rendering based on vehicle type stored in profile or form */}
+                        {/* We'll use a functional check or useWatch if available. Here we verify state driven approach */}
+                        {/* Let's grab the value directly from form if profile state lags or initial */}
+                        {(() => {
+                            const vType = form.getFieldValue('type') || profile?.vehicleDetails?.type;
+                            if (vType === 'bicycle') return null;
+
+                            return (
+                                <>
+                                    <Row gutter={16}>
+                                        <Col xs={24} md={12}>
+                                            <Form.Item label="Make" name="make" rules={[{ required: true }]}>
+                                                <Input placeholder="e.g. Toyota, Honda" size="large" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col xs={24} md={12}>
+                                            <Form.Item label="Model" name="model" rules={[{ required: true }]}>
+                                                <Input placeholder="e.g. Corolla, Click" size="large" />
+                                            </Form.Item>
+                                        </Col>
+                                    </Row>
+                                    <Row gutter={16}>
+                                        <Col xs={24} md={12}>
+                                            <Form.Item label="License Plate" name="licensePlate" rules={[{ required: true }]}>
+                                                <Input placeholder="AA-12345" size="large" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col xs={24} md={12}>
+                                            <Form.Item label="Color" name="color">
+                                                <Input placeholder="e.g. White, Black" size="large" />
+                                            </Form.Item>
+                                        </Col>
+                                    </Row>
+                                </>
+                            );
+                        })()}
+
                         <Button type="primary" htmlType="submit" size="large" block loading={loading}>Save & Continue</Button>
                     </Form>
                 );
@@ -238,21 +260,33 @@ const DeliveryOnboarding = () => {
                                 <Button icon={<UploadOutlined />}>Select File</Button>
                             </Upload>
                         </Form.Item>
-                        <Form.Item label="Driver's License" name="driversLicense" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
-                            <Upload beforeUpload={() => false} maxCount={1}>
-                                <Button icon={<UploadOutlined />}>Select File</Button>
-                            </Upload>
-                        </Form.Item>
-                        <Form.Item label="Vehicle Registration (Blue Book)" name="vehicleRegistration" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
-                            <Upload beforeUpload={() => false} maxCount={1}>
-                                <Button icon={<UploadOutlined />}>Select File</Button>
-                            </Upload>
-                        </Form.Item>
-                        <Form.Item label="Proof of Insurance" name="insuranceProof" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
-                            <Upload beforeUpload={() => false} maxCount={1}>
-                                <Button icon={<UploadOutlined />}>Select File</Button>
-                            </Upload>
-                        </Form.Item>
+
+                        {/* Conditional Docs for Non-Bicycle */}
+                        {(() => {
+                            const vType = profile?.vehicleDetails?.type || form.getFieldValue('type');
+                            if (vType === 'bicycle') return null;
+
+                            return (
+                                <>
+                                    <Form.Item label="Driver's License" name="driversLicense" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                                        <Upload beforeUpload={() => false} maxCount={1}>
+                                            <Button icon={<UploadOutlined />}>Select File</Button>
+                                        </Upload>
+                                    </Form.Item>
+                                    <Form.Item label="Vehicle Registration (Blue Book)" name="vehicleRegistration" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                                        <Upload beforeUpload={() => false} maxCount={1}>
+                                            <Button icon={<UploadOutlined />}>Select File</Button>
+                                        </Upload>
+                                    </Form.Item>
+                                    <Form.Item label="Proof of Insurance" name="insuranceProof" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                                        <Upload beforeUpload={() => false} maxCount={1}>
+                                            <Button icon={<UploadOutlined />}>Select File</Button>
+                                        </Upload>
+                                    </Form.Item>
+                                </>
+                            );
+                        })()}
+
                         <Button type="primary" htmlType="submit" size="large" block loading={loading}>Upload & Continue</Button>
                     </Form>
                 );
@@ -326,7 +360,7 @@ const DeliveryOnboarding = () => {
                     </div>
                 );
 
-            case 7: // Vehicle Inspection
+            case 6: // Vehicle Inspection (Renumbered from 7)
                 return (
                     <Form layout="vertical" onFinish={next}>
                         <Title level={4}>Vehicle Inspection</Title>
@@ -347,15 +381,15 @@ const DeliveryOnboarding = () => {
                     </Form>
                 );
 
-            case 8: // Final Review
+            case 7: // Final Review (Renumbered from 8)
                 return (
                     <Result
                         status="success"
                         title="Application Submitted!"
                         subTitle="Our clinical review team will verify your documents and background check. This usually takes 2-3 business days. We will email you once your account is activated."
                         extra={[
-                            <Button type="primary" key="dashboard" onClick={() => navigate('/delivery/dashboard')}>
-                                Go to Dashboard
+                            <Button type="primary" key="home" onClick={() => navigate('/')}>
+                                Return to Home
                             </Button>,
                             <Button key="support">Contact Support</Button>
                         ]}

@@ -76,9 +76,9 @@ class FilterService {
 
     // Stock filtering
     if (inStock === 'true') {
-      filter.stock = { $gt: 0 };
+      filter.quantity = { $gt: 0 };
     } else if (inStock === 'false') {
-      filter.stock = { $lte: 0 };
+      filter.quantity = { $lte: 0 };
     }
 
     // Prescription requirement filtering
@@ -140,7 +140,7 @@ class FilterService {
    */
   static buildSort(queryParams, defaultSort = { createdAt: -1 }) {
     const { sortBy, sortOrder } = queryParams;
-    
+
     if (!sortBy) return defaultSort;
 
     const order = sortOrder === 'asc' ? 1 : -1;
@@ -170,7 +170,7 @@ class FilterService {
       const filter = this.buildFilter(queryParams, {
         searchFields: ['name', 'description', 'manufacturer', 'brand']
       });
-      
+
       const sort = this.buildSort(queryParams, { name: 1 });
       const { page, limit, skip } = this.buildPagination(queryParams);
 
@@ -213,7 +213,7 @@ class FilterService {
         }),
         ...additionalFilters
       };
-      
+
       const sort = this.buildSort(queryParams, { createdAt: -1 });
       const { page, limit, skip } = this.buildPagination(queryParams);
 
@@ -336,12 +336,12 @@ class FilterService {
         ...this.buildFilter(queryParams, { searchFields }),
         ...additionalFilters
       };
-      
+
       const sort = this.buildSort(queryParams, defaultSort);
       const { page, limit, skip } = this.buildPagination(queryParams);
 
       let query = model.find(filter).sort(sort).skip(skip).limit(limit);
-      
+
       // Apply population if specified
       populate.forEach(pop => {
         query = query.populate(pop);

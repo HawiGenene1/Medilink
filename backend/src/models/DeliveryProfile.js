@@ -13,6 +13,21 @@ const deliveryProfileSchema = new mongoose.Schema({
         min: 1,
         max: 9
     },
+    currentLocation: {
+        type: {
+            type: String, // 'Point'
+            enum: ['Point'],
+            default: 'Point'
+        },
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            required: false
+        }
+    },
+    isAvailable: {
+        type: Boolean,
+        default: false
+    },
     onboardingStatus: {
         type: String,
         enum: ['in_progress', 'pending_review', 'approved', 'rejected'],
@@ -104,3 +119,7 @@ const deliveryProfileSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('DeliveryProfile', deliveryProfileSchema);
+
+// Index for geospatial queries
+deliveryProfileSchema.index({ currentLocation: '2dsphere' });
+

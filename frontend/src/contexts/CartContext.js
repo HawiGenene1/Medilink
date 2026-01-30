@@ -32,11 +32,14 @@ export const CartProvider = ({ children }) => {
                 return updatedItems;
             }
 
+            const priceStr = String(medicine.price?.basePrice || medicine.price || '0');
+            const priceValue = parseFloat(priceStr.replace(/[^\d.]/g, '')) || 0;
+
             return [...prevItems, {
                 ...medicine,
                 quantity,
                 pharmacy,
-                priceValue: parseFloat(medicine.price.replace(/[^\d.]/g, ''))
+                priceValue
             }];
         });
     };

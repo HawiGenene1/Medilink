@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Input, Button, List, Tag, Select, Space, Typography, Avatar, Tooltip, Empty, Spin } from 'antd';
+import { Row, Col, Card, Input, Button, List, Tag, Select, Space, Typography, Avatar, Tooltip, Empty, Spin, Divider, notification } from 'antd';
 import {
     SearchOutlined,
     EnvironmentOutlined,
@@ -35,9 +35,13 @@ const MedicineSearch = () => {
                     search: searchQuery,
                 }
             });
-            setMedicines(response.data);
+            setMedicines(response.data.data || []);
         } catch (error) {
             console.error('Error fetching medicines:', error);
+            notification.error({
+                message: 'Error',
+                description: 'Failed to fetch medicines. Please check your connection.'
+            });
         } finally {
             setLoading(false);
         }
@@ -110,7 +114,7 @@ const MedicineSearch = () => {
                                 bodyStyle={{ padding: '24px' }}
                                 actions={[
                                     <Tooltip title="View Details"><Button type="text" icon={<MedicineBoxOutlined />} onClick={() => navigate(`/customer/medicines/${item._id}`)}>Details</Button></Tooltip>,
-                                    <Tooltip title="Add to Cart"><Button type="primary" icon={<ShoppingCartOutlined />} onClick={() => addToCart({ ...item, id: String(item._id) }, 1, item.manufacturer)}>Add</Button></Tooltip>
+                                    <Tooltip title="Add to Cart"><Button type="primary" icon={<ShoppingCartOutlined />} onClick={() => addToCart({ ...item, id: String(item._id), pharmacyId: item.pharmacy?._id }, 1, item.pharmacy?.name || 'Pharmacy')}>Add</Button></Tooltip>
                                 ]}
                             >
                                 <div style={{ display: 'flex', gap: '16px' }}>
@@ -125,7 +129,15 @@ const MedicineSearch = () => {
                                                 size="small"
                                             />
                                         </div>
-                                        <Tag color="blue" style={{ marginTop: '4px' }}>{item.manufacturer}</Tag>
+                                        <Space split={<Divider type="vertical" />} style={{ marginTop: '4px' }}>
+                                            <Tag color="blue">{item.manufacturer}</Tag>
+                                            {item.pharmacy && (
+                                                <Space size={4}>
+                                                    <ShopOutlined style={{ color: '#1890ff' }} />
+                                                    <Text type="secondary" style={{ fontSize: '12px' }}>{item.pharmacy.name}</Text>
+                                                </Space>
+                                            )}
+                                        </Space>
 
                                         <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <Text strong style={{ fontSize: '18px', color: '#4361ee' }}>
@@ -139,10 +151,12 @@ const MedicineSearch = () => {
                                     </div>
                                 </div>
                                 <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between' }}>
-                                    <Tag color={(item.stockQuantity > 0) ? 'success' : 'warning'}>
-                                        {item.stockQuantity > 0 ? 'In Stock' : 'Out of Stock'}
+                                    <Tag color={(item.quantity > 0) ? 'success' : 'warning'}>
+                                        {item.quantity > 0 ? 'In Stock' : 'Out of Stock'}
                                     </Tag>
-                                    <Text type="secondary" style={{ fontSize: '12px' }}>Open until 9:00 PM</Text>
+                                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                                        {item.pharmacy?.address?.city || 'Addis Ababa'}
+                                    </Text>
                                 </div>
                             </Card>
                         </List.Item>

@@ -13,7 +13,27 @@ const {
     updateApplicationStatus
 } = require('../controllers/deliveryOnboardingController');
 
-// ... (Multer config remains same)
+// Multer config for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/onboarding/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, `onboarding-${Date.now()}${path.extname(file.originalname)}`);
+    }
+});
+
+const upload = multer({ storage });
+const onboardingUpload = upload.fields([
+    { name: 'governmentId', maxCount: 1 },
+    { name: 'workEligibility', maxCount: 1 },
+    { name: 'driversLicense', maxCount: 1 },
+    { name: 'vehicleRegistration', maxCount: 1 },
+    { name: 'insuranceProof', maxCount: 1 },
+    { name: 'bicycleOwnership', maxCount: 1 },
+    { name: 'chequePhoto', maxCount: 1 },
+    { name: 'inspectionPhotos', maxCount: 10 }
+]);
 
 // Routes
 router.use(protect); // Ensure user is logged in

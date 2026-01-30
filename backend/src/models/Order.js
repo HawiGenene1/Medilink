@@ -70,7 +70,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'card', 'mobile_money', 'bank_transfer'],
+    enum: ['cash', 'card', 'mobile_money', 'bank_transfer', 'telebirr', 'cbe'],
     default: 'cash'
   },
   paymentDetails: {
@@ -78,23 +78,29 @@ const orderSchema = new mongoose.Schema({
     paidAt: Date
   },
   address: {
-    street: {
-      type: String,
-      required: true
-    },
-    city: {
-      type: String,
-      required: true
-    },
+    street: String,
+    city: String,
     state: String,
     zipCode: String,
     country: {
       type: String,
       default: 'Ethiopia'
     },
+    label: String, // For the full address string
     coordinates: {
       latitude: Number,
       longitude: Number
+    },
+    geojson: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        index: '2dsphere'
+      }
     }
   },
   courier: {
@@ -158,18 +164,17 @@ const orderSchema = new mongoose.Schema({
 });
 
 // Generate order number before saving
-orderSchema.pre('save', async function(next) {
+// Generate order number before saving
+orderSchema.pre('save', async function () {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();
     this.orderNumber = `ORD-${Date.now()}-${(count + 1).toString().padStart(5, '0')}`;
   }
-  next();
 });
 
 // Calculate final amount before saving
-orderSchema.pre('save', function(next) {
+orderSchema.pre('save', function () {
   this.finalAmount = this.totalAmount + this.serviceFee + this.tax - this.discount;
-  next();
 });
 
 // Index for customer orders
