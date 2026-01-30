@@ -11,8 +11,9 @@ const {
   updateOrderStatus
 } = require('../controllers/orderController');
 const { checkSubscription } = require('../middleware/subscriptionMiddleware');
+const { checkOperationalPermission } = require('../middleware/pharmacyOwnerAuthMiddleware');
 
-// Public route for creating orders
+// Public route for creating orders (Customers)
 router.post('/', authenticate, createOrder);
 
 // Protected route for customers to get their orders
@@ -22,7 +23,7 @@ router.get('/', authenticate, getMyOrders);
 router.get(
   '/pharmacy/:pharmacyId',
   authenticate,
-  authorize('pharmacy_staff', 'pharmacy_admin', 'admin'),
+  authorize('admin', 'PHARMACY_OWNER'),
   checkSubscription,
   getPharmacyOrders
 );
@@ -37,8 +38,9 @@ router.patch('/:id/cancel', authenticate, cancelOrder);
 router.put(
   '/:orderId/status',
   authenticate,
-  authorize('pharmacy_staff', 'pharmacy_admin', 'admin'),
+  authorize('admin', 'PHARMACY_OWNER'),
   checkSubscription,
+  checkOperationalPermission('prepareOrders'),
   updateOrderStatus
 );
 
