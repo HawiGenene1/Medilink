@@ -44,7 +44,7 @@ const inventorySchema = new mongoose.Schema({
     default: true
   },
   notes: String
-}, { 
+}, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
@@ -54,14 +54,14 @@ const inventorySchema = new mongoose.Schema({
 inventorySchema.index({ pharmacy: 1, medicine: 1 }, { unique: true });
 
 // Index for low stock alerts
-inventorySchema.index({ 
-  pharmacy: 1, 
-  quantity: 1, 
-  reorderLevel: 1 
+inventorySchema.index({
+  pharmacy: 1,
+  quantity: 1,
+  reorderLevel: 1
 });
 
 // Virtual for stock status
-inventorySchema.virtual('stockStatus').get(function() {
+inventorySchema.virtual('stockStatus').get(function () {
   if (this.quantity <= 0) {
     return 'out_of_stock';
   } else if (this.quantity <= this.reorderLevel) {
@@ -72,7 +72,7 @@ inventorySchema.virtual('stockStatus').get(function() {
 });
 
 // Virtual for days to expiry
-inventorySchema.virtual('daysToExpiry').get(function() {
+inventorySchema.virtual('daysToExpiry').get(function () {
   if (!this.expiryDate) return null;
   const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
   const today = new Date();
@@ -80,12 +80,5 @@ inventorySchema.virtual('daysToExpiry').get(function() {
   return Math.round((expiry - today) / oneDay);
 });
 
-// Pre-save hook to update lastRestocked when quantity increases
-inventorySchema.pre('save', function(next) {
-  if (this.isModified('quantity') && this.quantity > this.getOriginal('quantity')) {
-    this.lastRestocked = new Date();
-  }
-  next();
-});
-
+// Removed broken pre-save hook as lastRestocked is handled in controller
 module.exports = mongoose.model('Inventory', inventorySchema);
