@@ -86,6 +86,7 @@ const getProfile = asyncHandler(async (req, res, next) => {
             phone: owner.phone,
             role: 'PHARMACY_OWNER',
             permissions: owner.permissions,
+            operationalPermissions: owner.operationalPermissions,
             subscriptionPlan: owner.subscriptionPlan,
             subscriptionStatus: owner.subscriptionStatus,
             pharmacy: owner.pharmacyId
@@ -99,7 +100,7 @@ const getProfile = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const updateProfile = asyncHandler(async (req, res, next) => {
-    const { fullName, phone } = req.body;
+    const { fullName, phone, operationalPermissions } = req.body;
 
     const owner = await PharmacyOwner.findById(req.owner._id);
 
@@ -109,6 +110,7 @@ const updateProfile = asyncHandler(async (req, res, next) => {
 
     if (fullName) owner.fullName = fullName;
     if (phone) owner.phone = phone;
+    if (operationalPermissions) owner.operationalPermissions = { ...owner.operationalPermissions, ...operationalPermissions };
 
     await owner.save();
 
@@ -120,7 +122,9 @@ const updateProfile = asyncHandler(async (req, res, next) => {
             fullName: owner.fullName,
             email: owner.email,
             phone: owner.phone,
-            role: 'PHARMACY_OWNER'
+            phone: owner.phone,
+            role: 'PHARMACY_OWNER',
+            operationalPermissions: owner.operationalPermissions
         }
     });
 });

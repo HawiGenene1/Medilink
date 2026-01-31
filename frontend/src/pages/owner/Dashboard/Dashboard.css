@@ -1,0 +1,69 @@
+.owner-dashboard {
+    padding: 8px;
+}
+
+.dashboard-header {
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+
+.stat-card .ant-statistic-title {
+    color: #8c8c8c;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.stat-card .ant-statistic-content {
+    color: #262626;
+    font-weight: 700;
+}
+
+.stat-card .ant-statistic-content-prefix {
+    margin-right: 12px;
+    font-size: 24px;
+}
+
+.card-footer {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #bfbfbf;
+}
+
+/* Color accents for cards */
+.stat-card.sales .ant-statistic-content-prefix {
+    color: #52c41a;
+}
+
+.stat-card.orders .ant-statistic-content-prefix {
+    color: #1890ff;
+}
+
+.stat-card.products .ant-statistic-content-prefix {
+    color: #722ed1;
+}
+
+.stat-card.staff .ant-statistic-content-prefix {
+    color: #fa8c16;
+}
+
+.recent-orders-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.recent-orders-card .ant-card-head {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.recent-orders-card .ant-card-head-title {
+    font-weight: 600;
+}

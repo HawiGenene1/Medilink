@@ -171,7 +171,6 @@ const OwnerDashboard = () => {
             <div className="dashboard-header">
                 <Space align="center">
                     <Title level={2} style={{ marginBottom: 0 }}>Dashboard Overview</Title>
-                    {isDev && <Tag color="orange">MOCK DATA ENABLED</Tag>}
                 </Space>
                 <Paragraph type="secondary" style={{ marginTop: 8 }}>
                     Welcome back! Here's a high-level overview of your pharmacy's current performance.
