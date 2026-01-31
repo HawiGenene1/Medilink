@@ -94,6 +94,8 @@ const favoriteRoutes = require('./routes/favoriteRoutes'); // Added
 const pharmacyOwnerRoutes = require('./routes/pharmacyOwnerRoutes'); // Added
 const adminRoutes = require('./routes/adminRoutes'); // Enabled
 const pharmacyRoutes = require('./routes/pharmacyRoutes'); // Enabled
+const inventoryRoutes = require('./routes/inventoryRoutes'); // Added
+const orderProcessingRoutes = require('./routes/orderProcessingRoutes'); // Added
 
 // Import middleware (comment out if files don't exist)
 const { authenticate, authorize } = require('./middleware/authMiddleware');
@@ -109,6 +111,8 @@ app.use('/api/favorites', favoriteRoutes);
 app.use('/api/pharmacy-owner', pharmacyOwnerRoutes);
 app.use('/api/admin', adminRoutes); // Mount admin routes
 app.use('/api/pharmacy', pharmacyRoutes); // Mount pharmacy routes (public for registration)
+app.use('/api/inventory', inventoryRoutes); // Mount inventory routes
+app.use('/api/order-processing', orderProcessingRoutes); // Mount order processing routes
 
 // Test route
 app.get('/', (req, res) => {

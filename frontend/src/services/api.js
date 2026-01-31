@@ -127,13 +127,27 @@ export const pharmacyOwnerAPI = {
   getReports: () => api.get('/pharmacy-owner/reports'),
   getAnalytics: () => api.get('/pharmacy-owner/analytics'),
   getPharmacy: () => api.get('/pharmacy-owner/pharmacy'),
-  getPharmacy: () => api.get('/pharmacy-owner/pharmacy'),
   updatePharmacy: (data) => api.put('/pharmacy-owner/pharmacy', data),
   // Staff Management
   getStaff: () => api.get('/pharmacy-owner/staff'),
   createStaff: (data) => api.post('/pharmacy-owner/staff', data),
   updateStaff: (id, data) => api.put(`/pharmacy-owner/staff/${id}`, data),
   deleteStaff: (id) => api.delete(`/pharmacy-owner/staff/${id}`),
+};
+
+// Inventory API
+export const inventoryAPI = {
+  get: () => api.get('/inventory'),
+  add: (data) => api.post('/inventory', data),
+  update: (id, data) => api.put(`/inventory/${id}`, data),
+  delete: (id) => api.delete(`/inventory/${id}`),
+};
+
+// Order Processing API (Staff)
+export const orderProcessingAPI = {
+  getOrders: (params) => api.get('/order-processing', { params }),
+  updateStatus: (id, statusData) => api.put(`/order-processing/${id}/status`, statusData),
+  verifyPrescription: (id, verificationData) => api.put(`/order-processing/${id}/verify-prescription`, verificationData),
 };
 
 export default api;

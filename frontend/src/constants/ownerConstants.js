@@ -35,6 +35,11 @@ export const OWNER_MENU_ITEMS = [
         label: 'Inventory',
     },
     {
+        key: '/owner/orders',
+        icon: ShoppingOutlined,
+        label: 'Order Processing',
+    },
+    {
         key: '/owner/pharmacy',
         icon: ShopOutlined,
         label: 'Pharmacy Details',

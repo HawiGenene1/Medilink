@@ -1,12 +1,16 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
 import AuthLayout from '../layouts/AuthLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
+import AdminLayout from '../layouts/AdminLayout';
+import OwnerLayout from '../layouts/OwnerLayout';
 
 // Components
 import ProtectedRoute from './ProtectedRoute';
+import { useAuth } from '../contexts/AuthContext';
 
 // Auth Pages
 import Login from '../pages/auth/Login';
@@ -34,10 +38,9 @@ import MedicineList from '../pages/medicines/MedicineList';
 import MedicineDetail from '../pages/medicines/MedicineDetail';
 
 // Admin & Other Pages
-import AdminLayout from '../layouts/AdminLayout';
-import OwnerLayout from '../layouts/OwnerLayout';
 import AdminDashboard from '../pages/admin/Dashboard';
 import OwnerDashboard from '../pages/owner/Dashboard';
+import OwnerOrders from '../pages/owner/Orders';
 import StaffManagement from '../pages/owner/StaffManagement';
 import PharmacyDetails from '../pages/owner/PharmacyDetails';
 import OwnerProfile from '../pages/owner/Profile';
@@ -48,7 +51,16 @@ import Analytics from '../pages/owner/Analytics';
 import OwnerInventory from '../pages/owner/Inventory';
 import OwnerNotifications from '../pages/owner/Notifications';
 import CashierDashboard from '../pages/cashier/Dashboard';
+import StaffDashboard from '../pages/owner/StaffDashboard';
 import DeliveryDashboard from '../pages/delivery/Dashboard';
+
+/**
+ * Helper component to switch between Staff and Owner dashboard
+ */
+const PharmacyDashboard = () => {
+  const { user } = useAuth();
+  return user?.role === 'staff' ? <StaffDashboard /> : <OwnerDashboard />;
+};
 
 const AppRouter = () => {
   return (
@@ -58,7 +70,6 @@ const AppRouter = () => {
         <Route path="/" element={<Home />} />
         <Route path="/medicines" element={<MedicineList />} />
         <Route path="/medicines/:id" element={<MedicineDetail />} />
-        {/* <Route path="/pharmacies" element={<PharmacyFinder />} /> */}
       </Route>
 
       {/* Auth Routes */}
@@ -75,7 +86,6 @@ const AppRouter = () => {
         <Route element={<CustomerLayout />}>
           <Route path="/customer/home" element={<CustomerDashboard />} />
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-          {/* Add placeholder routes for other menu items to avoid 404s in demo */}
           <Route path="/customer/medicines" element={<CustomerMedicines />} />
           <Route path="/customer/medicines/:id" element={<CustomerMedicineDetail />} />
           <Route path="/customer/cart" element={<CustomerCart />} />
@@ -91,41 +101,46 @@ const AppRouter = () => {
         </Route>
       </Route>
 
-
       {/* Protected Routes - Cashier */}
       <Route element={<ProtectedRoute allowedRoles={['cashier']} />}>
         <Route path="/cashier/dashboard" element={<CashierDashboard />} />
-        {/* <Route path="/cashier/pos" element={<POS />} /> */}
       </Route>
 
       {/* Protected Routes - Delivery */}
       <Route element={<ProtectedRoute allowedRoles={['delivery']} />}>
         <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
-        {/* <Route path="/delivery/tasks" element={<DeliveryTasks />} /> */}
       </Route>
 
       {/* Protected Routes - Admin */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route element={<AdminLayout />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          {/* <Route path="/admin/users" element={<UserManagement />} /> */}
         </Route>
       </Route>
 
+      {/* Shared Owner & Staff Routes */}
+      <Route element={<ProtectedRoute allowedRoles={['PHARMACY_OWNER', 'staff']} />}>
+        <Route element={<OwnerLayout />}>
+          <Route path="/owner/dashboard" element={<PharmacyDashboard />} />
+          <Route path="/owner/inventory" element={<OwnerInventory />} />
+          <Route path="/owner/orders" element={<OwnerOrders />} />
+          <Route path="/owner/profile" element={<OwnerProfile />} />
+          <Route path="/owner/notifications" element={<OwnerNotifications />} />
+        </Route>
+      </Route>
+
+      {/* Exclusive Owner Routes */}
       <Route element={<ProtectedRoute allowedRoles={['PHARMACY_OWNER']} />}>
         <Route element={<OwnerLayout />}>
-          <Route path="/owner/dashboard" element={<OwnerDashboard />} />
           <Route path="/owner/staff" element={<StaffManagement />} />
-          <Route path="/owner/inventory" element={<OwnerInventory />} />
           <Route path="/owner/pharmacy" element={<PharmacyDetails />} />
           <Route path="/owner/subscription" element={<Subscription />} />
           <Route path="/owner/reports" element={<Reports />} />
           <Route path="/owner/analytics" element={<Analytics />} />
-          <Route path="/owner/profile" element={<OwnerProfile />} />
           <Route path="/owner/settings" element={<OwnerSettings />} />
-          <Route path="/owner/notifications" element={<OwnerNotifications />} />
         </Route>
       </Route>
+
       {/* Redirects & Fallbacks */}
       <Route path="/login" element={<Navigate to="/auth/login" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
