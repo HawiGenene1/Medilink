@@ -94,17 +94,6 @@ const PaymentStatus = () => {
         }
     };
 
-    if (loading || verifying) {
-        return (
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-                <Spin size="large" />
-                <p style={{ marginTop: 16 }}>
-                    {verifying ? 'Verifying your payment...' : 'Loading...'}
-                </p>
-            </div>
-        );
-    }
-
     const [timer, setTimer] = useState(300); // 5 minutes in seconds
 
     useEffect(() => {
@@ -122,6 +111,17 @@ const PaymentStatus = () => {
         const secs = seconds % 60;
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
+
+    if (loading || verifying) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+                <Spin size="large" />
+                <p style={{ marginTop: 16 }}>
+                    {verifying ? 'Verifying your payment...' : 'Loading...'}
+                </p>
+            </div>
+        );
+    }
 
     const renderPaymentResult = () => {
         switch (paymentStatus) {

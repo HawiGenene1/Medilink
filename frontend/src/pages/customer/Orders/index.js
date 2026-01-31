@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Modal, Divider, Empty, Spin, message } from 'antd';
 import {
+  FileTextOutlined,
+  ShoppingCartOutlined,
   ShopOutlined,
   EnvironmentOutlined,
-  ShoppingCartOutlined,
-  FileTextOutlined,
-  MedicineBoxOutlined,
-  DownloadOutlined
+  DownloadOutlined,
+  SyncOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { ordersAPI } from '../../../services/api';
+import { ordersAPI, paymentsAPI } from '../../../services/api';
 import './Orders.css';
 
 const { Title, Text } = Typography;
