@@ -57,6 +57,38 @@ const Settings = () => {
     const nextDeleteStep = () => setDeleteStep(prev => prev + 1);
     const prevDeleteStep = () => setDeleteStep(prev => prev - 1);
 
+    // Download Data Handler
+    const handleDownloadData = () => {
+        const dataStr = JSON.stringify(user, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `medilink_data_${user._id}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        message.success("Your data has been downloaded.");
+    };
+
+    // Support Handler
+    const handleSupportAction = (title) => {
+        Modal.info({
+            title: title,
+            content: (
+                <div>
+                    <Paragraph>
+                        This is a placeholder for the <strong>{title}</strong> page.
+                    </Paragraph>
+                    <Paragraph>
+                        In a production environment, this would navigate to a dedicated page or open a detailed document.
+                    </Paragraph>
+                </div>
+            ),
+            onOk() { },
+        });
+    };
+
     const SecuritySettings = () => (
         <div className="settings-section fade-in">
             <Title level={4}>Change Password</Title>
@@ -106,13 +138,9 @@ const Settings = () => {
                 <Text>Share interaction data with pharmacists</Text>
                 <Switch defaultChecked />
             </div>
-            <div className="pref-row">
-                <Text>Digital Prescriptions: Auto-share with pharmacies</Text>
-                <Switch defaultChecked />
-            </div>
             <Divider />
             <Title level={4} style={{ color: '#ff4d4f' }}>Data Management</Title>
-            <Button danger>Download My Data (JSON)</Button>
+            <Button danger onClick={handleDownloadData}>Download My Data (JSON)</Button>
         </div>
     );
 
@@ -143,7 +171,7 @@ const Settings = () => {
                     { title: 'Privacy Policy', description: 'How we handle your data' },
                 ]}
                 renderItem={(item) => (
-                    <List.Item actions={[<Button type="link" key="view">View</Button>]}>
+                    <List.Item actions={[<Button type="link" key="view" onClick={() => handleSupportAction(item.title)}>View</Button>]}>
                         <List.Item.Meta
                             title={item.title}
                             description={item.description}
