@@ -1,3 +1,4 @@
+const TempPharmacy = require('../models/TempPharmacy'); // Added for registration handling
 const Pharmacy = require('../models/Pharmacy');
 const Subscription = require('../models/Subscription');
 const { sendEmail } = require('../services/emailService');
@@ -8,12 +9,12 @@ const { sendEmail } = require('../services/emailService');
 const getPendingRegistrations = async (req, res) => {
   try {
     const { status = 'pending', page = 1, limit = 10 } = req.query;
-    const registrations = await Pharmacy.find({ status })
-      .select('-password')
+    // CRITICAL: Changed from Pharmacy to TempPharmacy to match registration flow
+    const registrations = await TempPharmacy.find({ status })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const count = await Pharmacy.countDocuments({ status });
+    const count = await TempPharmacy.countDocuments({ status });
 
     res.json({
       success: true,
@@ -33,7 +34,8 @@ const getPendingRegistrations = async (req, res) => {
 // @access  Private/Admin
 const getRegistrationDetails = async (req, res) => {
   try {
-    const registration = await Pharmacy.findById(req.params.id).select('-password');
+    // CRITICAL: Changed from Pharmacy to TempPharmacy
+    const registration = await TempPharmacy.findById(req.params.id);
     if (!registration) {
       return res.status(404).json({ success: false, message: 'Registration not found' });
     }
@@ -49,11 +51,16 @@ const getRegistrationDetails = async (req, res) => {
 // @access  Private/Admin
 const approveRegistration = async (req, res) => {
   try {
-    const registration = await Pharmacy.findByIdAndUpdate(
+    // Stage 1: Update TempPharmacy status
+    const registration = await TempPharmacy.findByIdAndUpdate(
       req.params.id,
-      { status: 'approved', isActive: true },
+      {
+        status: 'approved',
+        approvalStatus: 'APPROVED', // Keep in sync
+        isActive: true
+      },
       { new: true, runValidators: true }
-    ).select('-password');
+    );
 
     if (!registration) {
       return res.status(404).json({ success: false, message: 'Registration not found' });
@@ -114,7 +121,7 @@ const getAllSubscriptions = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     const query = {};
-    
+
     if (status) {
       query.status = status;
     }
@@ -203,16 +210,16 @@ const deactivateSubscription = async (req, res) => {
 const renewSubscription = async (req, res) => {
   try {
     const { durationMonths } = req.body;
-    
+
     if (!durationMonths || isNaN(durationMonths) || durationMonths < 1) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide a valid duration in months (minimum 1 month)' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid duration in months (minimum 1 month)'
       });
     }
 
     const subscription = await Subscription.findById(req.params.id);
-    
+
     if (!subscription) {
       return res.status(404).json({ success: false, message: 'Subscription not found' });
     }
@@ -223,7 +230,7 @@ const renewSubscription = async (req, res) => {
 
     const updatedSubscription = await Subscription.findByIdAndUpdate(
       req.params.id,
-      { 
+      {
         status: 'active',
         startDate: currentDate,
         endDate: newEndDate,

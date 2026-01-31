@@ -56,14 +56,14 @@ router.get(
 router.get(
   '/pending',
   authenticate,
-  authorize(['pharmacy_staff', 'pharmacy_admin', 'admin']),
+  authorize(['admin']),
   getPendingPrescriptions
 );
 
 router.patch(
   '/:id/status',
   authenticate,
-  authorize(['pharmacy_staff', 'pharmacy_admin', 'admin']),
+  authorize(['admin']),
   [
     body('status')
       .isIn(['approved', 'rejected'])

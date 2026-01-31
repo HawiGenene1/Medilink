@@ -18,10 +18,50 @@ const registerPharmacy = async (req, res) => {
       email,
       phone,
       address,
-      tinNumber,
-      licenseDocument,
-      tinDocument
+      tinNumber
     } = req.body;
+
+    console.log('[DEBUG] Registration body received:', { ...req.body, address: typeof address });
+
+    // 1. Robust Address Parsing (FormData often flattens objects differently depending on browser/version)
+    let finalAddress = {
+      street: '',
+      city: '',
+      state: '',
+      postalCode: ''
+    };
+
+    if (typeof address === 'string') {
+      try {
+        finalAddress = JSON.parse(address);
+      } catch (e) {
+        // Fallback if it's just a string like "[object Object]"
+        finalAddress.street = req.body['address[street]'] || req.body.street || '';
+        finalAddress.city = req.body['address[city]'] || req.body.city || '';
+        finalAddress.state = req.body['address[state]'] || req.body.state || '';
+        finalAddress.postalCode = req.body['address[postalCode]'] || req.body.postalCode || '';
+      }
+    } else if (typeof address === 'object' && address !== null) {
+      finalAddress = {
+        street: address.street || req.body['address[street]'] || '',
+        city: address.city || req.body['address[city]'] || '',
+        state: address.state || req.body['address[state]'] || '',
+        postalCode: address.postalCode || req.body['address[postalCode]'] || ''
+      };
+    } else {
+      // Direct field access as last resort
+      finalAddress.street = req.body['address[street]'] || req.body.street || '';
+      finalAddress.city = req.body['address[city]'] || req.body.city || '';
+      finalAddress.state = req.body['address[state]'] || req.body.state || '';
+      finalAddress.postalCode = req.body['address[postalCode]'] || req.body.postalCode || '';
+    }
+
+    // 2. Safe Date Parsing
+    const parsedDate = establishedDate ? new Date(establishedDate) : new Date();
+
+    // 3. Extract Document Paths
+    const licenseDoc = req.files?.licenseDocument ? req.files.licenseDocument[0].path : 'pending';
+    const tinDoc = req.files?.tinDocument ? req.files.tinDocument[0].path : 'pending';
 
     // Check if pharmacy with same email or license already exists
     const existingPharmacy = await TempPharmacy.findOne({
@@ -38,19 +78,26 @@ const registerPharmacy = async (req, res) => {
       });
     }
 
+    // Development mode bypass: Auto-approve pharmacies
+    const isDev = process.env.NODE_ENV === 'development';
+    if (isDev) {
+      logger.info(`[DEV MODE] Auto-approving pharmacy: ${pharmacyName}`);
+    }
+
     // Create new temporary pharmacy record
     const tempPharmacy = new TempPharmacy({
       pharmacyName,
       licenseNumber,
-      establishedDate,
+      establishedDate: parsedDate,
       ownerName,
       email,
       phone,
-      address,
+      address: finalAddress,
       tinNumber,
-      licenseDocument,
-      tinDocument,
-      status: 'pending'
+      licenseDocument: licenseDoc,
+      tinDocument: tinDoc,
+      status: isDev ? 'approved' : 'pending',
+      approvalStatus: isDev ? 'APPROVED' : 'PENDING'
     });
 
     await tempPharmacy.save();
@@ -65,12 +112,24 @@ const registerPharmacy = async (req, res) => {
         id: tempPharmacy._id,
         pharmacyName: tempPharmacy.pharmacyName,
         email: tempPharmacy.email,
-        status: tempPharmacy.status
+        status: tempPharmacy.status,
+        approvalStatus: tempPharmacy.approvalStatus
       }
     });
 
   } catch (error) {
     logger.error('Pharmacy registration error:', error);
+
+    // Detailed validation error handling
+    if (error.name === 'ValidationError') {
+      const message = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: message
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error registering pharmacy',
@@ -87,9 +146,9 @@ const registerPharmacy = async (req, res) => {
 const checkPharmacyStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const pharmacy = await TempPharmacy.findById(id).select('-__v -updatedAt');
-    
+
     if (!pharmacy) {
       return res.status(404).json({
         success: false,
@@ -102,8 +161,8 @@ const checkPharmacyStatus = async (req, res) => {
       data: {
         status: pharmacy.status,
         ...(pharmacy.status === 'rejected' && { rejectionReason: pharmacy.rejectionReason }),
-        ...(pharmacy.status === 'approved' && { 
-          nextSteps: 'Please check your email for account setup instructions' 
+        ...(pharmacy.status === 'approved' && {
+          nextSteps: 'Please check your email for account setup instructions'
         })
       }
     });
@@ -158,7 +217,7 @@ const getPharmacySubscription = async (req, res) => {
 const requestSubscriptionRenewal = async (req, res) => {
   try {
     const { mode = 'monthly' } = req.body;
-    
+
     // In a real implementation, you would process the renewal request here
     // This is just a placeholder response
     res.status(200).json({

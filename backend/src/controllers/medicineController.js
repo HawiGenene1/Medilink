@@ -136,8 +136,8 @@ const addMedicine = async (req, res) => {
       minStockLevel: minStockLevel || 10,
       description,
       requiresPrescription: requiresPrescription === 'true' || requiresPrescription === true,
-      addedBy: req.user.userId,
-      availableAt: [req.user.pharmacyId],
+      addedBy: req.user?.userId || req.owner?._id,
+      availableAt: [req.user?.pharmacyId || req.owner?.pharmacyId],
       expiryDate: expiryDate ? new Date(expiryDate) : null
     });
 
@@ -173,7 +173,8 @@ const updateMedicine = async (req, res) => {
     }
 
     // Check authorization: Ensure the medicine belongs to the user's pharmacy
-    if (!medicine.availableAt.includes(req.user.pharmacyId)) {
+    const userPharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
+    if (!medicine.availableAt.includes(userPharmacyId)) {
       return res.status(403).json({ success: false, message: 'Not authorized to update this medicine' });
     }
 
@@ -229,7 +230,8 @@ const deleteMedicine = async (req, res) => {
     }
 
     // Check authorization
-    if (!medicine.availableAt.includes(req.user.pharmacyId)) {
+    const userPharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
+    if (!medicine.availableAt.includes(userPharmacyId)) {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this medicine' });
     }
 
@@ -274,7 +276,8 @@ const updateStock = async (req, res) => {
     }
 
     // Authorization check
-    if (!medicine.availableAt.includes(req.user.pharmacyId)) {
+    const userPharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
+    if (!medicine.availableAt.includes(userPharmacyId)) {
       return res.status(403).json({ success: false, message: 'Not authorized to update stock for this medicine' });
     }
 
@@ -317,7 +320,7 @@ const updateStock = async (req, res) => {
  */
 const getInventoryAlerts = async (req, res) => {
   try {
-    const pharmacyId = req.user.pharmacyId;
+    const pharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
     if (!pharmacyId) {
       return res.status(400).json({ success: false, message: 'Pharmacy ID not found for user' });
     }
