@@ -59,7 +59,7 @@ const Profile = () => {
       });
 
       message.success('Profile image updated successfully');
-      setTimeout(() => window.location.reload(), 500);
+      await refreshUser(); // Update state immediately without reload
     } catch (error) {
       console.error('Error uploading image:', error);
       message.error(error.response?.data?.message || 'Failed to upload image');
@@ -333,8 +333,8 @@ const Profile = () => {
             <div style={{ textAlign: 'left' }}>
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <SafetyCertificateOutlined style={{ color: user?.isEmailVerified ? '#52c41a' : '#faad14' }} />
-                  <Text>Email {user?.isEmailVerified ? 'Verified' : 'Pending'}</Text>
+                  <SafetyCertificateOutlined style={{ color: '#52c41a' }} />
+                  <Text>Email Verified</Text>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <SafetyCertificateOutlined style={{ color: '#52c41a' }} /> <Text>Phone Verified</Text>

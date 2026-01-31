@@ -40,6 +40,8 @@ const Pharmacies = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedPharmacy, setSelectedPharmacy] = useState(null);
     const [userLocation, setUserLocation] = useState(null);
+    const [pharmacies, setPharmacies] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [medicineSearch, setMedicineSearch] = useState('');
     const [radius, setRadius] = useState(5); // 5km radius
     const [medicineOptions, setMedicineOptions] = useState([]);
@@ -52,12 +54,49 @@ const Pharmacies = () => {
     const markersRef = React.useRef({});
     const userMarkerRef = React.useRef(null);
 
-    // Mock stock data (Internal mapping for demonstration)
-    const stockData = {
-        'ph-1': ['Amoxicillin', 'Paracetamol', 'Ibuprofen'],
-        'ph-2': ['Amoxicillin', 'Aspirin'],
-        'ph-3': ['Paracetamol', 'Vitamin C']
-    };
+    // Fetch Pharmacies
+    useEffect(() => {
+        const fetchPharmacies = async () => {
+            setLoading(true);
+            try {
+                // Construct query params
+                const params = new URLSearchParams();
+                if (searchQuery) params.append('search', searchQuery);
+                if (medicineSearch) params.append('medicine', medicineSearch);
+                if (userLocation) {
+                    params.append('lat', userLocation[0]);
+                    params.append('lng', userLocation[1]);
+                    params.append('radius', radius);
+                }
+
+                // Call our endpoint
+                const response = await fetch(`http://localhost:5000/api/pharmacy?${params.toString()}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Transform data for display
+                    const mapped = data.data.map(p => ({
+                        id: p._id,
+                        name: p.name,
+                        pos: p.location?.coordinates ? [p.location.coordinates[1], p.location.coordinates[0]] : [9.03, 38.74],
+                        rating: p.rating || 0,
+                        address: p.address?.street ? `${p.address.city}, ${p.address.street}` : p.address?.city || 'Addis Ababa',
+                        status: p.status === 'approved' ? 'Open' : 'Closed',
+                        distance: userLocation ? 'Calculating...' : 'N/A',
+                        phone: p.phone
+                    }));
+                    setPharmacies(mapped);
+                }
+            } catch (error) {
+                console.error('Failed to fetch pharmacies:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const timeoutId = setTimeout(fetchPharmacies, 500); // 500ms debounce
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery, medicineSearch, userLocation, radius]);
 
     // Haversine formula for distance
     const getDistance = (pos1, pos2) => {
@@ -68,7 +107,7 @@ const Pharmacies = () => {
             Math.cos(pos1[0] * Math.PI / 180) * Math.cos(pos2[0] * Math.PI / 180) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+        return parseFloat((R * c).toFixed(1));
     };
 
     // Load medicine options for AutoComplete
@@ -81,67 +120,21 @@ const Pharmacies = () => {
                 }
             } catch (err) {
                 console.error('Failed to fetch medicines:', err);
-                // Fallback mock
-                setMedicineOptions([
-                    { value: 'Amoxicillin' },
-                    { value: 'Paracetamol' },
-                    { value: 'Ibuprofen' },
-                    { value: 'Aspirin' }
-                ]);
             }
         };
         fetchMedicines();
     }, []);
 
-    const pharmacies = [
-        {
-            id: 'ph-1',
-            name: 'Kenema Pharmacy No. 4',
-            pos: [9.0227, 38.7460],
-            rating: 4.8,
-            reviews: 124,
-            status: 'Open',
-            distance: '0.5 km',
-            address: 'Bole Road, Addis Ababa',
-            phone: '+251 11 123 4567'
-        },
-        {
-            id: 'ph-2',
-            name: 'Abyssinia Central Pharma',
-            pos: [9.0270, 38.7510],
-            rating: 4.5,
-            reviews: 89,
-            status: 'Open',
-            distance: '1.2 km',
-            address: 'Kazanchis, Addis Ababa',
-            phone: '+251 11 987 6543'
-        },
-        {
-            id: 'ph-3',
-            name: 'Red Cross Dispensary',
-            pos: [9.0180, 38.7400],
-            rating: 4.9,
-            reviews: 312,
-            status: 'Closed',
-            distance: '2.5 km',
-            address: 'Piazza, Addis Ababa',
-            phone: '+251 11 555 0199'
-        }
-    ];
-
-    // Filter Pharmacies
-    const filteredPharmacies = pharmacies.filter(ph => {
-        const matchesName = ph.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesMedicine = medicineSearch ? stockData[ph.id]?.some(m => m.toLowerCase().includes(medicineSearch.toLowerCase())) : true;
-
-        // Distance filter if user location is known
+    // Filter and Calculate Distances
+    const filteredPharmacies = pharmacies.map(ph => {
+        let dist = 'N/A';
+        let distVal = 99999;
         if (userLocation) {
-            const dist = getDistance(userLocation, ph.pos);
-            return matchesName && matchesMedicine && dist <= radius;
+            distVal = getDistance(userLocation, ph.pos);
+            dist = `${distVal} km`;
         }
-
-        return matchesName && matchesMedicine;
-    });
+        return { ...ph, distance: dist, distVal };
+    }).sort((a, b) => a.distVal - b.distVal); // Sort by distance
 
     const handleLocateUser = () => {
         setLoadingLocation(true);
@@ -153,7 +146,7 @@ const Pharmacies = () => {
                     setUserLocation(pos);
                     setLoadingLocation(false);
                     if (mapInstance.current) {
-                        mapInstance.current.flyTo(pos, 15);
+                        mapInstance.current.setView(pos, 15);
 
                         // Update or Create User Marker
                         if (userMarkerRef.current) {
@@ -178,32 +171,25 @@ const Pharmacies = () => {
         }
     };
 
-    // Initialize Map
+    // Initialize Map with ESRI Layers
     useEffect(() => {
         if (mapRef.current && !mapInstance.current) {
-            mapInstance.current = L.map(mapRef.current).setView([9.0227, 38.7460], 14);
+            mapInstance.current = L.map(mapRef.current, {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([9.0227, 38.7460], 13);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            // ESRI Satellite Tiles
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'ESRI World Imagery'
             }).addTo(mapInstance.current);
 
-            // Add Markers
-            pharmacies.forEach(ph => {
-                const marker = L.marker(ph.pos)
-                    .addTo(mapInstance.current)
-                    .bindPopup(`
-                        <div class="map-popup-content" style="color: ${token.colorText}; background: ${token.colorBgContainer}">
-                            <strong style="color: ${token.colorPrimary}">${ph.name}</strong><br />
-                            <span style="font-size: 12px; color: ${token.colorTextSecondary}">${ph.address}</span><br />
-                            <div style="margin-top: 8px">
-                                <span style="background: ${token.colorPrimary}; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px">View Details</span>
-                            </div>
-                        </div>
-                    `);
-
-                marker.on('click', () => setSelectedPharmacy(ph));
-                markersRef.current[ph.id] = marker;
-            });
+            // Road Overlay
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                opacity: 0.8
+            }).addTo(mapInstance.current);
         }
 
         return () => {
@@ -212,15 +198,39 @@ const Pharmacies = () => {
                 mapInstance.current = null;
             }
         };
-    }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    // Update markers when tokens change (requires re-initialization or simplified approach)
-    // For simplicity, we rely on initial mount. If theme flips, user might need refresh for map popups or we'd add complex effect.
+    // Update Markers Effect
+    useEffect(() => {
+        if (!mapInstance.current) return;
+
+        // Clear existing markers
+        Object.values(markersRef.current).forEach(marker => marker.remove());
+        markersRef.current = {};
+
+        // Add new markers
+        filteredPharmacies.forEach(ph => {
+            const marker = L.marker(ph.pos)
+                .addTo(mapInstance.current)
+                .bindPopup(`
+                    <div class="map-popup-content" style="color: ${token.colorText}; background: ${token.colorBgContainer}">
+                        <strong style="color: ${token.colorPrimary}">${ph.name}</strong><br />
+                        <span style="font-size: 12px; color: ${token.colorTextSecondary}">${ph.address}</span><br />
+                        <div style="margin-top: 8px">
+                            <span style="background: ${token.colorPrimary}; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px">View Details</span>
+                        </div>
+                    </div>
+                `);
+
+            marker.on('click', () => setSelectedPharmacy(ph));
+            markersRef.current[ph.id] = marker;
+        });
+    }, [pharmacies, token]);
 
     // Update map view when selectedPharmacy changes
     useEffect(() => {
         if (selectedPharmacy && mapInstance.current) {
-            mapInstance.current.flyTo(selectedPharmacy.pos, 15);
+            mapInstance.current.flyTo(selectedPharmacy.pos, 16);
             const marker = markersRef.current[selectedPharmacy.id];
             if (marker) marker.openPopup();
         }
@@ -244,57 +254,57 @@ const Pharmacies = () => {
                         <Title level={3} style={{ margin: 0 }}>Nearby Pharmacies</Title>
                         <Text type="secondary">Found {filteredPharmacies.length} providers near you</Text>
 
-                        <div className="search-box-wrapper">
+                        <div className="search-box-wrapper" style={{ marginTop: '16px' }}>
                             <Input
                                 prefix={<SearchOutlined />}
-                                placeholder="Search by pharmacy..."
+                                placeholder="Search by name..."
                                 className="pharmacy-search"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
+                                style={{ marginBottom: '8px' }}
                             />
-                            <Button
-                                icon={<AimOutlined />}
-                                loading={loadingLocation}
-                                onClick={handleLocateUser}
-                                title="Locate Me"
-                            />
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <AutoComplete
+                                    style={{ flex: 1 }}
+                                    options={medicineOptions}
+                                    value={medicineSearch}
+                                    onChange={setMedicineSearch}
+                                    filterOption={(inputValue, option) =>
+                                        option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                                    }
+                                >
+                                    <Input
+                                        prefix={<MedicineBoxOutlined />}
+                                        placeholder="Search medicine stock..."
+                                        allowClear
+                                    />
+                                </AutoComplete>
+                                <Button
+                                    icon={<AimOutlined />}
+                                    loading={loadingLocation}
+                                    onClick={handleLocateUser}
+                                    title="Use GPS"
+                                />
+                            </div>
                         </div>
 
                         <div style={{ marginTop: '16px' }}>
-                            <Text type="secondary" size="small">Find Medicines</Text>
-                            <AutoComplete
-                                style={{ width: '100%', marginTop: '4px' }}
-                                options={medicineOptions}
-                                placeholder="Search medicine stock..."
-                                value={medicineSearch}
-                                onChange={setMedicineSearch}
-                                filterOption={(inputValue, option) =>
-                                    option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
-                                }
-                            >
-                                <Input prefix={<MedicineBoxOutlined />} allowClear />
-                            </AutoComplete>
-                        </div>
-
-                        {userLocation && (
-                            <div style={{ marginTop: '16px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <Text type="secondary">Radius: {radius}km</Text>
-                                    <Text type="secondary" style={{ fontSize: '10px' }}>Proximal Filtering</Text>
-                                </div>
-                                <Slider
-                                    min={1}
-                                    max={20}
-                                    value={radius}
-                                    onChange={setRadius}
-                                    tooltip={{ formatter: val => `${val}km` }}
-                                />
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <Text type="secondary">Radius: {radius}km</Text>
                             </div>
-                        )}
+                            <Slider
+                                min={1}
+                                max={20}
+                                value={radius}
+                                onChange={setRadius}
+                                tooltip={{ formatter: val => `${val}km` }}
+                            />
+                        </div>
                     </div>
 
                     <div className="pharmacy-list-scroll">
                         <List
+                            loading={loading}
                             dataSource={filteredPharmacies}
                             renderItem={item => (
                                 <div
@@ -356,7 +366,7 @@ const Pharmacies = () => {
                                     <div style={{ marginTop: '12px' }}>
                                         <Space size="large">
                                             <Space><PhoneOutlined /> <Text>{selectedPharmacy.phone}</Text></Space>
-                                            <Space><CompassOutlined /> <Text>{selectedPharmacy.distance} away</Text></Space>
+                                            <Space><CompassOutlined /> <Text>{selectedPharmacy.distance}</Text></Space>
                                         </Space>
                                     </div>
                                 </Col>
@@ -374,5 +384,4 @@ const Pharmacies = () => {
         </div>
     );
 };
-
 export default Pharmacies;

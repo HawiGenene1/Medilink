@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { registerPharmacy, checkPharmacyStatus, getPharmacySubscription, requestSubscriptionRenewal } = require('../controllers/pharmacyController');
+const { registerPharmacy, checkPharmacyStatus, getPharmacySubscription, requestSubscriptionRenewal, getPharmacyById, getPharmacies } = require('../controllers/pharmacyController');
 const { protect } = require('../middleware/authMiddleware');
 const router = express.Router();
 
@@ -32,6 +32,11 @@ router.get('/status/:id', checkPharmacyStatus);
 // @desc    Get public pharmacy details by ID
 // @access  Public
 router.get('/:id', getPharmacyById);
+
+// @route   GET /api/pharmacy
+// @desc    Get list of verifies pharmacies
+// @access  Public
+router.get('/', getPharmacies);
 
 // ============ SUBSCRIPTION ROUTES (Protected) ============
 

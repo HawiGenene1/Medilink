@@ -80,22 +80,6 @@ const MedicineSearch = () => {
                             <Option value="prescription">Prescription</Option>
                             <Option value="otc">OTC</Option>
                         </Select>
-                        <div style={{ background: '#fff', padding: '4px', borderRadius: '8px', border: '1px solid #d9d9d9', display: 'flex' }}>
-                            <Button
-                                type={viewMode === 'list' ? 'primary' : 'text'}
-                                icon={<UnorderedListOutlined />}
-                                onClick={() => setViewMode('list')}
-                            >
-                                List
-                            </Button>
-                            <Button
-                                type={viewMode === 'map' ? 'primary' : 'text'}
-                                icon={<EnvironmentOutlined />}
-                                onClick={() => setViewMode('map')}
-                            >
-                                Map
-                            </Button>
-                        </div>
                     </Col>
                 </Row>
             </div>
