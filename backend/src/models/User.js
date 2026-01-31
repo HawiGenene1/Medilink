@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin'],
+    enum: ['customer', 'cashier', 'delivery', 'admin'],
     default: 'customer'
   },
   username: {
@@ -46,7 +46,7 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Pharmacy',
     required: function () {
-      return ['pharmacy_staff', 'pharmacy_admin', 'cashier'].includes(this.role);
+      return ['cashier'].includes(this.role);
     }
   },
   // Address for customers and delivery personnel

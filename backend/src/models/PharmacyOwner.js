@@ -57,6 +57,10 @@ const pharmacyOwnerSchema = new mongoose.Schema({
         type: [String],
         default: ['dashboard', 'inventory', 'orders', 'staff']
     },
+    operationalPermissions: {
+        manageInventory: { type: Boolean, default: false },
+        prepareOrders: { type: Boolean, default: false }
+    },
     isActive: {
         type: Boolean,
         default: true
@@ -66,18 +70,13 @@ const pharmacyOwnerSchema = new mongoose.Schema({
 });
 
 // Middleware: Hash password before saving
-pharmacyOwnerSchema.pre('save', async function (next) {
+pharmacyOwnerSchema.pre('save', async function () {
     if (!this.isModified('password')) {
-        return next();
+        return;
     }
 
-    try {
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (error) {
-        next(error);
-    }
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Method to compare candidate password with hashed password

@@ -14,8 +14,8 @@ const pharmacyStaffSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['pharmacist', 'technician', 'assistant', 'admin'],
-    default: 'technician',
+    enum: ['pharmacist', 'cashier'],
+    default: 'cashier',
     required: [true, 'Role is required']
   },
   permissions: {
@@ -56,25 +56,25 @@ const pharmacyStaffSchema = new mongoose.Schema({
 pharmacyStaffSchema.index({ user: 1, pharmacy: 1 }, { unique: true });
 
 // Virtual for staff's full name
-pharmacyStaffSchema.virtual('name').get(function() {
+pharmacyStaffSchema.virtual('name').get(function () {
   return this.user?.name || 'Unknown';
 });
 
 // Check if staff has specific permission
-pharmacyStaffSchema.methods.hasPermission = function(area, action) {
+pharmacyStaffSchema.methods.hasPermission = function (area, action) {
   if (!this.permissions[area]) return false;
   return this.permissions[area][action] === true;
 };
 
 // Check if staff is active and can access the system
-pharmacyStaffSchema.methods.canAccess = function() {
+pharmacyStaffSchema.methods.canAccess = function () {
   if (!this.isActive) return false;
-  
+
   // Check if pharmacy subscription is active
   if (this.pharmacy?.subscription?.status !== 'active') {
     return false;
   }
-  
+
   return true;
 };
 

@@ -58,21 +58,20 @@ const insuranceSchema = new mongoose.Schema({
     type: String,
     trim: true
   }
-}, { 
+}, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
 });
 
 // Ensure only one primary insurance per user
-insuranceSchema.pre('save', async function(next) {
+insuranceSchema.pre('save', async function () {
   if (this.isPrimary) {
     await this.constructor.updateMany(
       { user: this.user, _id: { $ne: this._id } },
       { $set: { isPrimary: false } }
     );
   }
-  next();
 });
 
 module.exports = mongoose.model('Insurance', insuranceSchema);
