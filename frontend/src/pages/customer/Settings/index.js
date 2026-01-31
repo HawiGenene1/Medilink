@@ -72,13 +72,7 @@ const Settings = () => {
                 <Button type="primary">Update Password</Button>
             </Form>
 
-            <Divider style={{ margin: '40px 0' }} />
 
-            <Title level={4} style={{ color: '#E53935' }}>Two-Factor Authentication</Title>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text>Secure your account with SMS verification for all clinical orders.</Text>
-                <Switch defaultChecked />
-            </div>
         </div>
     );
 

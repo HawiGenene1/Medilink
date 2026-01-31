@@ -80,7 +80,7 @@ const Login = () => {
   if (requires2FA) {
     return (
       <div className="login-container">
-        <Card title="Two-Factor Authentication" className="login-card">
+        <Card title="Security Verification" className="login-card">
           <div style={{ marginBottom: 20 }}>
             <Text>Please enter the 6-digit security code sent to:</Text>
             <div style={{ marginTop: 8 }}>
