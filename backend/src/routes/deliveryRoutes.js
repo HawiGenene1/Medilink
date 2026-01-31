@@ -12,7 +12,8 @@ const {
     getDeliveryHistory,
     getEarningsStats,
     getAvailableRequests,
-    getDeliveryProfile
+    getDeliveryProfile,
+    requestPayout
 } = require('../controllers/deliveryController');
 
 // All routes here should be protected
@@ -33,5 +34,6 @@ router.get('/active', authorize('delivery'), getActiveDeliveries);
 router.get('/history', authorize('delivery'), getDeliveryHistory);
 router.get('/profile', authorize('delivery'), getDeliveryProfile);
 router.get('/earnings', authorize('delivery'), getEarningsStats);
+router.post('/payout/request', authorize('delivery'), requestPayout);
 
 module.exports = router;

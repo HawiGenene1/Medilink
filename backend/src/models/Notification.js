@@ -33,7 +33,7 @@ const notificationSchema = new mongoose.Schema({
   metadata: {
     type: mongoose.Schema.Types.Mixed
   }
-}, { 
+}, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
@@ -41,5 +41,8 @@ const notificationSchema = new mongoose.Schema({
 
 // Index for faster querying
 notificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
+
+// TTL index to auto-delete notifications after 30 days
+notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

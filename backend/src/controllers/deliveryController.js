@@ -3,6 +3,8 @@ const Order = require('../models/Order');
 const logger = require('../utils/logger');
 const { getIo } = require('../socket');
 const mongoose = require('mongoose');
+const PayoutRequest = require('../models/PayoutRequest');
+const { createNotification } = require('../utils/notificationHelper');
 
 /**
  * @route   GET /api/delivery/nearby
@@ -155,11 +157,27 @@ const acceptOrder = async (req, res) => {
         // await DeliveryProfile.findOneAndUpdate({ userId: driverId }, { isAvailable: false });
 
         // Notify Customer and Pharmacy
+        await createNotification({
+            userId: order.customer,
+            title: 'Order Accepted',
+            message: `Your order ${order.orderNumber} has been accepted by a courier.`,
+            type: 'order_update',
+            link: `/customer/orders/${orderId}/track`
+        });
+
+        await createNotification({
+            userId: driverId,
+            title: 'Order Accepted Successfully',
+            message: `You have accepted order #${order.orderNumber}. Head to the pharmacy for pickup.`,
+            type: 'order_update',
+            link: `/delivery/details/${orderId}`,
+            metadata: { isSuccess: true }
+        });
+
         const io = getIo();
         io.to(`order_${orderId}`).emit('order_status_update', {
             status: 'confirmed',
             courier: driverId
-            // Could send driver details here
         });
 
         res.json({
@@ -246,6 +264,16 @@ const updateDriverStatus = async (req, res) => {
             });
         }
 
+        if (profile) {
+            await createNotification({
+                userId,
+                title: isAvailable ? 'You are now Online' : 'You are now Offline',
+                message: isAvailable ? 'Waiting for orders...' : 'You will not receive new requests.',
+                type: 'account',
+                metadata: { isSuccess: true }
+            });
+        }
+
         res.json({
             success: true,
             data: profile
@@ -290,6 +318,14 @@ const startDelivery = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
         }
 
+        await createNotification({
+            userId: order.customer,
+            title: 'Out for Delivery',
+            message: `Courier has picked up your order ${order.orderNumber} and is heading your way.`,
+            type: 'order_update',
+            link: `/customer/orders/${orderId}/track`
+        });
+
         const io = getIo();
         io.to(`order_${orderId}`).emit('order_status_update', { status: 'in_transit' });
 
@@ -331,6 +367,14 @@ const completeDelivery = async (req, res) => {
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
         }
+
+        await createNotification({
+            userId: order.customer,
+            title: 'Order Delivered',
+            message: `Your order ${order.orderNumber} has been delivered. Thank you for using MediLink!`,
+            type: 'order_update',
+            link: `/customer/orders`
+        });
 
         const io = getIo();
         io.to(`order_${orderId}`).emit('order_status_update', { status: 'delivered' });
@@ -436,14 +480,21 @@ const getEarningsStats = async (req, res) => {
         ]);
 
         const totalEarnings = stats.length > 0 ? stats[0].totalEarnings : 0;
-        const completedDeliveries = stats.length > 0 ? stats[0].completedDeliveries : 0;
+        const completedDeliveries = stats.length > 0 ? stats[0].totalDeliveries : 0;
+
+        // Calculate pending payout (delivered but not paid to driver)
+        const pendingPayoutResult = await Order.aggregate([
+            { $match: { courier: new mongoose.Types.ObjectId(driverId), status: 'delivered', isPaidToDriver: false } },
+            { $group: { _id: null, total: { $sum: '$courierEarnings' } } }
+        ]);
+        const pendingPayout = pendingPayoutResult.length > 0 ? pendingPayoutResult[0].total : 0;
 
         // Get recent transactions (mocking simpler list for now, or reuse history)
         const recentTransactions = await Order.find({
             courier: driverId,
             status: 'delivered'
         })
-            .select('orderNumber serviceFee actualArrivalTime')
+            .select('orderNumber serviceFee courierEarnings actualArrivalTime isPaidToDriver')
             .sort({ actualArrivalTime: -1 })
             .limit(10);
 
@@ -451,21 +502,93 @@ const getEarningsStats = async (req, res) => {
             id: t._id,
             date: t.actualArrivalTime ? t.actualArrivalTime.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             amount: t.courierEarnings || t.serviceFee,
-            status: 'Completed'
+            status: t.isPaidToDriver ? 'Paid' : 'Completed'
         }));
 
         res.json({
             success: true,
             data: {
                 totalEarnings,
-                pendingPayout: 0, // Placeholder
+                pendingPayout,
                 completedDeliveries,
+                todayEarnings: stats.length > 0 ? stats[0].todayEarnings : 0,
+                thisWeekEarnings: stats.length > 0 ? stats[0].thisWeekEarnings : 0,
                 recentTransactions: formattedTransactions
             }
         });
     } catch (error) {
         logger.error('Error fetching earnings:', error);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * @route   POST /api/delivery/payout/request
+ * @desc    Request a payout
+ * @access  Private (Delivery)
+ */
+const requestPayout = async (req, res) => {
+    try {
+        const driverId = req.user.userId || req.user.id;
+
+        // 1. Calculate how much is eligible for payout
+        const pendingOrders = await Order.find({
+            courier: driverId,
+            status: 'delivered',
+            isPaidToDriver: false
+        });
+
+        if (pendingOrders.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No pending earnings available for payout'
+            });
+        }
+
+        const payoutAmount = pendingOrders.reduce((sum, order) => sum + (order.courierEarnings || 0), 0);
+
+        if (payoutAmount < 50) { // Minimum payout limit
+            return res.status(400).json({
+                success: false,
+                message: 'Minimum payout amount is 50 ETB'
+            });
+        }
+
+        // 2. Clear unpaid orders (mark as processing/queued for payout)
+        // For simplicity in this demo, we mark them as paid to driver when request is created
+        // In a real system, you'd mark them as 'payout_pending'
+        await Order.updateMany(
+            { _id: { $in: pendingOrders.map(o => o._id) } },
+            { $set: { isPaidToDriver: true } }
+        );
+
+        // 3. Create Payout Request record
+        const request = new PayoutRequest({
+            driverId,
+            amount: payoutAmount,
+            status: 'pending',
+            method: 'bank_transfer' // Default
+        });
+        await request.save();
+
+        await createNotification({
+            userId: driverId,
+            title: 'Payout Requested',
+            message: `Your payout request for ETB ${payoutAmount} has been submitted successfully.`,
+            type: 'account',
+            link: `/delivery/earnings`,
+            metadata: { isSuccess: true }
+        });
+
+        res.json({
+            success: true,
+            message: 'Payout request submitted successfully',
+            data: request
+        });
+
+    } catch (error) {
+        logger.error('Error requesting payout:', error);
+        res.status(500).json({ success: false, message: 'Server error requesting payout' });
     }
 };
 
@@ -563,7 +686,7 @@ module.exports = {
     getActiveDeliveries,
     getDeliveryHistory,
     getEarningsStats,
-    getEarningsStats,
     getAvailableRequests,
-    getDeliveryProfile
+    getDeliveryProfile,
+    requestPayout
 };

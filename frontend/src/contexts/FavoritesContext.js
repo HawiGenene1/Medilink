@@ -53,8 +53,10 @@ export const FavoritesProvider = ({ children }) => {
             return;
         }
 
+        const medicineId = medicine.id || medicine._id;
+
         // Optimistic update
-        const isAlreadyFavorite = favorites.some(item => item.id === medicine.id);
+        const isAlreadyFavorite = favorites.some(item => (item.id || item._id) === medicineId);
         if (isAlreadyFavorite) {
             message.info('Already in favorites');
             return;
@@ -64,19 +66,22 @@ export const FavoritesProvider = ({ children }) => {
         setFavorites(newFavorites);
 
         try {
-            await api.post('/favorites', { medicineId: medicine.id });
-            message.success('Added to favorites');
+            const response = await api.post('/favorites', { medicineId });
+            if (response.data) {
+                message.success('Added to favorites');
+            }
         } catch (error) {
             // Revert on failure
             setFavorites(favorites);
             console.error('Failed to add favorite', error);
-            message.error('Failed to save favorite');
+            const errorMsg = error.response?.data?.message || 'Failed to save favorite';
+            message.error(errorMsg);
         }
     };
 
     const removeFromFavorites = async (medicineId) => {
         // Optimistic update
-        const newFavorites = favorites.filter(item => item.id !== medicineId);
+        const newFavorites = favorites.filter(item => (item.id || item._id) !== medicineId);
         setFavorites(newFavorites);
 
         try {
@@ -84,21 +89,28 @@ export const FavoritesProvider = ({ children }) => {
             message.success('Removed from favorites');
         } catch (error) {
             // Revert on failure
-            const item = favorites.find(i => i.id === medicineId);
+            const item = favorites.find(i => (i.id || i._id) === medicineId);
             if (item) setFavorites([...newFavorites, item]);
-            // Or just refetch to be safe
-            // fetchFavorites();
             console.error('Failed to remove favorite', error);
             message.error('Failed to remove favorite');
         }
     };
 
     const isFavorite = (medicineId) => {
-        return favorites.some(item => item.id === medicineId);
+        return favorites.some(item => String(item.id || item._id) === String(medicineId));
+    };
+
+    const toggleFavorite = async (medicine) => {
+        const medicineId = String(medicine.id || medicine._id);
+        if (isFavorite(medicineId)) {
+            await removeFromFavorites(medicineId);
+        } else {
+            await addToFavorites(medicine);
+        }
     };
 
     return (
-        <FavoritesContext.Provider value={{ favorites, addToFavorites, removeFromFavorites, isFavorite, loading }}>
+        <FavoritesContext.Provider value={{ favorites, addToFavorites, removeFromFavorites, isFavorite, toggleFavorite, loading }}>
             {children}
         </FavoritesContext.Provider>
     );

@@ -3,6 +3,7 @@ const DeliveryProfile = require('../models/DeliveryProfile');
 const { getIo } = require('../socket');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
+const { createNotification } = require('../utils/notificationHelper');
 
 /**
  * GET /api/orders
@@ -236,6 +237,15 @@ const createOrder = async (req, res) => {
           });
         });
         console.log(`Notified ${drivers.length} drivers for order ${populatedOrder.orderNumber}`);
+        // Notify Customer
+        await createNotification({
+          userId: populatedOrder.customer,
+          title: 'Order Placed',
+          message: `Order #${populatedOrder.orderNumber} has been successfully placed!`,
+          type: 'order_update',
+          link: `/customer/orders/track/${populatedOrder._id}`,
+          metadata: { isSuccess: true }
+        });
       }
     } catch (err) {
       console.error('Failed to notify drivers:', err);

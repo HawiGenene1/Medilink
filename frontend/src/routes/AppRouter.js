@@ -51,6 +51,8 @@ import DeliverySettings from '../pages/delivery/DeliverySettings';
 import PharmacyLayout from '../layouts/PharmacyLayout';
 import Inventory from '../pages/pharmacy-staff/Inventory';
 import PharmacyDashboard from '../pages/pharmacy-admin/Dashboard';
+import DeliveryNotifications from '../pages/delivery/Notifications';
+import PharmacyNotifications from '../pages/pharmacy/Notifications';
 
 // Admin & Other Pages
 import AdminLayout from '../layouts/AdminLayout';
@@ -72,6 +74,7 @@ import Analytics from '../pages/admin/Analytics/Analytics';
 import Settings from '../pages/admin/Settings/Settings';
 import DeliveryApplicationList from '../pages/admin/DeliveryApplications/DeliveryApplicationList';
 import DeliveryApplicationDetail from '../pages/admin/DeliveryApplications/DeliveryApplicationDetail';
+import AdminNotifications from '../pages/admin/Notifications';
 
 const AppRouter = () => {
   return (
@@ -124,6 +127,7 @@ const AppRouter = () => {
           <Route path="/delivery/details/:id" element={<DeliveryDetails />} />
           <Route path="/delivery/profile" element={<DeliveryProfile />} />
           <Route path="/delivery/settings" element={<DeliverySettings />} />
+          <Route path="/delivery/notifications" element={<DeliveryNotifications />} />
         </Route>
       </Route>
 
@@ -132,6 +136,8 @@ const AppRouter = () => {
         <Route element={<PharmacyLayout />}>
           <Route path="/pharmacy-staff/inventory" element={<Inventory />} />
           <Route path="/pharmacy-admin/dashboard" element={<PharmacyDashboard />} />
+          <Route path="/pharmacy-admin/notifications" element={<PharmacyNotifications />} />
+          <Route path="/pharmacy-staff/notifications" element={<PharmacyNotifications />} />
         </Route>
       </Route>
 
@@ -173,6 +179,7 @@ const AppRouter = () => {
 
           {/* Settings */}
           <Route path="/admin/settings" element={<Settings />} />
+          <Route path="/admin/notifications" element={<AdminNotifications />} />
         </Route>
       </Route>
       {/* Redirects & Fallbacks */}

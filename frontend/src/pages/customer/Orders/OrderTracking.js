@@ -8,7 +8,8 @@ import {
     CheckCircleFilled,
     SendOutlined,
     UserOutlined,
-    LoadingOutlined
+    LoadingOutlined,
+    SyncOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import L from 'leaflet';
@@ -230,33 +231,58 @@ const OrderTracking = () => {
 
     const statusMapping = {
         'pending': 'Order Placed',
-        'confirmed': 'Order Accepted',
-        'preparing': 'Preparing',
+        'confirmed': 'Order Approved & Assigned',
+        'preparing': 'Pharmacy is Preparing Order',
         'ready': 'Ready for Pickup',
-        'in_transit': 'Out for Delivery',
+        'in_transit': 'Courier is Traveling to You',
         'delivered': 'Delivered'
     };
 
     const timelineItems = (orderData?.statusHistory || []).map((item, index) => {
-        const mappedStatus = statusMapping[item.status] || (item.status ? item.status.replace(/_/g, ' ') : 'Unknown');
+        const mappedStatus = statusMapping[item.status] || (item.status ? item.status.replace(/_/g, ' ') : 'Processing');
         const isLatest = index === (orderData?.statusHistory.length - 1);
 
         return {
             dot: getStatusIcon(item.status, isLatest),
             children: (
-                <div>
-                    <Text strong style={{ textTransform: 'capitalize', color: isLatest ? '#1E88E5' : 'inherit' }}>
+                <div style={{ opacity: isLatest ? 1 : 0.7 }}>
+                    <Text strong style={{
+                        fontSize: isLatest ? '14px' : '13px',
+                        color: isLatest ? '#1E88E5' : 'inherit'
+                    }}>
                         {mappedStatus}
                     </Text>
                     <br />
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                        {new Date(item.timestamp || new Date()).toLocaleString()}
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                        {new Date(item.timestamp || new Date()).toLocaleString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
-                    {item.note && <div style={{ fontSize: '13px', marginTop: '4px' }}>{item.note}</div>}
+                    {item.note && isLatest && (
+                        <div style={{ fontSize: '12px', marginTop: '4px', color: '#64748b' }}>
+                            {item.note}
+                        </div>
+                    )}
                 </div>
             )
         };
     });
+
+    // Fallback if history is empty
+    if (timelineItems.length === 0 && orderData?.status) {
+        timelineItems.push({
+            dot: getStatusIcon(orderData.status, true),
+            children: (
+                <div>
+                    <Text strong style={{ color: '#1E88E5' }}>
+                        {statusMapping[orderData.status] || orderData.status}
+                    </Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                        Current Status
+                    </Text>
+                </div>
+            )
+        });
+    }
 
     if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}><LoadingOutlined style={{ fontSize: '24px' }} /></div>;
 
@@ -293,8 +319,30 @@ const OrderTracking = () => {
 
                 {/* Status Section */}
                 <Col xs={24} lg={8}>
-                    <Card title={<Title level={4} style={{ margin: 0 }}>Order Status</Title>} style={{ marginBottom: '24px' }}>
-                        <div style={{ padding: '12px 0' }}>
+                    <Card
+                        title={
+                            <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                                <Title level={4} style={{ margin: 0 }}>Progress</Title>
+                                <Tag color="blue" icon={<SyncOutlined spin />}>Live</Tag>
+                            </Space>
+                        }
+                        style={{ marginBottom: '24px', borderRadius: '16px' }}
+                    >
+                        {orderData?.status && (
+                            <div style={{
+                                background: '#f0f7ff',
+                                padding: '12px',
+                                borderRadius: '12px',
+                                marginBottom: '20px',
+                                border: '1px solid #bae7ff'
+                            }}>
+                                <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Status</Text>
+                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#003a8c' }}>
+                                    {statusMapping[orderData.status] || orderData.status.replace(/_/g, ' ')}
+                                </div>
+                            </div>
+                        )}
+                        <div style={{ padding: '0 4px' }}>
                             <Timeline items={timelineItems} />
                         </div>
                     </Card>

@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { CartProvider } from './contexts/CartContext';
 import { FavoritesProvider } from './contexts/FavoritesContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import AppRouter from './routes/AppRouter';
 
 function App() {
@@ -31,7 +32,9 @@ function App() {
             <SocketProvider>
               <CartProvider>
                 <FavoritesProvider>
-                  <AppRouter />
+                  <NotificationProvider>
+                    <AppRouter />
+                  </NotificationProvider>
                 </FavoritesProvider>
               </CartProvider>
             </SocketProvider>

@@ -50,6 +50,10 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  isPaidToDriver: {
+    type: Boolean,
+    default: false
+  },
   tax: {
     type: Number,
     default: 0

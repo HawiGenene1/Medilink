@@ -107,10 +107,7 @@ const DeliveryDashboard = () => {
       await api.put('/delivery/status', payload);
 
       setIsOnline(online);
-      notification.success({
-        message: online ? 'You are now Online' : 'You are now Offline',
-        description: online ? 'Waiting for orders...' : 'You will not receive new requests.'
-      });
+      console.log(`Status updated to ${online ? 'Online' : 'Offline'}`);
     } catch (error) {
       notification.error({ message: 'Failed to update status' });
     } finally {
@@ -119,8 +116,12 @@ const DeliveryDashboard = () => {
   };
 
   const toggleOnline = () => {
-    if (!isOnline) {
-      // Going online - get location
+    const nextState = !isOnline;
+
+    if (nextState) {
+      // Going online - show optimistic change immediately
+      setIsOnline(true);
+
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -132,7 +133,6 @@ const DeliveryDashboard = () => {
             setLocation(loc);
             updateStatus(true, loc);
 
-            // Emit to socket as well
             if (socket) {
               socket.emit('update_location', {
                 userId: user?._id || user?.id,
@@ -142,15 +142,18 @@ const DeliveryDashboard = () => {
           },
           (err) => {
             console.error('Location error:', err);
-            notification.error({ message: 'Location access required. Please enable site permissions.' });
+            setIsOnline(false); // Revert on failure
+            notification.error({ message: 'Location access required' });
           },
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       } else {
+        setIsOnline(false);
         notification.error({ message: 'Geolocation not supported' });
       }
     } else {
       // Going offline
+      setIsOnline(false);
       updateStatus(false, null);
     }
   };
@@ -178,7 +181,7 @@ const DeliveryDashboard = () => {
       const response = await api.put('/delivery/accept', { orderId });
 
       if (response.data.success) {
-        notification.success({ message: 'Order Accepted', description: 'Head to the pharmacy for pickup.' });
+        console.log('Order Accepted successfully.');
         setIncomingRequest(null);
         setTasks(prev => [response.data.data, ...prev]);
         setAvailableJobs(prev => prev.filter(job => job._id !== orderId));

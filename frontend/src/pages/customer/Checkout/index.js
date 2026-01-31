@@ -324,10 +324,7 @@ const Checkout = () => {
             if (response.data.success) {
                 const newOrder = response.data.data;
                 setPlacedOrderId(newOrder._id);
-                notification.success({
-                    message: 'Order Placed',
-                    description: `Order #${newOrder.orderNumber} has been successfully placed!`
-                });
+                console.log('Order placed successfully. Notification handled via socket.');
 
                 // Set success state before clearing cart to avoid "Cart Empty" jump
                 setCurrentStep(4);

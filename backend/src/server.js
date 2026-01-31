@@ -32,6 +32,8 @@ const { protectAdmin } = require('./middleware/authMiddleware');
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/favorites', require('./routes/favoriteRoutes'));
+app.use('/api/favorite', require('./routes/favoriteRoutes'));
 
 // Medicines API
 try {
@@ -45,6 +47,8 @@ app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
 app.use('/api/delivery/onboarding', require('./routes/deliveryOnboardingRoutes'));
 app.use('/api/delivery', require('./routes/deliveryRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+
 
 // Test route
 app.get('/', (req, res) => {

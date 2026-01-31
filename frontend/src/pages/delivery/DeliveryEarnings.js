@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Typography, Statistic, List, Divider, Progress, Button } from 'antd';
+import { Card, Row, Col, Typography, Statistic, List, Divider, Progress, Button, notification } from 'antd';
 import { DollarOutlined, RiseOutlined, ArrowUpOutlined, CarOutlined } from '@ant-design/icons';
 import api from '../../services/api';
 
@@ -43,6 +43,29 @@ const DeliveryEarnings = () => {
         }
     };
 
+    const handleRequestPayout = async () => {
+        if (stats.pendingPayout <= 0) {
+            notification.warning({ message: 'No pending earnings to payout' });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await api.post('/delivery/payout/request');
+            if (response.data.success) {
+                console.log('Payout Requested successfully.');
+                fetchEarnings(); // Refresh data
+            }
+        } catch (error) {
+            notification.error({
+                message: 'Payout Failed',
+                description: error.response?.data?.message || 'Server error'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
             <Title level={2}><DollarOutlined /> Earnings</Title>
@@ -72,7 +95,16 @@ const DeliveryEarnings = () => {
                             valueStyle={{ color: '#faad14' }}
                             prefix="ETB"
                         />
-                        <Button type="link" size="small" style={{ paddingLeft: 0 }}>Request Payout</Button>
+                        <Button
+                            type="primary"
+                            size="small"
+                            style={{ marginTop: '8px' }}
+                            onClick={handleRequestPayout}
+                            loading={loading}
+                            disabled={stats.pendingPayout < 50}
+                        >
+                            {stats.pendingPayout < 50 ? 'Min 50 ETB' : 'Request Payout'}
+                        </Button>
                     </Card>
                 </Col>
                 <Col xs={24} sm={8}>
