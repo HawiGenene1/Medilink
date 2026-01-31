@@ -207,6 +207,12 @@ const verifyChapaPayment = asyncHandler(async (req, res) => {
             if (order) {
                 order.paymentStatus = 'paid';
                 order.status = 'confirmed'; // Auto-confirm paid orders
+                order.paymentDetails = {
+                    ...order.paymentDetails,
+                    transactionId: payment.transactionId,
+                    chapaReference: verification.data.reference,
+                    paidAt: new Date()
+                };
                 await order.save();
             }
 

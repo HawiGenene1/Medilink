@@ -79,6 +79,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentDetails: {
     transactionId: String,
+    chapaReference: String,
     paidAt: Date
   },
   deliveryAddress: {

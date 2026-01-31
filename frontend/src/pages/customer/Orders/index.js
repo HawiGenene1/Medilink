@@ -1,68 +1,72 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Timeline, Modal, Divider } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Modal, Divider, Empty, Spin, message } from 'antd';
 import {
-  ClockCircleOutlined,
-  EnvironmentOutlined,
   ShopOutlined,
+  EnvironmentOutlined,
   ShoppingCartOutlined,
   FileTextOutlined,
-  ArrowRightOutlined,
-  MedicineBoxOutlined
+  MedicineBoxOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { ordersAPI } from '../../../services/api';
 import './Orders.css';
 
 const { Title, Text } = Typography;
 
 const Orders = () => {
   const navigate = useNavigate();
-
-  const activeOrders = [
-    {
-      id: 'ORD-1024',
-      pharmacy: 'Kenema Pharmacy No. 4',
-      status: 'Out for Delivery',
-      statusColor: 'processing',
-      itemCount: 3,
-      total: '210 ETB',
-      date: 'Today, 2:30 PM',
-      progress: 75
-    },
-    {
-      id: 'ORD-1022',
-      pharmacy: 'City Central Pharma',
-      status: 'Processing',
-      statusColor: 'warning',
-      itemCount: 1,
-      total: '80 ETB',
-      date: 'Today, 10:15 AM',
-      progress: 30
-    }
-  ];
-
-  const pastOrders = [
-    {
-      id: 'ORD-0950',
-      pharmacy: 'Red Cross Pharmacy',
-      status: 'Delivered',
-      statusColor: 'success',
-      itemCount: 2,
-      total: '450 ETB',
-      date: 'Jan 15, 2026'
-    },
-    {
-      id: 'ORD-0942',
-      pharmacy: 'Kenema Pharmacy',
-      status: 'Delivered',
-      statusColor: 'success',
-      itemCount: 5,
-      total: '1,200 ETB',
-      date: 'Jan 12, 2026'
-    }
-  ];
-
+  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState([]);
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await ordersAPI.getAll();
+      if (response.data.success) {
+        setOrders(response.data.data.orders || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+      message.error('Failed to load your orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeOrders = orders.filter(o => !['delivered', 'cancelled', 'refunded'].includes(o.status));
+  const pastOrders = orders.filter(o => ['delivered', 'cancelled', 'refunded'].includes(o.status));
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return 'warning';
+      case 'confirmed': return 'blue';
+      case 'preparing': return 'processing';
+      case 'ready': return 'purple';
+      case 'out_for_delivery': return 'processing';
+      case 'delivered': return 'success';
+      case 'cancelled': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const getProgress = (status) => {
+    switch (status) {
+      case 'pending': return 10;
+      case 'confirmed': return 30;
+      case 'preparing': return 50;
+      case 'ready': return 70;
+      case 'out_for_delivery': return 90;
+      case 'delivered': return 100;
+      default: return 0;
+    }
+  };
 
   const handleViewDetails = (order) => {
     setSelectedOrder(order);
@@ -76,14 +80,14 @@ const Orders = () => {
           <Space size="middle">
             <Avatar shape="square" size={48} icon={<ShopOutlined />} style={{ background: '#E3F2FD', color: '#1E88E5' }} />
             <div>
-              <Text type="secondary" style={{ fontSize: '12px' }}>Order ID: {order.id}</Text>
-              <Title level={4} style={{ margin: 0 }}>{order.pharmacy}</Title>
+              <Text type="secondary" style={{ fontSize: '12px' }}>Order ID: {order.orderNumber}</Text>
+              <Title level={4} style={{ margin: 0 }}>{order.pharmacy?.name || 'Local Pharmacy'}</Title>
             </div>
           </Space>
         </Col>
         <Col style={{ textAlign: 'right' }}>
-          <Tag color={order.statusColor} style={{ marginRight: 0 }}>{order.status}</Tag>
-          <div style={{ marginTop: '4px' }}><Text type="secondary">{order.date}</Text></div>
+          <Tag color={getStatusColor(order.status)} style={{ marginRight: 0 }}>{order.status.toUpperCase()}</Tag>
+          <div style={{ marginTop: '4px' }}><Text type="secondary">{new Date(order.createdAt).toLocaleDateString()}</Text></div>
         </Col>
       </Row>
 
@@ -91,29 +95,29 @@ const Orders = () => {
         <Col xs={24} md={16}>
           <div className="order-items-preview">
             <Space size="middle">
-              <div className="item-qty-badge">{order.itemCount} Items</div>
-              <Text strong style={{ fontSize: '16px' }}>Total: {order.total}</Text>
+              <div className="item-qty-badge">{order.items?.length || 0} Items</div>
+              <Text strong style={{ fontSize: '16px' }}>Total: {order.finalAmount?.toFixed(2)} ETB</Text>
             </Space>
           </div>
 
           {isActive && (
             <div className="order-track-progress" style={{ marginTop: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <Text strong>{order.status}</Text>
-                <Text>{order.progress}%</Text>
+                <Text strong>{order.status.replace(/_/g, ' ').toUpperCase()}</Text>
+                <Text>{getProgress(order.status)}%</Text>
               </div>
-              <Progress percent={order.progress} strokeColor="#1E88E5" showInfo={false} />
+              <Progress percent={getProgress(order.status)} strokeColor="#1E88E5" showInfo={false} />
             </div>
           )}
         </Col>
         <Col xs={24} md={8} style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '12px' }}>
           <Button block icon={<FileTextOutlined />} onClick={() => handleViewDetails(order)}>View Details</Button>
-          {isActive ? (
-            <Button type="primary" block icon={<EnvironmentOutlined />} onClick={() => navigate(`/customer/orders/track/${order.id}`)}>
+          {(order.status === 'out_for_delivery' || order.status === 'ready') ? (
+            <Button type="primary" block icon={<EnvironmentOutlined />} onClick={() => navigate(`/customer/orders/track/${order._id}`)}>
               Track Live
             </Button>
           ) : (
-            <Button type="primary" block icon={<ShoppingCartOutlined />}>Reorder</Button>
+            <Button type="primary" block icon={<ShoppingCartOutlined />} disabled={order.status === 'pending'}>Reorder</Button>
           )}
         </Col>
       </Row>
@@ -123,10 +127,10 @@ const Orders = () => {
   const tabsItems = [
     {
       key: '1',
-      label: 'Active Orders',
+      label: `Active Orders (${activeOrders.length})`,
       children: (
         <div className="orders-list-wrapper">
-          {activeOrders.map(order => <OrderCard key={order.id} order={order} isActive={true} />)}
+          {activeOrders.length > 0 ? activeOrders.map(order => <OrderCard key={order._id} order={order} isActive={true} />) : <Empty description="No active orders" />}
         </div>
       )
     },
@@ -135,11 +139,28 @@ const Orders = () => {
       label: 'Order History',
       children: (
         <div className="orders-list-wrapper">
-          {pastOrders.map(order => <OrderCard key={order.id} order={order} isActive={false} />)}
+          {pastOrders.length > 0 ? pastOrders.map(order => <OrderCard key={order._id} order={order} isActive={false} />) : <Empty description="No past orders" />}
         </div>
       )
     }
   ];
+
+  const handleOpenChapaReceipt = () => {
+    const ref = selectedOrder?.paymentDetails?.chapaReference || selectedOrder?.paymentDetails?.transactionId;
+    if (ref) {
+      window.open(`https://chapa.link/payment-receipt/${ref}`, '_blank');
+    } else {
+      message.warning('Chapa reference not found for this order.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Spin size="large" tip="Loading orders..." />
+      </div>
+    );
+  }
 
   return (
     <div className="orders-page-container fade-in">
@@ -151,12 +172,22 @@ const Orders = () => {
       <Tabs defaultActiveKey="1" items={tabsItems} className="clinical-tabs" />
 
       <Modal
-        title={`Order Details - ${selectedOrder?.id}`}
+        title={`Order Details - ${selectedOrder?.orderNumber}`}
         open={detailsVisible}
         onCancel={() => setDetailsVisible(false)}
         footer={[
           <Button key="close" onClick={() => setDetailsVisible(false)}>Close</Button>,
-          selectedOrder?.status === 'Delivered' && <Button key="reorder" type="primary">Reorder Items</Button>
+          selectedOrder?.paymentStatus === 'paid' && (
+            <Button
+              key="chapa"
+              icon={<DownloadOutlined />}
+              onClick={handleOpenChapaReceipt}
+              style={{ backgroundColor: '#00af41', color: '#fff', border: 'none' }}
+            >
+              Chapa Receipt
+            </Button>
+          ),
+          selectedOrder?.status === 'delivered' && <Button key="reorder" type="primary">Reorder Items</Button>
         ]}
         width={600}
       >
@@ -165,26 +196,28 @@ const Orders = () => {
             <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <Text type="secondary">Pharmacy</Text>
-                <Title level={4} style={{ margin: 0 }}>{selectedOrder.pharmacy}</Title>
+                <Title level={4} style={{ margin: 0 }}>{selectedOrder.pharmacy?.name || 'Local Pharmacy'}</Title>
               </div>
-              <Tag color={selectedOrder.statusColor}>{selectedOrder.status}</Tag>
+              <Space direction="vertical" align="end">
+                <Tag color={getStatusColor(selectedOrder.status)}>{selectedOrder.status.toUpperCase()}</Tag>
+                <Tag color={selectedOrder.paymentStatus === 'paid' ? 'success' : 'warning'}>
+                  {selectedOrder.paymentStatus.toUpperCase()}
+                </Tag>
+              </Space>
             </div>
 
             <Title level={5}>Order Items</Title>
             <List
               itemLayout="horizontal"
-              dataSource={[
-                { name: 'Amoxicillin 500mg', qty: 2, price: '120 ETB' },
-                { name: 'Paracetamol 500mg', qty: 1, price: '40 ETB' }
-              ]}
+              dataSource={selectedOrder.items || []}
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
                     avatar={<Avatar icon={<MedicineBoxOutlined />} style={{ backgroundColor: '#f0f2f5', color: '#1890ff' }} />}
                     title={item.name}
-                    description={`Quantity: ${item.qty}`}
+                    description={`Quantity: ${item.quantity}`}
                   />
-                  <div>{item.price}</div>
+                  <div>{item.price?.toFixed(2) || item.subtotal?.toFixed(2)} ETB</div>
                 </List.Item>
               )}
             />
@@ -194,15 +227,19 @@ const Orders = () => {
             <div style={{ backgroundColor: '#fafafa', padding: '16px', borderRadius: '8px' }}>
               <Row justify="space-between" style={{ marginBottom: '8px' }}>
                 <Text>Subtotal</Text>
-                <Text strong>160 ETB</Text>
+                <Text strong>{selectedOrder.totalAmount?.toFixed(2)} ETB</Text>
               </Row>
               <Row justify="space-between" style={{ marginBottom: '8px' }}>
                 <Text>Delivery Fee</Text>
-                <Text strong>50 ETB</Text>
+                <Text strong>{selectedOrder.deliveryFee?.toFixed(2)} ETB</Text>
+              </Row>
+              <Row justify="space-between" style={{ marginBottom: '8px' }}>
+                <Text>Tax</Text>
+                <Text strong>{selectedOrder.tax?.toFixed(2)} ETB</Text>
               </Row>
               <Row justify="space-between">
                 <Title level={4} style={{ margin: 0 }}>Total</Title>
-                <Title level={4} style={{ margin: 0, color: '#1E88E5' }}>{selectedOrder.total}</Title>
+                <Title level={4} style={{ margin: 0, color: '#1E88E5' }}>{selectedOrder.finalAmount?.toFixed(2)} ETB</Title>
               </Row>
             </div>
           </div>
