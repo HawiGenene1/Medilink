@@ -17,18 +17,18 @@ const validateRegistration = [
   body('lastName', 'Last name is required').not().isEmpty().trim(),
   body('email', 'Please include a valid email').isEmail().normalizeEmail(),
   body('phone', 'Phone number is required').not().isEmpty().trim(),
-  body('role', 'Invalid role').optional().isIn(['customer', 'pharmacy_staff', 'pharmacy_admin', 'cashier', 'delivery', 'admin']),
+  body('role', 'Invalid role').optional().isIn(['customer', 'cashier', 'delivery', 'admin']),
   // Password is required only for non-customer roles
   (req, res, next) => {
     const { role = 'customer' } = req.body;
-    
+
     if (role !== 'customer' && !req.body.password) {
       return res.status(400).json({
         success: false,
         message: 'Password is required for this user role',
       });
     }
-    
+
     // For customer, password is auto-generated
     // For other roles, validate password if provided
     if (req.body.password) {
@@ -36,7 +36,7 @@ const validateRegistration = [
         .isLength({ min: 6 })
         .run(req);
     }
-    
+
     next();
   }
 ];

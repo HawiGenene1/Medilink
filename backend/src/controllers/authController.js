@@ -61,7 +61,7 @@ const register = async (req, res) => {
 
     // Hash password and save user
     await user.save();
-    
+
     // If this is a customer, send welcome email with generated password
     if (role === 'customer') {
       try {
@@ -138,7 +138,7 @@ const login = async (req, res) => {
       });
     }
 
-    const token = generateToken({ id: user._id, role: user.role });
+    const token = generateToken({ userId: user._id, email: user.email, role: user.role });
 
     const { password: _pwd, ...safeUser } = user.toObject();
 

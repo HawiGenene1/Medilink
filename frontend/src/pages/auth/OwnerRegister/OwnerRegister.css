@@ -1,0 +1,35 @@
+.owner-register-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 40px 20px;
+}
+
+.owner-register-card {
+    width: 100%;
+    max-width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.owner-register-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.registration-success {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.success-icon {
+    font-size: 64px;
+    color: #52c41a;
+    margin-bottom: 16px;
+}
+
+.owner-register-card .ant-steps-item-title {
+    font-size: 14px;
+}

@@ -44,12 +44,18 @@ export const AuthProvider = ({ children }) => {
       if (process.env.NODE_ENV === 'development' && token.startsWith('header.')) {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
+
+          // Restore operational permissions from localStorage if available
+          const storedPermissions = localStorage.getItem('operationalPermissions');
+          const operationalPermissions = storedPermissions ? JSON.parse(storedPermissions) : {};
+
           const mockUser = {
             _id: 'mock-user-' + payload.role,
             email: payload.email,
             firstName: payload.role.toUpperCase(),
             lastName: 'User',
             role: payload.role,
+            operationalPermissions: operationalPermissions
           };
           setUser(mockUser);
           setIsAuthenticated(true);
@@ -88,12 +94,17 @@ export const AuthProvider = ({ children }) => {
       if (email.includes('delivery')) role = 'delivery';
       if (email.includes('owner')) role = 'PHARMACY_OWNER';
 
+      // Restore operational permissions from localStorage if available
+      const storedPermissions = localStorage.getItem('operationalPermissions');
+      const operationalPermissions = storedPermissions ? JSON.parse(storedPermissions) : {};
+
       const mockUser = {
         _id: 'mock-user-' + role,
         email,
         firstName: role.toUpperCase(),
         lastName: 'User',
         role: role,
+        operationalPermissions: operationalPermissions
       };
 
       // Create a dummy JWT with the role encoded
@@ -170,6 +181,11 @@ export const AuthProvider = ({ children }) => {
       ...prevUser,
       ...userData
     }));
+
+    // In development mode, persist operational permissions to localStorage
+    if (process.env.NODE_ENV === 'development' && userData.operationalPermissions) {
+      localStorage.setItem('operationalPermissions', JSON.stringify(userData.operationalPermissions));
+    }
   };
 
   const value = {
