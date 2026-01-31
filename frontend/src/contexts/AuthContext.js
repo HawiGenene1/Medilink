@@ -93,10 +93,22 @@ export const AuthProvider = ({ children }) => {
       if (email.includes('cashier')) role = 'cashier';
       if (email.includes('delivery')) role = 'delivery';
       if (email.includes('owner')) role = 'PHARMACY_OWNER';
+      if (email.includes('staff')) role = 'staff';
 
       // Restore operational permissions from localStorage if available
       const storedPermissions = localStorage.getItem('operationalPermissions');
-      const operationalPermissions = storedPermissions ? JSON.parse(storedPermissions) : {};
+      let operationalPermissions = storedPermissions ? JSON.parse(storedPermissions) : null;
+
+      // Default permissions for testing if none exist
+      if (!operationalPermissions && (role === 'staff' || role === 'PHARMACY_OWNER')) {
+        operationalPermissions = {
+          manageInventory: true,
+          prepareOrders: true,
+          manageStaff: role === 'PHARMACY_OWNER'
+        };
+      } else if (!operationalPermissions) {
+        operationalPermissions = {};
+      }
 
       const mockUser = {
         _id: 'mock-user-' + role,

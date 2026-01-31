@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const PharmacyStaff = require("../models/PharmacyStaff");
 const PharmacyOwner = require("../models/PharmacyOwner");
 
 /**
@@ -92,6 +93,20 @@ const protect = async (req, res, next) => {
         role: user.role,
         pharmacyId: user.pharmacyId
       };
+
+      // If user is staff, attach detailed permissions
+      if (['staff', 'cashier', 'pharmacist'].includes(user.role)) {
+        const staffDetails = await PharmacyStaff.findOne({ user: user._id });
+        if (staffDetails) {
+          req.user.permissions = staffDetails.permissions;
+          req.user.pharmacyId = staffDetails.pharmacy;
+          // Also attach operationalPermissions map for compatibility if needed
+          req.user.operationalPermissions = {
+            manageInventory: staffDetails.permissions?.inventory?.view || false, // Basic check
+            prepareOrders: staffDetails.permissions?.orders?.process || false
+          };
+        }
+      }
 
       next();
     } catch (error) {

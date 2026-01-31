@@ -9,61 +9,85 @@ import {
   IdcardOutlined,
   UploadOutlined
 } from '@ant-design/icons';
+import api from '../../../services/api';
 import './PharmacyRegister.css';
 
 const { TextArea } = Input;
 
 const PharmacyRegister = () => {
   const [loading, setLoading] = useState(false);
-  const [fileList, setFileList] = useState([]);
+  const [licenseFileList, setLicenseFileList] = useState([]);
+  const [tinFileList, setTinFileList] = useState([]);
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
   const onFinish = async (values) => {
     setLoading(true);
+    console.log('Submitting registration with values:', values);
+
     try {
-      // Prepare form data for file uploads
       const formData = new FormData();
 
-      // Add form values to formData
+      // 1. Process text fields
       Object.keys(values).forEach(key => {
-        if (values[key] !== undefined && values[key] !== null) {
-          formData.append(key, values[key]);
+        if (key !== 'address' && key !== 'licenseDocument' && key !== 'tinDocument' && key !== 'establishedDate') {
+          if (values[key] !== undefined && values[key] !== null) {
+            formData.append(key, values[key]);
+          }
         }
       });
 
-      // Add files to formData
-      fileList.forEach(file => {
-        if (file.originFileObj) {
-          formData.append('documents', file.originFileObj);
-        }
+      // 2. Format establishedDate
+      if (values.establishedDate) {
+        formData.append('establishedDate', values.establishedDate.toISOString());
+      }
+
+      // 3. Flatten address
+      if (values.address) {
+        Object.keys(values.address).forEach(subKey => {
+          if (values.address[subKey]) {
+            formData.append(`address[${subKey}]`, values.address[subKey]);
+          }
+        });
+      }
+
+      // 4. Append files
+      if (licenseFileList[0]?.originFileObj) {
+        formData.append('licenseDocument', licenseFileList[0].originFileObj);
+      }
+      if (tinFileList[0]?.originFileObj) {
+        formData.append('tinDocument', tinFileList[0].originFileObj);
+      }
+
+      console.log('Sending registration request via Axios...');
+
+      const response = await api.post('/pharmacy/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      // Send registration request
-      const response = await fetch('http://localhost:5000/api/pharmacy/register', {
-        method: 'POST',
-        body: formData,
-      });
+      console.log('Server response:', response.data);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        message.success('Pharmacy registration submitted for approval. We will contact you soon!');
-        // Redirect to status check page
-        navigate(`/pharmacy/status/${data.data?.id || ''}`);
+      if (response.data.success) {
+        message.success('Pharmacy registration submitted! (Auto-approved for DEV)');
+        navigate(`/auth/owner/register?pharmacyId=${response.data.data?.id || ''}`);
       } else {
-        message.error(data.message || 'Registration failed. Please try again.');
+        const errorMsg = response.data.errors ? `Validation failed: ${response.data.errors.join(', ')}` : (response.data.message || 'Registration failed.');
+        message.error(errorMsg);
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      message.error('An error occurred during registration. Please try again.');
+      console.error('Registration error details:', error);
+      const serverMsg = error.response?.data?.message || error.response?.data?.errors?.join(', ');
+      message.error(serverMsg || 'Network error: Backend server might be unreachable.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFileChange = ({ fileList: newFileList }) => {
-    setFileList(newFileList);
+  const normFile = (e) => {
+    if (Array.isArray(e)) return e;
+    return e && e.fileList;
   };
 
   const beforeUpload = (file) => {
@@ -92,6 +116,7 @@ const PharmacyRegister = () => {
           onFinish={onFinish}
           layout="vertical"
           scrollToFirstError
+          initialValues={{ address: { city: '', street: '', state: '', postalCode: '' } }}
         >
           {/* Pharmacy Information */}
           <div className="form-section">
@@ -100,7 +125,7 @@ const PharmacyRegister = () => {
               <Form.Item
                 name="pharmacyName"
                 label="Pharmacy Name"
-                rules={[{ required: true, message: 'Please input your pharmacy name!' }]}
+                rules={[{ required: true, message: 'Pharmacy name is required' }]}
                 className="form-item"
               >
                 <Input prefix={<ShopOutlined />} placeholder="Pharmacy Name" />
@@ -109,7 +134,7 @@ const PharmacyRegister = () => {
               <Form.Item
                 name="licenseNumber"
                 label="License Number"
-                rules={[{ required: true, message: 'Please input your license number!' }]}
+                rules={[{ required: true, message: 'License number is required' }]}
                 className="form-item"
               >
                 <Input prefix={<IdcardOutlined />} placeholder="License Number" />
@@ -119,7 +144,7 @@ const PharmacyRegister = () => {
             <Form.Item
               name="establishedDate"
               label="Established Date"
-              rules={[{ required: true, message: 'Please select establishment date!' }]}
+              rules={[{ required: true, message: 'Please select establishment date' }]}
               className="form-item"
             >
               <DatePicker style={{ width: '100%' }} />
@@ -132,7 +157,7 @@ const PharmacyRegister = () => {
             <Form.Item
               name="ownerName"
               label="Owner's Full Name"
-              rules={[{ required: true, message: 'Please input owner\'s name!' }]}
+              rules={[{ required: true, message: 'Owner name is required' }]}
               className="form-item"
             >
               <Input prefix={<UserOutlined />} placeholder="Owner's Name" />
@@ -143,8 +168,8 @@ const PharmacyRegister = () => {
                 name="email"
                 label="Email"
                 rules={[
-                  { required: true, message: 'Please input your email!' },
-                  { type: 'email', message: 'Please enter a valid email!' }
+                  { required: true, message: 'Email is required' },
+                  { type: 'email', message: 'Invalid email' }
                 ]}
                 className="form-item"
               >
@@ -154,10 +179,10 @@ const PharmacyRegister = () => {
               <Form.Item
                 name="phone"
                 label="Phone Number"
-                rules={[{ required: true, message: 'Please input your phone number!' }]}
+                rules={[{ required: true, message: 'Phone is required' }]}
                 className="form-item"
               >
-                <Input prefix={<PhoneOutlined />} placeholder="Phone Number" />
+                <Input prefix={<PhoneOutlined />} placeholder="Phone" />
               </Form.Item>
             </div>
           </div>
@@ -168,7 +193,7 @@ const PharmacyRegister = () => {
             <Form.Item
               name={['address', 'street']}
               label="Street Address"
-              rules={[{ required: true, message: 'Please input your street address!' }]}
+              rules={[{ required: true, message: 'Street is required' }]}
               className="form-item"
             >
               <Input placeholder="Street Address" />
@@ -178,7 +203,7 @@ const PharmacyRegister = () => {
               <Form.Item
                 name={['address', 'city']}
                 label="City"
-                rules={[{ required: true, message: 'Please input your city!' }]}
+                rules={[{ required: true, message: 'City is required' }]}
                 className="form-item"
               >
                 <Input placeholder="City" />
@@ -187,7 +212,7 @@ const PharmacyRegister = () => {
               <Form.Item
                 name={['address', 'state']}
                 label="State/Region"
-                rules={[{ required: true, message: 'Please input your state/region!' }]}
+                rules={[{ required: true, message: 'State is required' }]}
                 className="form-item"
               >
                 <Input placeholder="State/Region" />
@@ -196,7 +221,7 @@ const PharmacyRegister = () => {
               <Form.Item
                 name={['address', 'postalCode']}
                 label="Postal Code"
-                rules={[{ required: true, message: 'Please input your postal code!' }]}
+                rules={[{ required: true, message: 'Postal code is required' }]}
                 className="form-item"
               >
                 <Input placeholder="Postal Code" />
@@ -210,7 +235,7 @@ const PharmacyRegister = () => {
             <Form.Item
               name="tinNumber"
               label="TIN Number"
-              rules={[{ required: true, message: 'Please input your TIN number!' }]}
+              rules={[{ required: true, message: 'TIN number is required' }]}
               className="form-item"
             >
               <Input prefix={<IdcardOutlined />} placeholder="TIN Number" />
@@ -221,50 +246,52 @@ const PharmacyRegister = () => {
               label="Additional Information"
               className="form-item"
             >
-              <TextArea rows={4} placeholder="Any additional information about your pharmacy" />
+              <TextArea rows={4} placeholder="Optional notes" />
             </Form.Item>
           </div>
 
           {/* Document Upload */}
           <div className="form-section">
             <h3>Required Documents</h3>
-            <p className="document-note">Please upload the following documents (PDF or image, max 5MB each):</p>
+            <p className="document-note">PDF or image, max 5MB.</p>
 
             <Form.Item
               name="licenseDocument"
               label="Business License"
-              rules={[{ required: true, message: 'Please upload your business license!' }]}
+              valuePropName="fileList"
+              getValueFromEvent={normFile}
+              rules={[{ required: true, message: 'License document is required' }]}
               className="form-item"
             >
               <Upload
-                name="licenseDocument"
                 listType="picture"
-                fileList={fileList}
+                fileList={licenseFileList}
                 beforeUpload={beforeUpload}
-                onChange={handleFileChange}
+                onChange={({ fileList }) => setLicenseFileList(fileList)}
                 accept=".pdf,.png,.jpg,.jpeg"
                 maxCount={1}
               >
-                <Button icon={<UploadOutlined />}>Click to upload</Button>
+                <Button icon={<UploadOutlined />}>Upload License</Button>
               </Upload>
             </Form.Item>
 
             <Form.Item
               name="tinDocument"
               label="TIN Certificate"
-              rules={[{ required: true, message: 'Please upload your TIN certificate!' }]}
+              valuePropName="fileList"
+              getValueFromEvent={normFile}
+              rules={[{ required: true, message: 'TIN certificate is required' }]}
               className="form-item"
             >
               <Upload
-                name="tinDocument"
                 listType="picture"
-                fileList={fileList}
+                fileList={tinFileList}
                 beforeUpload={beforeUpload}
-                onChange={handleFileChange}
+                onChange={({ fileList }) => setTinFileList(fileList)}
                 accept=".pdf,.png,.jpg,.jpeg"
                 maxCount={1}
               >
-                <Button icon={<UploadOutlined />}>Click to upload</Button>
+                <Button icon={<UploadOutlined />}>Upload TIN</Button>
               </Upload>
             </Form.Item>
           </div>
@@ -275,10 +302,11 @@ const PharmacyRegister = () => {
               htmlType="submit"
               loading={loading}
               className="register-button"
+              block
             >
               Submit Registration
             </Button>
-            <div className="login-link">
+            <div className="login-link" style={{ textAlign: 'center', marginTop: '16px' }}>
               Already have an account? <Link to="/auth/login">Login here</Link>
             </div>
           </Form.Item>

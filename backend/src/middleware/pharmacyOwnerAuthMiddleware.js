@@ -113,17 +113,35 @@ module.exports = {
  */
 const checkOperationalPermission = (permissionKey) => {
     return (req, res, next) => {
-        // If it's a staff member (req.user exists but isOwner is undefined/false), specific permissions handled by User roles
-        if (req.user && !req.user.isOwner && !req.owner) {
+        // Staff granular permission check
+        if (req.user && ['staff', 'cashier', 'pharmacist'].includes(req.user.role)) {
+            const perms = req.user.permissions;
+            if (!perms) return next(new ErrorResponse('Staff permissions not found', 403));
+
+            if (permissionKey === 'manageInventory') {
+                const inv = perms.inventory || {};
+                // Determine required action based on method
+                if (req.method === 'POST' && !inv.add) return next(new ErrorResponse('Permission denied: Cannot add items', 403));
+                if (req.method === 'PUT' && !inv.edit) return next(new ErrorResponse('Permission denied: Cannot edit items', 403));
+                if (req.method === 'DELETE' && !inv.delete) return next(new ErrorResponse('Permission denied: Cannot delete items', 403));
+                // GET usually public, but if protected, check view
+                if (req.method === 'GET' && !inv.view) return next(new ErrorResponse('Permission denied: Cannot view inventory', 403));
+            } else if (permissionKey === 'prepareOrders') {
+                const ord = perms.orders || {};
+                if (req.method === 'PUT' && !ord.process) return next(new ErrorResponse('Permission denied: Cannot process orders', 403));
+                // Add cancel check if route has specific path for cancel, but generic PUT logic covers process
+            }
+            // For other keys or if checks passed
+            return next();
+        }
+
+        // If user is neither owner nor staff (should not happen if authorized correctly)
+        if (req.user && !req.user.isOwner && !req.owner && !['staff', 'cashier', 'pharmacist'].includes(req.user?.role)) {
             return next();
         }
 
         // If owner, check the specific operational flag
         const owner = req.owner || (req.user && req.user.isOwner ? req.user : null);
-
-        // We need to fetch the fresh owner record if it's not fully populated on req.user
-        // But req.owner from protectPharmacyOwner or updated protect() should have it.
-        // Let's rely on req.owner being the full mongoose doc
 
         if (req.owner) {
             const hasPermission = req.owner.operationalPermissions && req.owner.operationalPermissions[permissionKey];

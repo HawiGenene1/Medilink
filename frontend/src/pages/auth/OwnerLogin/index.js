@@ -18,7 +18,8 @@ const OwnerLogin = () => {
             const result = await ownerLogin(values.email, values.password);
 
             if (result.success) {
-                message.success('Welcome back, Pharmacy Owner!');
+                const isStaff = result.user.role === 'staff';
+                message.success(isStaff ? 'Login successful! Welcome to the Staff Portal.' : 'Welcome back, Pharmacy Owner!');
                 navigate('/owner/dashboard');
             } else {
                 message.error(result.message || 'Login failed. Please check your credentials.');

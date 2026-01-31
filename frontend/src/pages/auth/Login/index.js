@@ -24,12 +24,6 @@ const Login = () => {
           case 'customer':
             navigate('/customer/home');
             break;
-          case 'pharmacy_staff':
-            navigate('/pharmacy-staff/dashboard');
-            break;
-          case 'pharmacy_admin':
-            navigate('/pharmacy-admin/dashboard');
-            break;
           case 'cashier':
             navigate('/cashier/dashboard');
             break;
@@ -38,6 +32,10 @@ const Login = () => {
             break;
           case 'admin':
             navigate('/admin/dashboard');
+            break;
+          case 'PHARMACY_OWNER':
+          case 'staff':
+            navigate('/owner/dashboard');
             break;
           default:
             navigate('/');
@@ -117,7 +115,6 @@ const Login = () => {
               <Button size="small" onClick={() => onFinish({ email: 'customer@test.com', password: '123' })}>Customer</Button>
               <Button size="small" onClick={() => onFinish({ email: 'pharmacy@test.com', password: '123' })}>Pharmacy</Button>
               <Button size="small" onClick={() => onFinish({ email: 'admin@test.com', password: '123' })}>Admin</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'staff@test.com', password: '123' })}>Staff</Button>
             </div>
           </div>
         </Form>

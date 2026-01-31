@@ -52,7 +52,7 @@ exports.validateStaffCreate = [
     body('lastName').trim().notEmpty().withMessage('Last name is required'),
     body('email').isEmail().withMessage('Please provide a valid email').normalizeEmail(),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('role').isIn(['pharmacist', 'cashier']).withMessage('Invalid role'),
+    body('role').isIn(['pharmacist', 'cashier', 'staff']).withMessage('Invalid role'),
     body('permissions').optional().isObject().withMessage('Permissions must be an object'),
     handleValidation
 ];
@@ -61,7 +61,7 @@ exports.validateStaffCreate = [
  * Staff update validation
  */
 exports.validateStaffUpdate = [
-    body('role').optional().isIn(['pharmacist', 'cashier']).withMessage('Invalid role'),
+    body('role').optional().isIn(['pharmacist', 'cashier', 'staff']).withMessage('Invalid role'),
     body('permissions').optional().isObject().withMessage('Permissions must be an object'),
     body('isActive').optional().isBoolean().withMessage('isActive must be a boolean'),
     handleValidation

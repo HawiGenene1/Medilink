@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const PharmacyStaff = require('../models/PharmacyStaff');
 const { generateToken } = require('../config/jwt');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
@@ -142,17 +143,32 @@ const login = async (req, res) => {
 
     const { password: _pwd, ...safeUser } = user.toObject();
 
+    const userData = {
+      id: safeUser._id,
+      firstName: safeUser.firstName,
+      lastName: safeUser.lastName,
+      email: safeUser.email,
+      role: safeUser.role,
+      phone: safeUser.phone,
+    };
+
+    // If staff, fetch detailed permissions
+    if (['staff', 'cashier', 'pharmacist'].includes(safeUser.role)) {
+      const staffDetails = await PharmacyStaff.findOne({ user: safeUser._id });
+      if (staffDetails) {
+        userData.operationalPermissions = {
+          manageInventory: staffDetails.permissions?.inventory?.view || false,
+          prepareOrders: staffDetails.permissions?.orders?.process || false,
+        };
+        userData.permissions = staffDetails.permissions;
+        userData.pharmacyId = staffDetails.pharmacy;
+      }
+    }
+
     return res.json({
       success: true,
       token,
-      user: {
-        id: safeUser._id,
-        firstName: safeUser.firstName,
-        lastName: safeUser.lastName,
-        email: safeUser.email,
-        role: safeUser.role,
-        phone: safeUser.phone,
-      },
+      user: userData,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -180,16 +196,30 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
+    const userData = {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+    };
+
+    if (['staff', 'cashier', 'pharmacist'].includes(user.role)) {
+      const staffDetails = await PharmacyStaff.findOne({ user: user._id });
+      if (staffDetails) {
+        userData.operationalPermissions = {
+          manageInventory: staffDetails.permissions?.inventory?.view || false,
+          prepareOrders: staffDetails.permissions?.orders?.process || false,
+        };
+        userData.permissions = staffDetails.permissions;
+        userData.pharmacyId = staffDetails.pharmacy;
+      }
+    }
+
     return res.json({
       success: true,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-      },
+      user: userData,
     });
   } catch (error) {
     console.error('Get current user error:', error);
