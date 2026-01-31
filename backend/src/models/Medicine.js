@@ -179,6 +179,9 @@ const medicineSchema = new Schema({
 
 // Virtual for discounted price
 medicineSchema.virtual('discountedPrice').get(function () {
+  if (!this.price || typeof this.price.basePrice !== 'number') {
+    return 0;
+  }
   return this.price.basePrice * (1 - (this.price.discount / 100));
 });
 

@@ -216,7 +216,7 @@ const getMyOrders = async (req, res) => {
  */
 const getOrderDetails = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.orderId)
+    const order = await Order.findById(req.params.id)
       .populate('customer', 'firstName lastName email phone')
       .populate('pharmacy', 'name address phone')
       .populate('deliveryPerson', 'firstName lastName phone')
@@ -231,7 +231,7 @@ const getOrderDetails = async (req, res) => {
 
     // Check if user is authorized to view this order
     if (
-      order.customer._id.toString() !== req.user.userId &&
+      order.customer._id.toString() !== req.user.userId.toString() &&
       req.user.role !== 'admin' &&
       (!order.pharmacy || order.pharmacy._id.toString() !== req.user.pharmacyId)
     ) {
@@ -265,7 +265,7 @@ const cancelOrder = async (req, res) => {
 
 
   try {
-    const order = await Order.findById(req.params.orderId);
+    const order = await Order.findById(req.params.id);
 
     if (!order) {
 
@@ -276,7 +276,7 @@ const cancelOrder = async (req, res) => {
     }
 
     // Check if user is the owner of the order
-    if (order.customer.toString() !== req.user.userId) {
+    if (order.customer.toString() !== req.user.userId.toString()) {
 
       return res.status(403).json({
         success: false,
