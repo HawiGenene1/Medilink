@@ -105,6 +105,24 @@ const PaymentStatus = () => {
         );
     }
 
+    const [timer, setTimer] = useState(300); // 5 minutes in seconds
+
+    useEffect(() => {
+        let interval = null;
+        if (paymentStatus === 'success' || paymentStatus === 'completed') {
+            interval = setInterval(() => {
+                setTimer((prev) => (prev > 0 ? prev - 1 : 0));
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [paymentStatus]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
     const renderPaymentResult = () => {
         switch (paymentStatus) {
             case 'success':
@@ -132,14 +150,14 @@ const PaymentStatus = () => {
                             <Button key="orders" onClick={() => navigate('/customer/orders')}>
                                 View My Orders (History)
                             </Button>,
-                            <Button key="home" onClick={() => navigate('/')}>
-                                Home
+                            <Button key="home" onClick={() => navigate('/')} disabled={timer > 0}>
+                                Home {timer > 0 ? `(${formatTime(timer)})` : ''}
                             </Button>
                         ]}
                     >
                         <Alert
                             message="Persistent Success Page"
-                            description="This page will remain active for at least 5 minutes. You can also always find your official Chapa receipt in the 'My Orders' history page later."
+                            description={`This page will remain active for at least 5 minutes (${formatTime(timer)} remaining). You can also always find your official Chapa receipt in the 'My Orders' history page later.`}
                             type="success"
                             showIcon
                             style={{ marginTop: 24, borderRadius: 12 }}

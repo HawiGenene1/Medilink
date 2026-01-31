@@ -94,6 +94,11 @@ export const cartAPI = {
   clearCart: () => api.delete('/cart'),
 };
 
+// Payments API
+export const paymentsAPI = {
+  syncReceipt: (orderId) => api.get(`/payments/chapa/sync/${orderId}`),
+};
+
 // User API
 export const userAPI = {
   uploadAvatar: (formData) =>

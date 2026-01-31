@@ -283,8 +283,62 @@ const cancelChapaPayment = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Sync Order Payment (Recovery)
+// @route   GET /api/payments/chapa/sync/:orderId
+// @access  Private
+const syncOrderPayment = asyncHandler(async (req, res) => {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+        res.status(404);
+        throw new Error('Order not found');
+    }
+
+    // Try to find a completed payment for this order
+    let payment = await Payment.findOne({ order: orderId, paymentStatus: 'completed' });
+
+    if (!payment) {
+        // Try searching by transactionId if we have one in order.paymentDetails
+        if (order.paymentDetails?.transactionId) {
+            payment = await Payment.findOne({ transactionId: order.paymentDetails.transactionId });
+        }
+    }
+
+    if (payment && payment.paymentStatus === 'completed') {
+        // Attempt to re-verify with Chapa to get the official reference if missing
+        try {
+            const verification = await ChapaService.verifyPayment(payment.transactionId);
+            if (verification.status === 'success') {
+                order.paymentStatus = 'paid';
+                order.paymentDetails = {
+                    ...order.paymentDetails,
+                    transactionId: payment.transactionId,
+                    chapaReference: verification.data.reference,
+                    paidAt: payment.paidAt || new Date()
+                };
+                await order.save();
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'Payment synced successfully',
+                    data: order.paymentDetails
+                });
+            }
+        } catch (error) {
+            console.error('Sync verification error:', error);
+        }
+    }
+
+    res.status(404).json({
+        success: false,
+        message: 'No completed payment found for this order. If you just paid, please wait a moment or check your Chapa receipt directly.'
+    });
+});
+
 module.exports = {
     initializeChapaPayment,
     verifyChapaPayment,
-    cancelChapaPayment
+    cancelChapaPayment,
+    syncOrderPayment
 };

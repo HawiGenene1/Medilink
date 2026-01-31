@@ -145,14 +145,65 @@ const Orders = () => {
     }
   ];
 
-  const handleOpenChapaReceipt = () => {
-    const ref = selectedOrder?.paymentDetails?.chapaReference || selectedOrder?.paymentDetails?.transactionId;
-    if (ref) {
-      window.open(`https://chapa.link/payment-receipt/${ref}`, '_blank');
-    } else {
-      message.warning('Chapa reference not found for this order.');
+  const handleSyncReceipt = async (orderId) => {
+    try {
+      setLoading(true);
+      const response = await paymentsAPI.syncReceipt(orderId);
+      if (response.data.success) {
+        message.success('Receipt synced successfully!');
+        fetchOrders(); // Refresh order local state
+        // Update selected order in modal if it's the one we just synced
+        if (selectedOrder?._id === orderId) {
+          setSelectedOrder({
+            ...selectedOrder,
+            paymentDetails: response.data.data,
+            paymentStatus: 'paid'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      message.error(error.response?.data?.message || 'Failed to sync receipt. Please contact support.');
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleOpenChapaReceipt = () => {
+    const ref = selectedOrder?.paymentDetails?.chapaReference;
+    if (ref) {
+      // Use chapa.link as primary but maybe mention chapa.co if they have DNS issues
+      window.open(`https://chapa.link/payment-receipt/${ref}`, '_blank');
+    } else {
+      message.warning('Official Chapa reference ID not found for this order. Try "Sync Receipt" first.');
+    }
+  };
+
+  const modalFooter = [
+    <Button key="close" onClick={() => setDetailsVisible(false)}>Close</Button>,
+    selectedOrder?.paymentStatus === 'paid' && !selectedOrder?.paymentDetails?.chapaReference && (
+      <Button
+        key="sync"
+        onClick={() => handleSyncReceipt(selectedOrder?._id)}
+        icon={<SyncOutlined />}
+        loading={loading}
+      >
+        Sync Receipt
+      </Button>
+    ),
+    selectedOrder?.paymentStatus === 'paid' && selectedOrder?.paymentDetails?.chapaReference && (
+      <Button
+        key="chapa"
+        icon={<DownloadOutlined />}
+        onClick={handleOpenChapaReceipt}
+        className="chapa-receipt-btn"
+        style={{ backgroundColor: '#00af41', color: '#fff', border: 'none' }}
+      >
+        Official Chapa Receipt
+      </Button>
+    ),
+    selectedOrder?.status === 'delivered' && <Button key="reorder" type="primary">Reorder Items</Button>
+  ];
 
   if (loading) {
     return (
@@ -163,33 +214,19 @@ const Orders = () => {
   }
 
   return (
-    <div className="orders-page-container fade-in">
-      <div className="orders-header" style={{ marginBottom: '32px' }}>
+    <div className="orders-page-container">
+      <div className="orders-header">
         <Title level={2}>My Orders</Title>
-        <Text type="secondary">Manage your active and completed medical orders</Text>
+        <Text type="secondary">Manage and track your medication orders</Text>
       </div>
 
-      <Tabs defaultActiveKey="1" items={tabsItems} className="clinical-tabs" />
+      <Tabs defaultActiveKey="1" items={tabsItems} className="orders-tabs" />
 
       <Modal
         title={`Order Details - ${selectedOrder?.orderNumber}`}
         open={detailsVisible}
         onCancel={() => setDetailsVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setDetailsVisible(false)}>Close</Button>,
-          selectedOrder?.paymentStatus === 'paid' && (
-            <Button
-              key="chapa"
-              icon={<DownloadOutlined />}
-              onClick={handleOpenChapaReceipt}
-              className="chapa-receipt-btn"
-              style={{ backgroundColor: '#00af41', color: '#fff', border: 'none' }}
-            >
-              Official Chapa Receipt
-            </Button>
-          ),
-          selectedOrder?.status === 'delivered' && <Button key="reorder" type="primary">Reorder Items</Button>
-        ]}
+        footer={modalFooter}
         width={600}
       >
         {selectedOrder && (
