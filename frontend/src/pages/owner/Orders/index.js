@@ -1,117 +1,212 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Card, Button, Tag, Space, Typography, Alert, Tabs } from 'antd';
-import { EyeOutlined, CheckCircleOutlined, LockOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Table, Card, Button, Tag, Space, Typography, message, Modal, Descriptions, Row, Col, Input, Select } from 'antd';
+import { EyeOutlined, CheckCircleOutlined, SyncOutlined, SearchOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
-// import { orderAPI } from '../../../services/api';
+import { orderProcessingAPI } from '../../../services/api';
 
 const { Title, Text } = Typography;
+const { Option } = Select;
 
-const OwnerOrders = () => {
+const OrderManagement = () => {
     const { user } = useAuth();
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState([]);
+    const [filteredOrders, setFilteredOrders] = useState([]);
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [detailVisible, setDetailVisible] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
 
-    // Permission Check
-    const canProcessOrders = user?.operationalPermissions?.prepareOrders;
+    const canProcess = user?.role === 'PHARMACY_OWNER' || user?.operationalPermissions?.prepareOrders;
 
-    useEffect(() => {
-        // Mock data
-        const mockData = [
-            { _id: 'ORD-001', customer: 'Abebe Bikila', items: 3, total: 450.00, status: 'pending', date: '2026-01-30' },
-            { _id: 'ORD-002', customer: 'Tirunesh Dibaba', items: 1, total: 120.00, status: 'processing', date: '2026-01-30' },
-            { _id: 'ORD-003', customer: 'Haile Gebrselassie', items: 5, total: 1200.00, status: 'ready', date: '2026-01-29' },
-        ];
-        setOrders(mockData);
+    const fetchOrders = useCallback(async () => {
+        try {
+            setLoading(true);
+            const res = await orderProcessingAPI.getOrders();
+            if (res.data.success) {
+                setOrders(res.data.data);
+                setFilteredOrders(res.data.data);
+            }
+        } catch (error) {
+            message.error('Failed to fetch orders');
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
-    const getStatusColor = (status) => {
-        const colors = {
-            pending: 'orange',
-            processing: 'blue',
-            ready: 'green',
-            completed: 'geekblue',
-            cancelled: 'red'
+    useEffect(() => {
+        fetchOrders();
+    }, [fetchOrders]);
+
+    useEffect(() => {
+        let result = orders;
+        if (searchTerm) {
+            result = result.filter(o =>
+                o.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (`${o.customer?.firstName} ${o.customer?.lastName}`).toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+        if (statusFilter !== 'all') {
+            result = result.filter(o => o.status === statusFilter);
+        }
+        setFilteredOrders(result);
+    }, [searchTerm, statusFilter, orders]);
+
+    const handleUpdateStatus = async (id, status) => {
+        try {
+            const res = await orderProcessingAPI.updateStatus(id, { status });
+            if (res.data.success) {
+                message.success(`Order set to ${status}`);
+                fetchOrders();
+                setDetailVisible(false);
+            }
+        } catch (error) {
+            message.error('Status update failed');
+        }
+    };
+
+    const getStatusTag = (status) => {
+        const map = {
+            pending: { color: 'gold', text: 'PENDING' },
+            processing: { color: 'blue', text: 'PREPARING' },
+            prepared: { color: 'cyan', text: 'PACKED' },
+            ready_for_pickup: { color: 'green', text: 'READY' },
+            out_for_delivery: { color: 'purple', text: 'IN TRANSIT' },
+            delivered: { color: 'success', text: 'DELIVERED' },
+            cancelled: { color: 'error', text: 'CANCELLED' }
         };
-        return colors[status] || 'default';
+        const config = map[status] || { color: 'default', text: status.toUpperCase() };
+        return <Tag color={config.color}>{config.text}</Tag>;
     };
 
     const columns = [
         {
-            title: 'Order ID',
-            dataIndex: '_id',
-            key: '_id',
-            render: text => <Text strong>{text}</Text>
+            title: 'Order Number',
+            dataIndex: 'orderNumber',
+            key: 'number',
+            render: (num) => <Text strong>{num}</Text>
         },
         {
             title: 'Customer',
-            dataIndex: 'customer',
+            dataIndex: ['customer', 'firstName'],
             key: 'customer',
+            render: (_, record) => `${record.customer?.firstName} ${record.customer?.lastName}`
         },
         {
-            title: 'Total',
-            dataIndex: 'total',
-            key: 'total',
-            render: total => `ETB ${total.toFixed(2)}`
+            title: 'Items',
+            dataIndex: 'items',
+            key: 'itemsCount',
+            render: (items) => items.length
         },
         {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
-            render: status => <Tag color={getStatusColor(status)}>{status.toUpperCase()}</Tag>
+            render: (status) => getStatusTag(status)
         },
         {
-            title: 'Actions',
-            key: 'actions',
+            title: 'Action',
+            key: 'action',
             render: (_, record) => (
-                <Space size="middle">
-                    <Button type="link" icon={<EyeOutlined />}>View Details</Button>
-
-                    {/* Operational Action */}
-                    {record.status === 'pending' && (
-                        canProcessOrders ? (
-                            <Button type="primary" size="small">Start Processing</Button>
-                        ) : (
-                            <Tag icon={<LockOutlined />} color="default">Read Only</Tag>
-                        )
+                <Space>
+                    <Button icon={<EyeOutlined />} onClick={() => { setSelectedOrder(record); setDetailVisible(true); }}>Details</Button>
+                    {canProcess && record.status === 'pending' && (
+                        <Button type="primary" size="small" onClick={() => handleUpdateStatus(record._id, 'processing')}>Start Preparing</Button>
                     )}
-
-                    {record.status === 'processing' && (
-                        canProcessOrders ? (
-                            <Button type="primary" success size="small" icon={<CheckCircleOutlined />}>Mark Ready</Button>
-                        ) : (
-                            <Tag icon={<LockOutlined />} color="default">Read Only</Tag>
-                        )
+                    {canProcess && record.status === 'processing' && (
+                        <Button type="primary" success="true" size="small" onClick={() => handleUpdateStatus(record._id, 'ready_for_pickup')}>Mark Ready</Button>
                     )}
                 </Space>
-            ),
-        },
+            )
+        }
     ];
 
     return (
-        <div style={{ padding: '24px' }}>
-            <div style={{ marginBottom: '24px' }}>
-                <Title level={2}>Order Oversight</Title>
-                <Text type="secondary">Track order workflow and staff performance</Text>
-            </div>
-
-            {!canProcessOrders && (
-                <Alert
-                    message="Oversight Mode"
-                    description="You can view order status and details (Oversight). To pack or process orders, enable 'Order Preparation' in Settings."
-                    type="info"
-                    showIcon
-                    style={{ marginBottom: '24px' }}
-                />
-            )}
+        <div style={{ padding: 24 }}>
+            <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+                <Col>
+                    <Title level={2} style={{ marginBottom: 0 }}>Order Processing</Title>
+                    <Text type="secondary">Manage customer orders and prescription verifications.</Text>
+                </Col>
+                <Col>
+                    <Space>
+                        <Input
+                            placeholder="Search Order # or Name"
+                            prefix={<SearchOutlined />}
+                            style={{ width: 250 }}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            allowClear
+                        />
+                        <Select
+                            defaultValue="all"
+                            style={{ width: 150 }}
+                            onChange={value => setStatusFilter(value)}
+                        >
+                            <Option value="all">All Status</Option>
+                            <Option value="pending">Pending</Option>
+                            <Option value="processing">Preparing</Option>
+                            <Option value="ready_for_pickup">Ready</Option>
+                            <Option value="delivered">Delivered</Option>
+                        </Select>
+                        <Button icon={<SyncOutlined spin={loading} />} onClick={fetchOrders} />
+                    </Space>
+                </Col>
+            </Row>
 
             <Card bordered={false}>
-                <Tabs defaultActiveKey="active" items={[
-                    { key: 'active', label: 'Active Orders', children: <Table columns={columns} dataSource={orders} rowKey="_id" /> },
-                    { key: 'history', label: 'Order History', children: <div style={{ padding: 20, textAlign: 'center' }}>No history yet</div> }
-                ]} />
+                <Table
+                    dataSource={filteredOrders}
+                    columns={columns}
+                    rowKey="_id"
+                    loading={loading}
+                    onRow={(record) => ({
+                        onDoubleClick: () => { setSelectedOrder(record); setDetailVisible(true); }
+                    })}
+                />
             </Card>
+
+            <Modal
+                title={`Order Details: ${selectedOrder?.orderNumber}`}
+                open={detailVisible}
+                onCancel={() => setDetailVisible(false)}
+                footer={null}
+                width={700}
+            >
+                {selectedOrder && (
+                    <>
+                        <Descriptions bordered column={2}>
+                            <Descriptions.Item label="Customer">{selectedOrder.customer?.firstName} {selectedOrder.customer?.lastName}</Descriptions.Item>
+                            <Descriptions.Item label="Contact">{selectedOrder.customer?.phone || 'N/A'}</Descriptions.Item>
+                            <Descriptions.Item label="Total">ETB {selectedOrder.finalAmount}</Descriptions.Item>
+                            <Descriptions.Item label="Status">{getStatusTag(selectedOrder.status)}</Descriptions.Item>
+                        </Descriptions>
+                        <Title level={5} style={{ marginTop: 20 }}>Order Items</Title>
+                        <Table
+                            dataSource={selectedOrder.items}
+                            pagination={false}
+                            size="small"
+                            columns={[
+                                { title: 'Medicine', dataIndex: 'name', key: 'name' },
+                                { title: 'Qty', dataIndex: 'quantity', key: 'qty' },
+                                { title: 'Price', dataIndex: 'price', key: 'price', render: p => `${p} ETB` }
+                            ]}
+                        />
+                        <div style={{ marginTop: 24, textAlign: 'right' }}>
+                            <Space>
+                                {canProcess && selectedOrder.status === 'pending' && (
+                                    <Button type="primary" onClick={() => handleUpdateStatus(selectedOrder._id, 'processing')}>Start Preparing</Button>
+                                )}
+                                {canProcess && selectedOrder.status === 'processing' && (
+                                    <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleUpdateStatus(selectedOrder._id, 'ready_for_pickup')}>Complete & Notify</Button>
+                                )}
+                                <Button onClick={() => setDetailVisible(false)}>Close</Button>
+                            </Space>
+                        </div>
+                    </>
+                )}
+            </Modal>
         </div>
     );
 };
 
-export default OwnerOrders;
+export default OrderManagement;

@@ -106,6 +106,7 @@ const createOrder = async (req, res) => {
     // Create order
     const order = new Order({
       customer: req.user.userId,
+      pharmacy: req.body.pharmacyId, // Pharmacy selected by customer
       items: orderItems,
       totalAmount,
       deliveryFee,
@@ -117,10 +118,11 @@ const createOrder = async (req, res) => {
       prescriptionImage: requiresPrescription ? prescriptionImage : undefined,
       notes,
       status: 'pending',
-      paymentStatus: paymentMethod === 'cash' ? 'pending' : 'pending', // Will be updated after payment processing
+      paymentStatus: paymentMethod === 'cash' ? 'pending' : 'pending',
       statusHistory: [{
         status: 'pending',
-        note: 'Order created'
+        note: 'Order created',
+        timestamp: new Date()
       }]
     });
 

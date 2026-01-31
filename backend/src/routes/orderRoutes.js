@@ -23,7 +23,7 @@ router.get('/', authenticate, getMyOrders);
 router.get(
   '/pharmacy/:pharmacyId',
   authenticate,
-  authorize('admin', 'PHARMACY_OWNER'),
+  authorize('admin', 'PHARMACY_OWNER', 'staff'),
   checkSubscription,
   getPharmacyOrders
 );
@@ -38,7 +38,7 @@ router.patch('/:id/cancel', authenticate, cancelOrder);
 router.put(
   '/:orderId/status',
   authenticate,
-  authorize('admin', 'PHARMACY_OWNER'),
+  authorize('admin', 'PHARMACY_OWNER', 'staff'),
   checkSubscription,
   checkOperationalPermission('prepareOrders'),
   updateOrderStatus
