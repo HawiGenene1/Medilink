@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, Upload, List, Tag, Table, Space, Alert, Modal } from 'antd';
+import { Row, Col, Card, Typography, Button, Upload, List, Tag, Table, Space, Alert, Modal, theme, Avatar } from 'antd';
 import {
   InboxOutlined,
   FileProtectOutlined,
@@ -16,6 +16,7 @@ const { Dragger } = Upload;
 
 const Prescriptions = () => {
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const { token } = theme.useToken();
 
   // Mock Data for Prescriptions
   const prescriptions = [
@@ -70,7 +71,7 @@ const Prescriptions = () => {
       ellipsis: true,
       render: (text) => (
         <Space>
-          <FileProtectOutlined style={{ color: '#1E88E5' }} />
+          <FileProtectOutlined style={{ color: token.colorPrimary }} />
           <Text title={text}>{text}</Text>
         </Space>
       )
@@ -120,7 +121,14 @@ const Prescriptions = () => {
 
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={18}>
-          <Card bordered={false} className="clinical-card">
+          <Card
+            bordered={false}
+            className="clinical-card"
+            style={{
+              background: token.colorBgContainer,
+              border: `1px solid ${token.colorBorderSecondary}`
+            }}
+          >
             <Table
               columns={columns}
               dataSource={prescriptions}
@@ -133,7 +141,14 @@ const Prescriptions = () => {
         </Col>
 
         <Col xs={24} lg={6}>
-          <Card title="Why verify?" className="safety-card">
+          <Card
+            title="Why verify?"
+            className="safety-card"
+            style={{
+              background: token.colorFillAlter,
+              border: `1px solid ${token.colorBorderSecondary}`
+            }}
+          >
             <Paragraph style={{ fontSize: '13px' }}>
               Medicines in Ethiopia classified as "Prescription Only" require a clinical authorization signed by a certified practitioner.
             </Paragraph>
@@ -142,6 +157,7 @@ const Prescriptions = () => {
               description="Your documents are encrypted and only accessible by licensed pharmacists."
               type="info"
               showIcon
+              style={{ background: token.colorInfoBg, borderColor: token.colorInfoBorder }}
             />
             <div style={{ marginTop: '24px' }}>
               <Title level={5}>Accepted Formats</Title>
@@ -153,7 +169,7 @@ const Prescriptions = () => {
 
       <Modal
         title="Upload Prescription"
-        visible={uploadModalVisible}
+        open={uploadModalVisible}
         onCancel={() => setUploadModalVisible(false)}
         footer={null}
         width={600}
@@ -163,9 +179,13 @@ const Prescriptions = () => {
             multiple={false}
             action="/api/upload" // Placeholder
             className="rx-dragger"
+            style={{
+              background: token.colorFillAlter,
+              borderColor: token.colorBorderDash
+            }}
           >
             <p className="ant-upload-drag-icon">
-              <InboxOutlined />
+              <InboxOutlined style={{ color: token.colorPrimary }} />
             </p>
             <p className="ant-upload-text">Click or drag prescription to this area to upload</p>
             <p className="ant-upload-hint">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Timeline, Modal, Divider, Spin, Result } from 'antd';
+import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Timeline, Modal, Divider, Spin, Result, theme } from 'antd';
 import {
   ClockCircleOutlined,
   EnvironmentOutlined,
@@ -20,6 +20,7 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('1');
+  const { token } = theme.useToken();
 
   const fetchOrders = async () => {
     try {
@@ -75,11 +76,26 @@ const Orders = () => {
   };
 
   const OrderCard = ({ order, isActive }) => (
-    <Card className="order-main-card" style={{ marginBottom: '20px' }}>
+    <Card
+      className="order-main-card"
+      style={{
+        marginBottom: '20px',
+        background: token.colorBgContainer,
+        borderColor: token.colorBorderSecondary
+      }}
+    >
       <Row justify="space-between" align="middle" style={{ marginBottom: '20px' }}>
         <Col>
           <Space size="middle">
-            <Avatar shape="square" size={48} icon={<ShopOutlined />} style={{ background: '#E3F2FD', color: '#1E88E5' }} />
+            <Avatar
+              shape="square"
+              size={48}
+              icon={<ShopOutlined />}
+              style={{
+                background: token.colorFillSecondary,
+                color: token.colorPrimary
+              }}
+            />
             <div>
               <Text type="secondary" style={{ fontSize: '12px' }}>Order #: {order.orderNumber}</Text>
               <Title level={4} style={{ margin: 0 }}>{order.pharmacy?.name || 'Pharmacy'}</Title>
@@ -94,9 +110,12 @@ const Orders = () => {
 
       <Row gutter={40}>
         <Col xs={24} md={16}>
-          <div className="order-items-preview">
+          <div
+            className="order-items-preview"
+            style={{ background: token.colorFillAlter }}
+          >
             <Space size="middle">
-              <div className="item-qty-badge">{order.items?.length || 0} Items</div>
+              <div className="item-qty-badge" style={{ color: token.colorText }}>{order.items?.length || 0} Items</div>
               <Text strong style={{ fontSize: '16px' }}>Total: {order.finalAmount} ETB</Text>
             </Space>
           </div>
@@ -107,7 +126,7 @@ const Orders = () => {
                 <Text strong>{(order.status || 'pending').toUpperCase().replace('_', ' ')}</Text>
                 <Text>{getOrderProgress(order.status)}%</Text>
               </div>
-              <Progress percent={getOrderProgress(order.status)} strokeColor="#1E88E5" showInfo={false} />
+              <Progress percent={getOrderProgress(order.status)} strokeColor={token.colorPrimary} showInfo={false} />
             </div>
           )}
         </Col>
@@ -183,7 +202,12 @@ const Orders = () => {
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
-                    avatar={<Avatar icon={<MedicineBoxOutlined />} style={{ backgroundColor: '#f0f2f5', color: '#1890ff' }} />}
+                    avatar={
+                      <Avatar
+                        icon={<MedicineBoxOutlined />}
+                        style={{ background: token.colorFillSecondary, color: token.colorPrimary }}
+                      />
+                    }
                     title={item.name}
                     description={`Quantity: ${item.qty}`}
                   />
@@ -194,7 +218,7 @@ const Orders = () => {
 
             <Divider style={{ margin: '16px 0' }} />
 
-            <div style={{ backgroundColor: '#fafafa', padding: '16px', borderRadius: '8px' }}>
+            <div style={{ backgroundColor: token.colorFillAlter, padding: '16px', borderRadius: '8px' }}>
               <Row justify="space-between" style={{ marginBottom: '8px' }}>
                 <Text>Subtotal</Text>
                 <Text strong>160 ETB</Text>
@@ -205,7 +229,7 @@ const Orders = () => {
               </Row>
               <Row justify="space-between">
                 <Title level={4} style={{ margin: 0 }}>Total</Title>
-                <Title level={4} style={{ margin: 0, color: '#1E88E5' }}>{selectedOrder.total}</Title>
+                <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>{selectedOrder.total}</Title>
               </Row>
             </div>
           </div>

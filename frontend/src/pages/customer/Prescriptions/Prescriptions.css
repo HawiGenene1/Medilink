@@ -10,12 +10,13 @@
 
 .safety-card {
     border-radius: 16px;
-    background: #F8FAFC;
+    /* background: #F8FAFC; handled by JS */
 }
 
 .rx-dragger {
-    background: #FAFAFA !important;
-    border: 2px dashed #E2E8F0 !important;
+    /* background: handled by JS tokens */
+    border-style: dashed !important;
+    border-width: 2px !important;
     border-radius: 12px !important;
     padding: 32px 0 !important;
 }
@@ -30,13 +31,11 @@
 }
 
 .ant-table-thead>tr>th {
-    background: #F1F5F9 !important;
+    /* background: #F1F5F9 !important; handled by JS or default theme */
     font-weight: 600 !important;
 }
 
-.ant-table-row:hover {
-    background-color: #F8FAFC !important;
-}
+/* .ant-table-row:hover removed - handled by default theme */
 
 .ant-table-cell {
     white-space: nowrap !important;
