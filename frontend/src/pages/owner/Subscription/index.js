@@ -80,7 +80,7 @@ const Subscription = () => {
                 <div>
                     <Space size="middle" align="center">
                         <Title level={2} style={{ marginBottom: 0 }}>Subscription Management</Title>
-                        {isDev && <Tag color="orange">Mock Mode</Tag>}
+
                     </Space>
                     <div style={{ marginTop: 8 }}>
                         <Text type="secondary">Manage your business tier, billing cycles, and included features.</Text>
@@ -146,12 +146,18 @@ const Subscription = () => {
 
                 <Col xs={24} lg={8}>
                     <Card title={<Space><CreditCardOutlined /> Payment Method</Space>}>
-                        <Empty
-                            description="No payment method linked"
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        >
-                            <Button type="dashed" block>Add Card</Button>
-                        </Empty>
+                        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                            <div style={{ marginBottom: 16 }}>
+                                <Text strong style={{ fontSize: '16px' }}>Chapa Payment</Text>
+                            </div>
+                            <Tag color="green" style={{ marginBottom: 16 }}>ACTIVE</Tag>
+                            <Paragraph type="secondary">
+                                Secure payments processed via Chapa.
+                            </Paragraph>
+                            <Button type="default" block>
+                                Manage Payment Methods
+                            </Button>
+                        </div>
                     </Card>
 
                     <Card style={{ marginTop: '24px' }} title="Subscription Tips">

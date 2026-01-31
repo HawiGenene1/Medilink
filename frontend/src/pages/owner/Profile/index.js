@@ -81,7 +81,6 @@ const OwnerProfile = () => {
                         <Space>
                             <Tag color="blue">{user?.role?.replace('_', ' ')}</Tag>
                             {user?.isActive && <Tag color="green">ACTIVE ACCOUNT</Tag>}
-                            {isDev && <Tag color="orange">Dev Mode</Tag>}
                         </Space>
                     </div>
                 </Space>

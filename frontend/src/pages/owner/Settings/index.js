@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     Typography,
@@ -27,16 +27,35 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { pharmacyOwnerAPI } from '../../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const { Title, Text, Paragraph } = Typography;
 
 const OwnerSettings = () => {
     const { user, updateUser } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const initialTab = searchParams.get('tab') || 'account';
+
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(false);
     const [accountForm] = Form.useForm();
     const [passwordForm] = Form.useForm();
+
+    // Update active tab when URL changes
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && tab !== activeTab) {
+            setActiveTab(tab);
+        }
+    }, [location.search]);
+
+    const handleTabChange = (key) => {
+        setActiveTab(key);
+        // Optional: Update URL without reloading to reflect current tab
+        navigate(`/owner/settings?tab=${key}`, { replace: true });
+    };
 
     const onAccountUpdate = async (values) => {
         try {
@@ -308,7 +327,8 @@ const OwnerSettings = () => {
             </div>
 
             <Tabs
-                defaultActiveKey="account"
+                activeKey={activeTab}
+                onChange={handleTabChange}
                 items={items}
                 type="card"
                 className="custom-settings-tabs"

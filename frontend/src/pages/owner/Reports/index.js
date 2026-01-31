@@ -115,8 +115,9 @@ const Reports = () => {
         <div style={{ padding: '24px' }}>
             <div className="page-header" style={{ marginBottom: '24px' }}>
                 <Space size="middle" align="center">
-                    <Title level={2} style={{ marginBottom: 0 }}>Business Analytics & Reports</Title>
-                    {isDev && <Tag color="orange">Mock Mode</Tag>}
+                    <Title level={2} style={{ marginBottom: 0 }}>
+                        <BarChartOutlined /> Reports & Analytics
+                    </Title>
                 </Space>
                 <div style={{ marginTop: 8 }}>
                     <Text type="secondary">Track monthly performance, revenue growth, and workforce trends.</Text>

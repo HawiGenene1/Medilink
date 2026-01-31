@@ -12,8 +12,8 @@ router.use(protect);
 
 // User routes
 router.get(
-  '/pharmacy/:pharmacyId', 
-  authorize('pharmacy_admin', 'admin'),
+  '/pharmacy/:pharmacyId',
+  authorize('admin'),
   [
     check('pharmacyId', 'Invalid pharmacy ID').isMongoId()
   ],
@@ -35,7 +35,7 @@ router.get(
 );
 
 router.get(
-  '/:id', 
+  '/:id',
   [check('id', 'Invalid subscription ID').isMongoId()],
   subscriptionController.getSubscription
 );
