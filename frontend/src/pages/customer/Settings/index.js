@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Tabs, Form, Input, Button, Switch, Avatar, Upload, Space, Divider, Alert, List, Modal, Steps } from 'antd';
+import { Row, Col, Card, Typography, Tabs, Form, Input, Button, Switch, Avatar, Upload, Space, Divider, Alert, List, Modal, Steps, theme } from 'antd';
 import {
     UserOutlined,
     LockOutlined,
@@ -26,8 +26,9 @@ const { Title, Text, Paragraph } = Typography;
 
 const Settings = () => {
     const { user, logout } = useAuth();
-    const { theme, toggleTheme } = useUI();
+    const { theme: appTheme, toggleTheme } = useUI();
     const { message } = App.useApp();
+    const { token } = theme.useToken();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('security'); // Changed default active tab
@@ -139,7 +140,7 @@ const Settings = () => {
                 <Switch defaultChecked />
             </div>
             <Divider />
-            <Title level={4} style={{ color: '#ff4d4f' }}>Data Management</Title>
+            <Title level={4} style={{ color: token.colorError }}>Data Management</Title>
             <Button danger onClick={handleDownloadData}>Download My Data (JSON)</Button>
         </div>
     );
@@ -152,7 +153,7 @@ const Settings = () => {
                 <Switch
                     checkedChildren="Dark"
                     unCheckedChildren="Light"
-                    checked={theme === 'dark'}
+                    checked={appTheme === 'dark'}
                     onChange={toggleTheme}
                 />
             </div>
@@ -208,11 +209,15 @@ const Settings = () => {
                     tabPosition="left"
                     items={tabItems}
                     className="settings-tabs"
+                    style={{
+                        border: `1px solid ${token.colorBorderSecondary}`,
+                        borderRadius: token.borderRadiusLG
+                    }}
                 />
             </Card>
 
             {/* Subtle Delete Account Section */}
-            <div style={{ marginTop: '64px', borderTop: '1px solid #f0f0f0', paddingTop: '32px', textAlign: 'center' }}>
+            <div style={{ marginTop: '64px', borderTop: `1px solid ${token.colorBorderSecondary}`, paddingTop: '32px', textAlign: 'center' }}>
                 <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
                     No longer need your account?
                 </Text>
@@ -235,7 +240,7 @@ const Settings = () => {
             <Modal
                 title={
                     <Space>
-                        <WarningOutlined style={{ color: '#ff4d4f' }} />
+                        <WarningOutlined style={{ color: token.colorError }} />
                         <span>Delete Account</span>
                     </Space>
                 }
