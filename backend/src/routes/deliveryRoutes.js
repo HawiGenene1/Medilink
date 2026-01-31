@@ -11,7 +11,8 @@ const {
     getActiveDeliveries,
     getDeliveryHistory,
     getEarningsStats,
-    getAvailableRequests
+    getAvailableRequests,
+    getDeliveryProfile
 } = require('../controllers/deliveryController');
 
 // All routes here should be protected
@@ -30,6 +31,7 @@ router.put('/complete', authorize('delivery'), completeDelivery);
 // Metrics & Dashboard
 router.get('/active', authorize('delivery'), getActiveDeliveries);
 router.get('/history', authorize('delivery'), getDeliveryHistory);
+router.get('/profile', authorize('delivery'), getDeliveryProfile);
 router.get('/earnings', authorize('delivery'), getEarningsStats);
 
 module.exports = router;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Card, Tag, DatePicker, Typography, Space } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import axios from 'axios';
+import api from '../../services/api';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -18,16 +18,16 @@ const DeliveryHistory = () => {
     const fetchHistory = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('/api/delivery/history');
+            const response = await api.get('/delivery/history');
             if (response.data.success) {
                 const formattedData = response.data.data.map(order => ({
                     key: order._id,
                     orderId: order.orderNumber || order._id,
-                    date: dayjs(order.updatedAt).format('YYYY-MM-DD HH:mm'),
-                    pickup: order.pharmacy?.name || 'Unknown',
-                    dropoff: 'Customer Location', // Could be more specific if address is available
-                    amount: order.totalAmount.toFixed(2),
-                    earnings: (order.serviceFee || 0).toFixed(2),
+                    date: dayjs(order.actualArrivalTime || order.updatedAt).format('YYYY-MM-DD HH:mm'),
+                    pickup: typeof order.pharmacy === 'object' ? (order.pharmacy?.name || 'Pharmacy') : (order.pharmacy || 'Pharmacy'),
+                    dropoff: typeof order.address === 'object' ? (order.address?.street || order.address?.label || 'Customer') : 'Customer',
+                    amount: order.finalAmount || order.totalAmount,
+                    earnings: order.courierEarnings || order.serviceFee || 0,
                     status: order.status
                 }));
                 setHistory(formattedData);
@@ -52,10 +52,16 @@ const DeliveryHistory = () => {
             key: 'date',
         },
         {
-            title: 'Pickup Location',
+            title: 'Pickup',
             dataIndex: 'pickup',
             key: 'pickup',
             responsive: ['md'],
+        },
+        {
+            title: 'Dropoff',
+            dataIndex: 'dropoff',
+            key: 'dropoff',
+            responsive: ['lg'],
         },
         {
             title: 'Order Amount',
@@ -74,7 +80,13 @@ const DeliveryHistory = () => {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
-            render: status => <Tag color="green">{status.toUpperCase()}</Tag>,
+            render: status => {
+                let color = 'blue';
+                if (status === 'delivered') color = 'green';
+                if (status === 'cancelled') color = 'red';
+                if (status === 'refunded') color = 'orange';
+                return <Tag color={color}>{status.toUpperCase().replace('_', ' ')}</Tag>;
+            },
         },
     ];
 

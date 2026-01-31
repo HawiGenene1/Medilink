@@ -143,7 +143,12 @@ const acceptOrder = async (req, res) => {
 
         // Assign driver
         order.courier = driverId;
-        order.status = 'confirmed'; // or 'driver_assigned'
+        order.status = 'confirmed';
+        order.statusHistory.push({
+            status: 'confirmed',
+            timestamp: new Date(),
+            note: 'Order accepted by courier'
+        });
         await order.save();
 
         // Mark driver as busy?
@@ -269,8 +274,14 @@ const startDelivery = async (req, res) => {
         const order = await Order.findOneAndUpdate(
             { _id: orderId, courier: driverId },
             {
-                status: 'in_transit',
-                'statusHistory': { $push: { status: 'in_transit', timestamp: new Date(), note: 'Driver picked up order' } }
+                $set: { status: 'in_transit' },
+                $push: {
+                    statusHistory: {
+                        status: 'in_transit',
+                        timestamp: new Date(),
+                        note: 'Driver picked up order'
+                    }
+                }
             },
             { new: true }
         );
@@ -299,13 +310,20 @@ const completeDelivery = async (req, res) => {
         const { orderId } = req.body;
         const driverId = req.user.userId || req.user.id;
 
+        // Fetch order first to get serviceFee
+        const existingOrder = await Order.findOne({ _id: orderId, courier: driverId });
+        if (!existingOrder) {
+            return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
+        }
+
         const order = await Order.findOneAndUpdate(
             { _id: orderId, courier: driverId },
             {
                 status: 'delivered',
                 actualArrivalTime: new Date(),
-                paymentStatus: 'paid', // Assuming COD collected or already paid
-                'statusHistory': { $push: { status: 'delivered', timestamp: new Date(), note: 'Order delivered' } }
+                paymentStatus: 'paid',
+                courierEarnings: existingOrder.serviceFee || 50,
+                $push: { statusHistory: { status: 'delivered', timestamp: new Date(), note: 'Order delivered' } }
             },
             { new: true }
         );
@@ -358,13 +376,19 @@ const getActiveDeliveries = async (req, res) => {
 const getDeliveryHistory = async (req, res) => {
     try {
         const driverId = req.user.userId || req.user.id;
+
+        logger.info(`[GetDeliveryHistory] Fetching history for Driver: ${driverId}`);
+
         const history = await Order.find({
             courier: driverId,
             status: { $in: ['delivered', 'cancelled', 'refunded'] }
         })
-            .populate('customer', 'firstName lastName') // Less data for history
+            .populate('customer', 'firstName lastName')
+            .populate('pharmacy', 'name address')
             .sort({ updatedAt: -1 })
             .limit(50);
+
+        logger.info(`[GetDeliveryHistory] Found ${history.length} past orders.`);
 
         res.json({ success: true, count: history.length, data: history });
     } catch (error) {
@@ -382,14 +406,31 @@ const getEarningsStats = async (req, res) => {
     try {
         const driverId = req.user.userId || req.user.id;
 
-        // Simple aggregation for total earnings
+        const now = new Date();
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
         const stats = await Order.aggregate([
             { $match: { courier: new mongoose.Types.ObjectId(driverId), status: 'delivered' } },
             {
                 $group: {
                     _id: null,
-                    totalEarnings: { $sum: '$serviceFee' },
-                    completedDeliveries: { $sum: 1 }
+                    totalEarnings: { $sum: '$courierEarnings' },
+                    totalDeliveries: { $sum: 1 },
+                    todayEarnings: {
+                        $sum: {
+                            $cond: [{ $gte: ['$actualArrivalTime', startOfDay] }, '$courierEarnings', 0]
+                        }
+                    },
+                    thisWeekEarnings: {
+                        $sum: {
+                            $cond: [{ $gte: ['$actualArrivalTime', startOfWeek] }, '$courierEarnings', 0]
+                        }
+                    }
                 }
             }
         ]);
@@ -409,7 +450,7 @@ const getEarningsStats = async (req, res) => {
         const formattedTransactions = recentTransactions.map(t => ({
             id: t._id,
             date: t.actualArrivalTime ? t.actualArrivalTime.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-            amount: t.serviceFee,
+            amount: t.courierEarnings || t.serviceFee,
             status: 'Completed'
         }));
 
@@ -462,6 +503,56 @@ const getAvailableRequests = async (req, res) => {
     }
 };
 
+/**
+ * @route   GET /api/delivery/profile
+ * @desc    Get delivery profile
+ * @access  Private (Delivery)
+ */
+const getDeliveryProfile = async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id;
+        let profile = await DeliveryProfile.findOne({ userId });
+
+        if (!profile) {
+            // Auto-create if missing (same logic as updateDriverStatus for robustness)
+            const getIo = require('../socket').getIo;
+            const User = require('../models/User'); // Ensure User model is available
+
+            const user = await User.findById(userId);
+            if (user && user.role === 'delivery') {
+                profile = new DeliveryProfile({
+                    userId,
+                    onboardingStatus: 'approved',
+                    personalDetails: {
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        phone: user.phone
+                    },
+                    vehicleDetails: {
+                        type: 'motorcycle',
+                        make: 'Yamaha',
+                        model: 'R15',
+                        year: '2022',
+                        color: 'Blue',
+                        licensePlate: 'ADD-1234'
+                    }
+                });
+                await profile.save();
+            }
+        }
+
+        if (!profile) {
+            return res.status(404).json({ success: false, message: 'Profile not found' });
+        }
+
+        res.json({ success: true, data: profile });
+    } catch (error) {
+        logger.error('Error fetching delivery profile:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
 module.exports = {
     findNearbyDrivers,
     requestDelivery,
@@ -472,5 +563,7 @@ module.exports = {
     getActiveDeliveries,
     getDeliveryHistory,
     getEarningsStats,
-    getAvailableRequests
+    getEarningsStats,
+    getAvailableRequests,
+    getDeliveryProfile
 };

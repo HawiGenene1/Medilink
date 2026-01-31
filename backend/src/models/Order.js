@@ -46,6 +46,10 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  courierEarnings: {
+    type: Number,
+    default: 0
+  },
   tax: {
     type: Number,
     default: 0

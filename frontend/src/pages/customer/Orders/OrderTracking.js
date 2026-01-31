@@ -107,9 +107,9 @@ const OrderTracking = () => {
         };
     }, [socket, id]);
 
-    // Initialize Map Once
+    // Initialize Map once loading is finished and mapRef is in DOM
     useEffect(() => {
-        if (mapRef.current && !mapInstance.current) {
+        if (!loading && mapRef.current && !mapInstance.current) {
             mapInstance.current = L.map(mapRef.current, {
                 zoomControl: false,
                 attributionControl: false
@@ -124,6 +124,13 @@ const OrderTracking = () => {
                 maxZoom: 19,
                 opacity: 0.8
             }).addTo(mapInstance.current);
+
+            // Force recalculate size after render
+            setTimeout(() => {
+                if (mapInstance.current) {
+                    mapInstance.current.invalidateSize();
+                }
+            }, 100);
         }
 
         return () => {
@@ -135,7 +142,7 @@ const OrderTracking = () => {
                 destMarkerRef.current = null;
             }
         };
-    }, []);
+    }, [loading]);
 
     // Update Markers and Bounds
     useEffect(() => {
@@ -222,10 +229,11 @@ const OrderTracking = () => {
     };
 
     const statusMapping = {
+        'pending': 'Order Placed',
         'confirmed': 'Order Accepted',
-        'preparing': 'Packed',
-        'ready': 'Picked Up',
-        'out_for_delivery': 'On the Way',
+        'preparing': 'Preparing',
+        'ready': 'Ready for Pickup',
+        'in_transit': 'Out for Delivery',
         'delivered': 'Delivered'
     };
 

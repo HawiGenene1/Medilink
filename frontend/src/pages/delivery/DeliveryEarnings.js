@@ -28,12 +28,13 @@ const DeliveryEarnings = () => {
             if (response.data.success) {
                 const data = response.data.data;
                 setStats({
-                    totalEarnings: data.totalEarnings,
-                    pendingPayout: 0, // Backend doesn't calculate this yet, defaulting
-                    thisWeek: data.todayEarnings, // Using today as proxy for now, needing backend update for full week
-                    lastWeek: 0,
-                    completedDeliveries: data.totalDeliveries
+                    totalEarnings: data.totalEarnings || 0,
+                    pendingPayout: data.pendingPayout || 0,
+                    thisWeek: data.thisWeekEarnings || 0,
+                    today: data.todayEarnings || 0,
+                    completedDeliveries: data.completedDeliveries || 0
                 });
+                setRecentPayouts(data.recentTransactions || []);
             }
         } catch (error) {
             console.error('Failed to fetch earnings:', error);
@@ -77,15 +78,14 @@ const DeliveryEarnings = () => {
                 <Col xs={24} sm={8}>
                     <Card style={{ borderRadius: '12px' }}>
                         <Statistic
-                            title="This Week"
-                            value={stats.thisWeek}
+                            title="Earned Today"
+                            value={stats.today}
                             precision={2}
                             valueStyle={{ color: '#1890ff' }}
-                            prefix={<ArrowUpOutlined />}
-                            suffix="ETB"
+                            prefix="ETB"
                         />
                         <Text type="secondary" style={{ fontSize: '12px' }}>
-                            +18% vs last week
+                            {stats.completedDeliveries} Total Trips
                         </Text>
                     </Card>
                 </Col>
@@ -97,18 +97,19 @@ const DeliveryEarnings = () => {
                             <Text type="secondary">Chart Placeholder (Earnings per Day)</Text>
                         </div>
 
-                        <Divider orientation="left">Recent Activity</Divider>
+                        <Divider orientation="left">Recent Transactions</Divider>
                         <List
                             itemLayout="horizontal"
-                            dataSource={[]} // Placeholder until we have a recent earnings endpoint
+                            loading={loading}
+                            dataSource={recentPayouts}
                             renderItem={item => (
                                 <List.Item>
                                     <List.Item.Meta
                                         avatar={<div style={{ background: '#e6f7ff', padding: '8px', borderRadius: '50%' }}><CarOutlined style={{ color: '#1890ff' }} /></div>}
-                                        title={item.title}
-                                        description={item.desc}
+                                        title={`Order Completed`}
+                                        description={item.date}
                                     />
-                                    <div style={{ fontWeight: 600, color: '#3f8600' }}>{item.amount}</div>
+                                    <div style={{ fontWeight: 600, color: '#3f8600' }}>+ETB {item.amount.toFixed(2)}</div>
                                 </List.Item>
                             )}
                         />

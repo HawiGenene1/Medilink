@@ -3,10 +3,35 @@ import { Card, Avatar, Typography, Descriptions, Button, Row, Col, Tag, Divider 
 import { UserOutlined, EditOutlined, CarOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 
+import api from '../../../services/api';
+
 const { Title, Text } = Typography;
 
 const DeliveryProfile = () => {
     const { user } = useAuth();
+    const [profile, setProfile] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await api.get('/delivery/profile');
+                if (response.data.success) {
+                    setProfile(response.data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching profile:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString();
+    };
 
     return (
         <div style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
@@ -31,9 +56,9 @@ const DeliveryProfile = () => {
                         <div style={{ textAlign: 'left' }}>
                             <Descriptions column={1} size="small">
                                 <Descriptions.Item label="Phone">{user?.phone || 'Not set'}</Descriptions.Item>
-                                <Descriptions.Item label="Joined">Jan 2026</Descriptions.Item>
-                                <Descriptions.Item label="Total Deliveries">145</Descriptions.Item>
-                                <Descriptions.Item label="Rating">4.8/5.0</Descriptions.Item>
+                                <Descriptions.Item label="Joined">{formatDate(user?.createdAt)}</Descriptions.Item>
+                                <Descriptions.Item label="Total Deliveries">{profile?.totalDeliveries || 0}</Descriptions.Item>
+                                <Descriptions.Item label="Rating">{profile?.rating || 'New'}</Descriptions.Item>
                             </Descriptions>
                         </div>
 
@@ -50,8 +75,12 @@ const DeliveryProfile = () => {
                                 <Avatar size={64} icon={<CarOutlined />} style={{ backgroundColor: '#f0f5ff', color: '#1890ff' }} />
                             </Col>
                             <Col>
-                                <Title level={4} style={{ margin: 0 }}>Yamaha R3</Title>
-                                <Text type="secondary">Motorcycle • Blue • FAST-22</Text>
+                                <Title level={4} style={{ margin: 0 }}>
+                                    {profile?.vehicleDetails?.make || 'Vehicle'} {profile?.vehicleDetails?.model || ''}
+                                </Title>
+                                <Text type="secondary">
+                                    {profile?.vehicleDetails?.type?.toUpperCase() || 'Not Set'} • {profile?.vehicleDetails?.color || 'Color'} • {profile?.vehicleDetails?.licensePlate || 'NO PLATE'}
+                                </Text>
                             </Col>
                         </Row>
                     </Card>
