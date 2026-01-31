@@ -46,6 +46,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const ErrorResponse = require('./utils/errorResponse');
 
 // Initialize Express app
 const app = express();
@@ -59,20 +60,27 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Get environment variables
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGODB_URI;
+// MongoDB connection connection
+const connectDB = async () => {
+  try {
+    const connUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/medilink';
+    console.log(`Connecting to MongoDB: ${connUri}`);
 
-// Connect to MongoDB only if URI is provided
-// if (MONGO_URI) {
-//   mongoose
-//     .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-//     .then(() => console.log('MongoDB connected successfully'))
-//     .catch(err => console.log('MongoDB connection error:', err));
-// } else {
-//   console.log('MONGODB_URI not set. Skipping MongoDB connection.');
-// }
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.log('MongoDB connection error:', err));
+    await mongoose.connect(connUri, {
+      serverSelectionTimeoutMS: 5000, // Fail fast if no connection
+    });
+
+    console.log(`MongoDB Connected: ${mongoose.connection.host}`);
+  } catch (err) {
+    console.error(`Error connecting to MongoDB: ${err.message}`);
+    // Don't exit in dev mode, maybe it'll reconnect
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
+  }
+};
+
+connectDB();
 
 
 // Import routes (only import what exists)
@@ -83,16 +91,12 @@ const prescriptionRoutes = require('./routes/prescriptionRoutes'); // Added
 const orderRoutes = require('./routes/orderRoutes'); // Added
 const deliveryRoutes = require('./routes/deliveryRoutes'); // Added
 const favoriteRoutes = require('./routes/favoriteRoutes'); // Added
-// const adminRoutes = require('./routes/adminRoutes');
-// const cashierRoutes = require('./routes/cashierRoutes');
-// const customerRoutes = require('./routes/customerRoutes');
-// const deliveryRoutes = require('./routes/deliveryRoutes');
-// const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
-// const pharmacyRoutes = require('./routes/pharmacyRoutes');
+const pharmacyOwnerRoutes = require('./routes/pharmacyOwnerRoutes'); // Added
+const adminRoutes = require('./routes/adminRoutes'); // Enabled
+const pharmacyRoutes = require('./routes/pharmacyRoutes'); // Enabled
 
 // Import middleware (comment out if files don't exist)
-// const { authenticate } = require('./middleware/authMiddleware');
-// const { authorize } = require('./middleware/roleMiddleware');
+const { authenticate, authorize } = require('./middleware/authMiddleware');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -102,13 +106,9 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/favorites', favoriteRoutes);
-
-// app.use('/api/admin', authenticate, authorize('admin'), adminRoutes);
-// app.use('/api/cashier', authenticate, authorize('cashier'), cashierRoutes);
-// app.use('/api/customer', authenticate, authorize('customer'), customerRoutes);
-// app.use('/api/delivery', authenticate, authorize('delivery'), deliveryRoutes);
-// app.use('/api/pharmacy-admin', authenticate, authorize('pharmacy_admin'), pharmacyAdminRoutes);
-// app.use('/api/pharmacy', authenticate, authorize('pharmacy_staff', 'pharmacy_admin'), pharmacyRoutes);
+app.use('/api/pharmacy-owner', pharmacyOwnerRoutes);
+app.use('/api/admin', adminRoutes); // Mount admin routes
+app.use('/api/pharmacy', pharmacyRoutes); // Mount pharmacy routes (public for registration)
 
 // Test route
 app.get('/', (req, res) => {
@@ -129,10 +129,36 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  let error = { ...err };
+  error.message = err.message;
+
+  // Log to console for dev
+  console.error(err.stack || err);
+
+  // Mongoose bad ObjectId
+  if (err.name === 'CastError') {
+    const message = `Resource not found`;
+    error = new ErrorResponse(message, 404);
+  }
+
+  // Mongoose duplicate key
+  if (err.code === 11000) {
+    const message = 'Duplicate field value entered';
+    error = new ErrorResponse(message, 400);
+  }
+
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    const message = Object.values(err.errors).map(val => val.message);
+    error = new ErrorResponse(message, 400);
+  }
+
+  const statusCode = error.statusCode || 500;
+  const statusMessage = error.message || 'Server Error';
+
+  res.status(statusCode).json({
     success: false,
-    message: 'Something went wrong!',
+    message: statusMessage,
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });

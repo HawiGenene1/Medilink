@@ -46,6 +46,7 @@ import Subscription from '../pages/owner/Subscription';
 import Reports from '../pages/owner/Reports';
 import Analytics from '../pages/owner/Analytics';
 import OwnerInventory from '../pages/owner/Inventory';
+import OwnerNotifications from '../pages/owner/Notifications';
 import CashierDashboard from '../pages/cashier/Dashboard';
 import DeliveryDashboard from '../pages/delivery/Dashboard';
 
@@ -122,6 +123,7 @@ const AppRouter = () => {
           <Route path="/owner/analytics" element={<Analytics />} />
           <Route path="/owner/profile" element={<OwnerProfile />} />
           <Route path="/owner/settings" element={<OwnerSettings />} />
+          <Route path="/owner/notifications" element={<OwnerNotifications />} />
         </Route>
       </Route>
       {/* Redirects & Fallbacks */}

@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import './CommonDashboardLayout.css';
 
 const { Header, Sider, Content } = Layout;
@@ -23,6 +24,7 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
     const [currentLocation, setCurrentLocation] = useState('Addis Ababa');
     const [searchValue, setSearchValue] = useState('');
     const { user, logout } = useAuth();
+    const { unreadCount } = useNotifications();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -149,7 +151,7 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                             </div>
                         )}
 
-                        <Badge count={2} offset={[-2, 2]} size="small">
+                        <Badge count={unreadCount} offset={[-2, 2]} size="small">
                             <Button
                                 type="text"
                                 shape="circle"
