@@ -15,7 +15,7 @@ exports.uploadProfileImage = async (req, res) => {
 
         // Update user avatar
         const user = await User.findByIdAndUpdate(
-            req.user.id,
+            req.user.userId,
             { avatar: imageUrl },
             { new: true, runValidators: true }
         ).select('-password');
@@ -40,11 +40,14 @@ exports.uploadProfileImage = async (req, res) => {
 // @access  Private
 exports.getUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
+        const user = await User.findById(req.user.userId).select('-password');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.json(user);
+
+        // Use toJSON() to ensure all fields are included (including isTwoFactorEnabled, recoveryEmail, etc.)
+        const userJSON = user.toJSON();
+        res.json({ success: true, user: userJSON });
     } catch (error) {
         console.error('Error fetching user profile:', error);
         res.status(500).json({ message: 'Server error fetching profile' });
@@ -56,7 +59,7 @@ exports.getUserProfile = async (req, res) => {
 // @access  Private
 exports.updateUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.userId).select('+password');
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -65,22 +68,33 @@ exports.updateUserProfile = async (req, res) => {
         user.firstName = req.body.firstName || user.firstName;
         user.lastName = req.body.lastName || user.lastName;
         user.phone = req.body.phone || user.phone;
-        // user.email = req.body.email || user.email; // Usually separate flow for email change
 
-        if (req.body.address) {
-            user.address = { ...user.address, ...req.body.address };
+        // Handle Addresses
+        if (req.body.addresses) {
+            user.addresses = req.body.addresses;
         }
 
+        // Handle Security Updates
+        if (req.body.recoveryEmail) user.recoveryEmail = req.body.recoveryEmail;
+        if (req.body.recoveryPhone) user.recoveryPhone = req.body.recoveryPhone;
+        if (typeof req.body.isTwoFactorEnabled !== 'undefined') {
+            user.isTwoFactorEnabled = req.body.isTwoFactorEnabled;
+        }
+
+        // Handle Password Change
         if (req.body.password) {
             user.password = req.body.password;
+            user.passwordChangedAt = Date.now() - 1000;
         }
 
         const updatedUser = await user.save();
 
-        // Remove password from response
+        // Remove sensitive data from response
         updatedUser.password = undefined;
+        updatedUser.twoFactorCode = undefined;
 
         res.json({
+            success: true,
             message: 'Profile updated successfully',
             user: updatedUser
         });
@@ -95,15 +109,7 @@ exports.updateUserProfile = async (req, res) => {
 // @access  Private
 exports.deleteUserProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Potential addition: delete associated favorites, orders, etc.
-        // For now, focus on User account deletion
-        await User.findByIdAndDelete(req.user.id);
+        await User.findByIdAndDelete(req.user.userId);
 
         res.json({ message: 'Account deleted successfully' });
     } catch (error) {

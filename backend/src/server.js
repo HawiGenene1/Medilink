@@ -15,7 +15,7 @@ app.use(cors()); // Allow all CORS for now, restrict later
 app.use(express.json()); // parse JSON requests
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] Incoming Request: ${req.method} ${req.url}`);
-  if (req.method === 'POST') {
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
     console.log('Request Body:', JSON.stringify(req.body, null, 2));
   }
   next();
@@ -34,6 +34,7 @@ const { protectAdmin } = require('./middleware/authMiddleware');
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', require('./routes/favoriteRoutes'));
 app.use('/api/favorite', require('./routes/favoriteRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 
 // Medicines API
 try {
@@ -61,6 +62,7 @@ app.get('/', (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
+  console.log(`[404] Route not found: ${req.method} ${req.url}`);
   res.status(404).json({
     success: false,
     message: 'Route not found'

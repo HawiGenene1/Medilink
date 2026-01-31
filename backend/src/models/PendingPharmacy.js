@@ -106,7 +106,6 @@ const pendingPharmacySchema = new mongoose.Schema({
 
 // Indexes for better performance
 pendingPharmacySchema.index({ email: 1 });
-pendingPharmacySchema.index({ licenseNumber: 1 });
 pendingPharmacySchema.index({ status: 1 });
 pendingPharmacySchema.index({ submittedAt: -1 });
 

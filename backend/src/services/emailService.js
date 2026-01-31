@@ -104,9 +104,23 @@ async function sendPasswordResetEmail(email, name, resetLink) {
     return sendEmail(email, subject, html);
 }
 
+/**
+ * Send OTP recovery email
+ * @param {string} email - Recipient email
+ * @param {string} name - User's name
+ * @param {string} code - 6-digit OTP code
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function sendOTPEmail(email, name, code) {
+    const otpTemplate = require('../templates/otpEmail');
+    const { subject, html } = otpTemplate(name, code);
+    return sendEmail(email, subject, html);
+}
+
 module.exports = {
     sendEmail,
     sendWelcomeEmail,
     sendPasswordResetEmail,
+    sendOTPEmail,
     transporter
 };

@@ -142,15 +142,7 @@ const register = async (req, res) => {
       .catch((emailError) => logger.error('Failed to send welcome email:', emailError));
 
     const resultData = {
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        status: user.status
-      }
+      user: user.toJSON()
     };
 
     // Generate token for customer only (others must verify email/login manually)
@@ -182,75 +174,93 @@ const register = async (req, res) => {
 
 /**
  * @route   POST /api/auth/login
- * @desc    Authenticate user & get token
+ * @desc    Authenticate user & get token (or prompt for 2FA)
  * @access  Public
  */
 const login = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array(),
-      });
-    }
-
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid credentials',
-      });
+      return res.status(400).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Check account status
-    // Allow delivery and pharmacy_admin to login even if pending (to complete onboarding)
     if (user.status !== 'active' && !(user.status === 'pending' && (user.role === 'delivery' || user.role === 'pharmacy_admin'))) {
-      let statusMessage = 'Your account is pending approval.';
-      if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
-      if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';
-
-      return res.status(403).json({
-        success: false,
-        message: statusMessage,
-      });
+      return res.status(403).json({ success: false, message: 'Account status restricted' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid credentials',
+      return res.status(400).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    // Check for 2FA
+    if (user.isTwoFactorEnabled) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
+      user.twoFactorCode = code;
+      user.twoFactorCodeExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+      await user.save();
+
+      // Send Code to Recovery Email/Phone
+      const emailTarget = user.recoveryEmail || user.email;
+      const phoneTarget = user.recoveryPhone || user.phone;
+
+      console.log(`[2FA_CODE] Security code for ${emailTarget} / ${phoneTarget}: ${code}`);
+
+      // We can use a dedicated service later, for now return a flag
+      return res.json({
+        success: true,
+        requires2FA: true,
+        email: emailTarget,
+        phone: phoneTarget,
+        tempId: user._id // Used to identify the session in verify
       });
     }
 
-    const token = generateToken({ userId: user._id, role: user.role });
-
-    const { password: _pwd, ...safeUser } = user.toObject();
+    const token = generateToken({ userId: user._id.toString(), role: user.role });
+    const safeUser = user.toJSON();
 
     return res.json({
       success: true,
       token,
-      user: {
-        id: safeUser._id,
-        firstName: safeUser.firstName,
-        lastName: safeUser.lastName,
-        email: safeUser.email,
-        role: safeUser.role,
-        phone: safeUser.phone,
-        status: safeUser.status
-      },
+      user: safeUser
     });
   } catch (error) {
     console.error('Login error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Server error during login',
-      error: error.message,
+    return res.status(500).json({ success: false, message: 'Server error during login' });
+  }
+};
+
+/**
+ * @route   POST /api/auth/verify-2fa
+ * @desc    Verify 2FA code and provide token
+ * @access  Public
+ */
+const verify2FA = async (req, res) => {
+  try {
+    const { userId, code } = req.body;
+    const user = await User.findById(userId).select('+twoFactorCode +twoFactorCodeExpires');
+
+    if (!user || user.twoFactorCode !== code || user.twoFactorCodeExpires < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+    }
+
+    // Clear code
+    user.twoFactorCode = undefined;
+    user.twoFactorCodeExpires = undefined;
+    await user.save();
+
+    const token = generateToken({ userId: user._id.toString(), role: user.role });
+
+    return res.json({
+      success: true,
+      token,
+      user: user.toJSON()
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Verification failed' });
   }
 };
 
@@ -270,17 +280,16 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
+    const userJSON = user.toJSON();
+
+    // Prevent caching to ensure fresh data on every request
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     return res.json({
       success: true,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        status: user.status
-      },
+      user: userJSON
     });
   } catch (error) {
     console.error('Get current user error:', error);
@@ -371,4 +380,5 @@ module.exports = {
   login,
   getCurrentUser,
   verifyEmail,
+  verify2FA
 };

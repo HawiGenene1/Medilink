@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App, Divider } from 'antd';
+import React, { useState, useRef, useEffect } from 'react';
+import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App, Divider, Modal, message as antdMessage } from 'antd';
 import {
   UserOutlined,
   MailOutlined,
@@ -8,7 +8,8 @@ import {
   UploadOutlined,
   SafetyCertificateOutlined,
   EditOutlined,
-  CameraOutlined
+  CameraOutlined,
+  PlusOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
@@ -16,11 +17,33 @@ import api from '../../../services/api';
 const { Title, Text } = Typography;
 
 const Profile = () => {
-  const { user } = useAuth();
-  const { message } = App.useApp();
+  const { user, refreshUser } = useAuth();
+  const antApp = App.useApp();
+  const message = antApp?.message || antdMessage;
+
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [twoFactorModalVisible, setTwoFactorModalVisible] = useState(false);
+
+  const [addressForm] = Form.useForm();
+  const [twoFactorForm] = Form.useForm();
   const fileInputRef = useRef(null);
+
+  // Sync 2FA form when user data loads
+  React.useEffect(() => {
+    if (user) {
+      twoFactorForm.setFieldsValue({
+        recoveryEmail: user.recoveryEmail || user.email,
+        recoveryPhone: user.recoveryPhone || ''
+      });
+    }
+  }, [user, twoFactorForm]);
+
+  // Refresh user data when component mounts to ensure we have latest settings
+  useEffect(() => {
+    refreshUser();
+  }, []);
 
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
@@ -31,25 +54,15 @@ const Profile = () => {
 
     setLoading(true);
     try {
-      // Upload to backend
       const response = await api.post('/users/profile-image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      // Update local user context if needed
-      // Ideally AuthContext should provide a way to update user data
-      // For now, we rely on the reload or manual local storage update
-      const updatedUser = { ...user, avatar: response.data.avatar };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-
       message.success('Profile image updated successfully');
-      // Simple reload to refresh context
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       console.error('Error uploading image:', error);
-      message.error('Failed to upload image');
+      message.error(error.response?.data?.message || 'Failed to upload image');
     } finally {
       setLoading(false);
     }
@@ -59,23 +72,56 @@ const Profile = () => {
     fileInputRef.current.click();
   };
 
-  // Mock Addresses
-  const addresses = [
-    { id: 1, type: 'Home', address: 'Bole, Addis Ababa, House 123', default: true },
-    { id: 2, type: 'Work', address: 'Kazanchis, Office 404', default: false },
-  ];
-
   const handleProfileUpdate = async (values) => {
     setLoading(true);
     try {
       await api.put('/users/profile', values);
       message.success('Profile updated successfully');
       setEditing(false);
-      // Optional: Update local storage/context if needed, though reload is usually safer for global state
-      setTimeout(() => window.location.reload(), 1000);
+      setTimeout(() => window.location.reload(), 800);
     } catch (error) {
       console.error('Update failed:', error);
       message.error('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddAddress = async (values) => {
+    setLoading(true);
+    try {
+      const currentAddresses = user?.addresses || [];
+      const updatedAddresses = [...currentAddresses, { ...values, isDefault: currentAddresses.length === 0 }];
+
+      await api.put('/users/profile', { addresses: updatedAddresses });
+      message.success('Address added successfully');
+      setAddressModalVisible(false);
+      addressForm.resetFields();
+      setTimeout(() => window.location.reload(), 800);
+    } catch (error) {
+      message.error('Failed to add address');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetup2FA = async (values) => {
+    console.log('[2FA Setup] Submitting values:', values);
+    setLoading(true);
+    try {
+      const response = await api.put('/users/profile', {
+        ...values,
+        // We only save the recovery info, we DON'T enable login 2FA
+        // isTwoFactorEnabled: true 
+      });
+      console.log('[Recovery Setup] Success:', response.data);
+      message.success('Account recovery options updated!');
+      setTwoFactorModalVisible(false);
+      await refreshUser();
+    } catch (error) {
+      console.error('[2FA Setup] Failed:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to enable 2FA';
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -150,17 +196,6 @@ const Profile = () => {
           description={<Text strong>{user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</Text>}
         />
       </List.Item>
-      <List.Item>
-        <List.Item.Meta
-          title={<Text type="secondary">Verification Status</Text>}
-          description={
-            <Space>
-              <Tag color="success">Email Verified</Tag>
-              <Tag color="success">Phone Verified</Tag>
-            </Space>
-          }
-        />
-      </List.Item>
     </List>
   );
 
@@ -194,23 +229,32 @@ const Profile = () => {
       label: 'Addresses',
       children: (
         <>
-          <Button type="dashed" block style={{ marginBottom: '16px' }}>+ Add New Address</Button>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setAddressModalVisible(true)}
+            >
+              Add Address
+            </Button>
+          </div>
           <List
-            dataSource={addresses}
+            dataSource={user?.addresses || []}
             renderItem={item => (
-              <List.Item actions={[<Button type="link" key="edit">Edit</Button>, <Button type="link" key="del" danger>Delete</Button>]}>
+              <List.Item>
                 <List.Item.Meta
                   avatar={<Avatar icon={<EnvironmentOutlined />} style={{ backgroundColor: '#f0f0f0', color: '#000' }} />}
                   title={
                     <Space>
-                      <Text strong>{item.type}</Text>
-                      {item.default && <Tag color="blue">Default</Tag>}
+                      <Text strong>{item.label}</Text>
+                      {item.isDefault && <Tag color="blue">Default</Tag>}
                     </Space>
                   }
-                  description={item.address}
+                  description={`${item.street}, ${item.city}, ${item.country}`}
                 />
               </List.Item>
             )}
+            locale={{ emptyText: 'No addresses saved.' }}
           />
         </>
       )
@@ -220,17 +264,31 @@ const Profile = () => {
       label: 'Security',
       children: (
         <List>
-          <List.Item actions={[<Button key="chg">Change</Button>]}>
+          <List.Item>
             <List.Item.Meta
               avatar={<SafetyCertificateOutlined style={{ fontSize: '24px' }} />}
               title="Password"
-              description="Last changed 3 months ago"
+              description={`Last changed: ${user?.passwordChangedAt ? new Date(user.passwordChangedAt).toLocaleString() : 'Never'}`}
             />
           </List.Item>
-          <List.Item actions={[<Switch key="2fa" />]}>
+          <List.Item actions={[
+            <Button
+              type="primary"
+              ghost
+              onClick={() => setTwoFactorModalVisible(true)}
+            >
+              {user?.recoveryEmail || user?.recoveryPhone ? 'Update Options' : 'Set Up Recovery'}
+            </Button>
+          ]}>
             <List.Item.Meta
-              title="Two-Factor Authentication"
-              description="Enable 2FA for enhanced security"
+              title="Account Recovery"
+              description={
+                user?.recoveryEmail
+                  ? `Recovery enabled via ${user.recoveryEmail}`
+                  : user?.recoveryPhone
+                    ? `Recovery enabled via ${user.recoveryPhone}`
+                    : 'Set up recovery options to regain access if you forget your password'
+              }
             />
           </List.Item>
         </List>
@@ -245,7 +303,12 @@ const Profile = () => {
         <Col xs={24} md={8}>
           <Card style={{ textAlign: 'center', borderRadius: '16px' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-              <Avatar size={100} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} style={{ backgroundColor: '#4361ee', border: '4px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+              <Avatar
+                size={100}
+                icon={<UserOutlined />}
+                src={user?.avatar ? `http://localhost:5000${user.avatar}` : null}
+                style={{ backgroundColor: '#4361ee', border: '4px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              />
               <Button
                 shape="circle"
                 icon={<CameraOutlined />}
@@ -260,7 +323,6 @@ const Profile = () => {
                 style={{ display: 'none' }}
                 accept="image/*"
                 onChange={handleImageUpload}
-                capture="user"
               />
             </div>
             <Title level={4} style={{ margin: 0 }}>{user?.firstName} {user?.lastName}</Title>
@@ -268,28 +330,16 @@ const Profile = () => {
 
             <Divider style={{ margin: '12px 0' }} />
 
-            <Row gutter={8}>
-              <Col span={12}>
-                <Card size="small" bordered={false} style={{ background: '#f8f9fa' }}>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>Orders</Text><br />
-                  <Text strong>12</Text>
-                </Card>
-              </Col>
-              <Col span={12}>
-                <Card size="small" bordered={false} style={{ background: '#f8f9fa' }}>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>Rx Files</Text><br />
-                  <Text strong>4</Text>
-                </Card>
-              </Col>
-            </Row>
-
-            <div style={{ marginTop: '24px', textAlign: 'left' }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
-                <SafetyCertificateOutlined style={{ color: '#52c41a' }} /> <Text>Email Verified</Text>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
-                <SafetyCertificateOutlined style={{ color: '#52c41a' }} /> <Text>Phone Verified</Text>
-              </div>
+            <div style={{ textAlign: 'left' }}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <SafetyCertificateOutlined style={{ color: user?.isEmailVerified ? '#52c41a' : '#faad14' }} />
+                  <Text>Email {user?.isEmailVerified ? 'Verified' : 'Pending'}</Text>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <SafetyCertificateOutlined style={{ color: '#52c41a' }} /> <Text>Phone Verified</Text>
+                </div>
+              </Space>
             </div>
           </Card>
         </Col>
@@ -301,6 +351,74 @@ const Profile = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Address Modal */}
+      <Modal
+        title="Add New Address"
+        open={addressModalVisible}
+        onCancel={() => setAddressModalVisible(false)}
+        footer={null}
+      >
+        <Form form={addressForm} layout="vertical" onFinish={handleAddAddress}>
+          <Form.Item name="label" label="Address Label" rules={[{ required: true }]}>
+            <Input placeholder="Home, Work, etc." />
+          </Form.Item>
+          <Form.Item name="street" label="Street Address" rules={[{ required: true }]}>
+            <Input placeholder="e.g. Bole Road, House 123" />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="city" label="City" rules={[{ required: true }]}>
+                <Input placeholder="Addis Ababa" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="country" label="Country" initialValue="Ethiopia">
+                <Input disabled />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Button type="primary" htmlType="submit" block loading={loading}>
+            Save Address
+          </Button>
+        </Form>
+      </Modal>
+
+      {/* 2FA Modal */}
+      <Modal
+        title="Update Account Recovery Options"
+        open={twoFactorModalVisible}
+        onCancel={() => setTwoFactorModalVisible(false)}
+        footer={null}
+      >
+        <div style={{ marginBottom: 20 }}>
+          <Text type="secondary">
+            These contacts will be used to verify your identity if you forget your password or lose access to your primary email.
+          </Text>
+        </div>
+        <Form form={twoFactorForm} layout="vertical" onFinish={handleSetup2FA}>
+          <Form.Item
+            name="recoveryEmail"
+            label="Recovery Email"
+            rules={[
+              { required: true, message: 'Please provide a recovery email' },
+              { type: 'email', message: 'Please enter a valid email' }
+            ]}
+            initialValue={user?.email}
+          >
+            <Input prefix={<MailOutlined />} placeholder="Enter email for security codes" />
+          </Form.Item>
+          <Form.Item
+            name="recoveryPhone"
+            label="Backup Phone (Optional)"
+          >
+            <Input prefix={<PhoneOutlined />} placeholder="+251..." />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" block icon={<SafetyCertificateOutlined />} loading={loading}>
+            Enable Secure Protection
+          </Button>
+        </Form>
+      </Modal>
     </div>
   );
 };

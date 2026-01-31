@@ -47,14 +47,39 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await api.post('/auth/login', { email, password });
+
+      if (response.data.requires2FA) {
+        return {
+          success: true,
+          requires2FA: true,
+          tempId: response.data.tempId,
+          email: response.data.email,
+          phone: response.data.phone
+        };
+      }
+
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
-      return { success: true, user }; // Return user for redirect logic
+      return { success: true, user };
     } catch (error) {
       console.error('Login failed:', error);
       return { success: false, message: error.response?.data?.message || 'Login failed' };
+    }
+  };
+
+  // Verify 2FA function
+  const verify2FA = async (userId, code) => {
+    try {
+      const response = await api.post('/auth/verify-2fa', { userId, code });
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true, user };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Invalid code' };
     }
   };
 
@@ -100,6 +125,23 @@ export const AuthProvider = ({ children }) => {
     return roles.includes(user.role);
   };
 
+  // Refresh user data
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/auth/me', {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      setUser(response.data.user);
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      return { success: false };
+    }
+  };
+
   const value = {
     user,
     isAuthenticated,
@@ -107,6 +149,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    refreshUser,
     hasRole,
     hasAnyRole
   };

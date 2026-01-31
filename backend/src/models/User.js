@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false // Don't return password by default in queries
   },
-phone: {
+  phone: {
     type: String,
     required: [true, 'Phone number is required'],
     trim: true
@@ -43,7 +43,17 @@ phone: {
     ref: 'Pharmacy',
     required: false // Make it optional for now
   },
-  // Address for customers and delivery personnel
+  // Addresses
+  addresses: [{
+    label: { type: String, default: 'Home' }, // e.g., Home, Work
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    country: { type: String, default: 'Ethiopia' },
+    isDefault: { type: Boolean, default: false }
+  }],
+  // Legacy address field (kept for backward compatibility during migration)
   address: {
     street: String,
     city: String,
@@ -51,10 +61,19 @@ phone: {
     zipCode: String,
     country: String
   },
+
   avatar: {
     type: String,
     default: ''
   },
+
+  // Security & 2FA
+  passwordChangedAt: Date,
+  isTwoFactorEnabled: { type: Boolean, default: false },
+  recoveryEmail: String,
+  recoveryPhone: String,
+  twoFactorCode: String,
+  twoFactorCodeExpires: Date,
   // For delivery personnel
   vehicleInfo: {
     type: {
@@ -149,12 +168,21 @@ userSchema.methods.comparePassword = function (candidatePassword) {
 };
 
 // Method to get user without sensitive data
-userSchema.methods.toJSON = function () {
-  const user = this.toObject();
-  delete user.password;
-  delete user.__v;
-  return user;
-};
+userSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  }
+});
+
+userSchema.set('toObject', {
+  transform: (doc, ret) => {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  }
+});
 
 const User = mongoose.model('User', userSchema);
 

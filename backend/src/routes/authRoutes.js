@@ -46,6 +46,11 @@ router.post(
   login
 );
 
+// @desc    Verify 2FA code
+// @route   POST /api/auth/verify-2fa
+// @access  Public
+router.post('/verify-2fa', require('../controllers/authController').verify2FA);
+
 // @desc    Get current user profile
 // @route   GET /api/auth/me
 // @access  Private
@@ -53,6 +58,7 @@ router.get('/me', protect, getCurrentUser);
 
 // Password reset routes
 router.post('/request-password-reset', requestPasswordReset);
+router.post('/send-recovery-code', require("../controllers/passwordController").sendRecoveryCode);
 router.post('/reset-password', resetPassword);
 
 module.exports = router;

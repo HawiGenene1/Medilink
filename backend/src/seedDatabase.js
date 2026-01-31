@@ -70,6 +70,8 @@ const seedData = async () => {
       email: 'customer@medilink.com',
       password: userPassword,
       phone: '+251933333333',
+      recoveryEmail: 'thick.rodent.jssq@protectsmail.net',
+      recoveryPhone: '+251962151292',
       role: 'customer',
       isActive: true,
       status: 'active',

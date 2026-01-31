@@ -47,10 +47,11 @@ const protect = async (req, res, next) => {
 
       // Attach user to request object
       req.user = {
-        userId: user._id,
+        id: user._id.toString(),
+        userId: user._id.toString(),
         email: user.email,
         role: user.role,
-        pharmacyId: user.pharmacyId
+        pharmacyId: user.pharmacyId ? user.pharmacyId.toString() : null
       };
 
       next();
