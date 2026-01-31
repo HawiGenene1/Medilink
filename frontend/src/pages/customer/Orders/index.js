@@ -6,7 +6,8 @@ import {
   ShopOutlined,
   EnvironmentOutlined,
   DownloadOutlined,
-  SyncOutlined
+  SyncOutlined,
+  MedicineBoxOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { ordersAPI, paymentsAPI } from '../../../services/api';
