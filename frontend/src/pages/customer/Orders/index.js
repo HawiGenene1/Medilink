@@ -28,7 +28,7 @@ const Orders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await ordersAPI.getAll();
+      const response = await ordersAPI.getAll(1, 100);
       if (response.data.success) {
         setOrders(response.data.data.orders || []);
       }
