@@ -16,6 +16,7 @@ import {
     FrownOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useUI } from '../../../contexts/UIContext';
 import api from '../../../services/api';
 import { App } from 'antd';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +26,7 @@ const { Title, Text, Paragraph } = Typography;
 
 const Settings = () => {
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useUI();
     const { message } = App.useApp();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
@@ -83,18 +85,12 @@ const Settings = () => {
                 <Text>Order Status Updates</Text>
                 <Switch defaultChecked />
             </div>
-            <div className="pref-row">
-                <Text>Newsletter & Health Tips</Text>
-                <Switch />
-            </div>
+
 
             <Divider />
 
             <Title level={4}>Push Notifications</Title>
-            <div className="pref-row">
-                <Text>Direct messaging from pharmacist</Text>
-                <Switch defaultChecked />
-            </div>
+
             <div className="pref-row">
                 <Text>Interactive tracking alerts</Text>
                 <Switch defaultChecked />
@@ -128,19 +124,11 @@ const Settings = () => {
                 <Switch
                     checkedChildren="Dark"
                     unCheckedChildren="Light"
-                    defaultChecked={false}
+                    checked={theme === 'dark'}
+                    onChange={toggleTheme}
                 />
             </div>
-            <Divider />
-            <Title level={4}>Clinical Preferences</Title>
-            <Paragraph type="secondary">Set your default healthcare providers.</Paragraph>
-            <Card className="option-card-mini" style={{ marginBottom: '16px' }}>
-                <Space>
-                    <EnvironmentOutlined style={{ color: '#1E88E5' }} />
-                    <Text strong>Kenema Pharmacy No. 4 (Bole)</Text>
-                    <Button type="link" size="small">Change Default</Button>
-                </Space>
-            </Card>
+
         </div>
     );
 
