@@ -8,11 +8,12 @@ const Pharmacy = require('../models/Pharmacy');
 const checkSubscription = async (req, res, next) => {
     try {
         // 1. Ensure user is authenticated and has a pharmacyId
-        if (!req.user || !req.user.pharmacyId) {
-            // If user isn't associated with a pharmacy (e.g. platform admin or customer), 
-            // this check might not apply, or they shouldn't be here.
-            // For now, if they are admin, bypass.
-            if (req.user.role === 'admin') {
+        // Check both req.user (Staff) and req.owner (Owner)
+        const pharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
+
+        if (!pharmacyId) {
+            // If user is admin (platform level), bypass check
+            if (req.user?.role === 'admin') {
                 return next();
             }
             return res.status(403).json({
@@ -20,8 +21,6 @@ const checkSubscription = async (req, res, next) => {
                 message: 'Access denied. No pharmacy associated with this user.'
             });
         }
-
-        const pharmacyId = req.user.pharmacyId;
 
         // 2. Fetch the active subscription for the pharmacy
         const subscription = await Subscription.findOne({
