@@ -114,13 +114,17 @@ const login = async (req, res) => {
     }
 
     const { email, password } = req.body;
-    console.log('LOGIN DEBUG: Attempting login for:', email);
+    const fs = require('fs');
+    const path = require('path');
+    const logPath = path.join(process.cwd(), 'auth_debug.log');
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] Login attempt: Email="${email}", PwdLen=${password?.length}\n`);
 
     // Find user
     const user = await User.findOne({ email }).select('+password');
-    console.log('LOGIN DEBUG: User found:', user ? user._id : 'NO USER');
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] User search: Found=${!!user}, ID=${user?._id}\n`);
 
     if (!user) {
+      fs.appendFileSync(logPath, `[${new Date().toISOString()}] FAIL: User not found\n`);
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
@@ -128,14 +132,13 @@ const login = async (req, res) => {
     }
 
     // Check account status
-    // Allow delivery and pharmacy_admin to login even if pending (to complete onboarding)
-    console.log('LOGIN DEBUG: Checking status. Role:', user.role, 'Status:', user.status);
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] Status check: Role=${user.role}, Status=${user.status}\n`);
     if (user.status !== 'active' && !(user.status === 'pending' && (user.role === 'delivery' || user.role === 'pharmacy_admin'))) {
       let statusMessage = 'Your account is pending approval.';
       if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
       if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';
 
-      console.log('LOGIN DEBUG: Account not active:', statusMessage);
+      fs.appendFileSync(logPath, `[${new Date().toISOString()}] FAIL: Status ${user.status}\n`);
       return res.status(403).json({
         success: false,
         message: statusMessage,
@@ -143,11 +146,11 @@ const login = async (req, res) => {
     }
 
     // Verify Password
-    console.log('LOGIN DEBUG: Verifying password...');
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('LOGIN DEBUG: Password match result:', isMatch);
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] Password check: HashLen=${user.password?.length}, Match=${isMatch}\n`);
 
     if (!isMatch) {
+      fs.appendFileSync(logPath, `[${new Date().toISOString()}] FAIL: Password mismatch\n`);
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
