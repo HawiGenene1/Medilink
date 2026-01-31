@@ -31,39 +31,28 @@ const seedData = async () => {
 
     // Create Roles
     console.log('🏷️ Creating roles...');
-    const adminRole = await Role.create({ name: 'admin', permissions: ['all'] });
-    const customerRole = await Role.create({ name: 'customer', permissions: ['view_medicines', 'create_orders'] });
-    const pharmacyStaffRole = await Role.create({ name: 'pharmacy_staff', permissions: ['manage_medicines', 'view_orders'] });
-    const pharmacyAdminRole = await Role.create({ name: 'pharmacy_admin', permissions: ['manage_pharmacy', 'view_orders', 'manage_staff'] });
-    const deliveryRole = await Role.create({ name: 'delivery', permissions: ['view_deliveries', 'update_delivery_status'] });
-    const cashierRole = await Role.create({ name: 'cashier', permissions: ['view_orders', 'verify_payments', 'process_refunds', 'generate_invoices'] });
+    await Role.create({ name: 'admin', permissions: ['all'] });
+    await Role.create({ name: 'customer', permissions: ['view_medicines', 'create_orders'] });
+    await Role.create({ name: 'pharmacy_staff', permissions: ['manage_medicines', 'view_orders'] });
+    await Role.create({ name: 'pharmacy_admin', permissions: ['manage_pharmacy', 'view_orders', 'manage_staff'] });
+    await Role.create({ name: 'delivery', permissions: ['view_deliveries', 'update_delivery_status'] });
+    await Role.create({ name: 'cashier', permissions: ['view_orders', 'verify_payments', 'process_refunds', 'generate_invoices'] });
     console.log('✅ Roles created\n');
 
     // Create Users
     console.log('👥 Creating users...');
-    
-    const admin = await User.create({
-      firstName: 'Admin',
-      lastName: 'User',
-      email: 'admin@medilink.com',
-      password: 'Admin123', // Will be hashed by pre-save hook
-      username: 'admin',
-      phone: '+251911111111',
-      role: adminRole._id,
-      isActive: true,
-      isEmailVerified: true
-    });
 
-    // Create pharmacy owner as customer first (will update role after pharmacy is created)
+    // Create pharmacy owner first
     const pharmacyOwner = await User.create({
       firstName: 'John',
       lastName: 'Pharmacy',
       email: 'pharmacy@medilink.com',
-      password: 'Test123', // Will be hashed by pre-save hook
+      password: 'Test123',
       username: 'pharmacy_owner',
       phone: '+251922222222',
-      role: customerRole._id, // Temporary role, will update after pharmacy is created
+      role: 'customer',
       isActive: true,
+      status: 'active',
       address: {
         street: '123 Main St',
         city: 'Addis Ababa',
@@ -77,11 +66,12 @@ const seedData = async () => {
       firstName: 'Jane',
       lastName: 'Customer',
       email: 'customer@medilink.com',
-      password: 'Test123', // Will be hashed by pre-save hook
+      password: 'Test123',
       username: 'customer',
       phone: '+251933333333',
-      role: customerRole._id,
+      role: 'customer',
       isActive: true,
+      status: 'active',
       address: {
         street: '456 Customer Ave',
         city: 'Addis Ababa',
@@ -95,35 +85,38 @@ const seedData = async () => {
       firstName: 'Mike',
       lastName: 'Delivery',
       email: 'delivery@medilink.com',
-      password: 'Test123', // Will be hashed by pre-save hook
+      password: 'Test123',
       username: 'delivery',
       phone: '+251944444444',
-      role: deliveryRole._id,
+      role: 'delivery',
       isActive: true,
+      status: 'active',
       vehicleInfo: {
         type: 'motorcycle',
         licensePlate: 'AA-123-456'
       }
     });
 
-    // Create cashier user
-    const cashier = await User.create({
-      firstName: 'Cashier',
+    const admin = await User.create({
+      firstName: 'Admin',
       lastName: 'User',
-      email: 'cashier@medilink.com',
-      password: 'Cashier123', // Will be hashed by pre-save hook
-      username: 'cashier',
-      role: cashierRole._id,
+      email: 'admin@medilink.com',
+      password: 'Admin123',
+      username: 'admin',
+      role: 'admin',
+      phone: '+251911111111',
       isActive: true,
+      status: 'active',
       isEmailVerified: true
     });
 
-    console.log(`✅ Created ${5} users including cashier\n`);
+    console.log(`✅ Created Base Users\n`);
 
     // Create Pharmacy
     console.log('🏥 Creating pharmacies...');
     const pharmacy1 = await Pharmacy.create({
       name: 'MediCare Pharmacy',
+      ownerName: 'John Pharmacy',
       licenseNumber: 'PH-2024-001',
       email: 'contact@medicare.com',
       phone: '+251911234567',
@@ -136,27 +129,18 @@ const seedData = async () => {
       },
       location: {
         type: 'Point',
-        coordinates: [38.7469, 9.0320] // [longitude, latitude] for Addis Ababa
+        coordinates: [38.7469, 9.0320]
       },
       owner: pharmacyOwner._id,
-      description: 'Your trusted neighborhood pharmacy providing quality medicines and healthcare products.',
-      openingHours: {
-        monday: { open: '08:00', close: '20:00', isClosed: false },
-        tuesday: { open: '08:00', close: '20:00', isClosed: false },
-        wednesday: { open: '08:00', close: '20:00', isClosed: false },
-        thursday: { open: '08:00', close: '20:00', isClosed: false },
-        friday: { open: '08:00', close: '20:00', isClosed: false },
-        saturday: { open: '09:00', close: '18:00', isClosed: false },
-        sunday: { open: '10:00', close: '16:00', isClosed: false }
-      },
+      description: 'Your trusted neighborhood pharmacy.',
       isVerified: true,
       isActive: true,
-      rating: 4.5,
-      reviewCount: 125
+      rating: 4.5
     });
 
     const pharmacy2 = await Pharmacy.create({
       name: 'HealthPlus Pharmacy',
+      ownerName: 'John Pharmacy',
       licenseNumber: 'PH-2024-002',
       email: 'info@healthplus.com',
       phone: '+251917654321',
@@ -172,26 +156,31 @@ const seedData = async () => {
         coordinates: [38.7577, 9.0354]
       },
       owner: pharmacyOwner._id,
-      description: 'Modern pharmacy with a wide range of medicines and healthcare services.',
-      openingHours: {
-        monday: { open: '07:00', close: '22:00', isClosed: false },
-        tuesday: { open: '07:00', close: '22:00', isClosed: false },
-        wednesday: { open: '07:00', close: '22:00', isClosed: false },
-        thursday: { open: '07:00', close: '22:00', isClosed: false },
-        friday: { open: '07:00', close: '22:00', isClosed: false },
-        saturday: { open: '08:00', close: '22:00', isClosed: false },
-        sunday: { open: '09:00', close: '20:00', isClosed: false }
-      },
+      description: 'Modern pharmacy.',
       isVerified: true,
       isActive: true,
-      rating: 4.7,
-      reviewCount: 89
+      rating: 4.7
     });
 
-    console.log(`✅ Created ${2} pharmacies\n`);
+    console.log(`✅ Created Pharmacies\n`);
 
-    // Update pharmacy owner with pharmacyId and role
-    await User.findByIdAndUpdate(pharmacyOwner._id, { 
+    // Create Cashier
+    const cashier = await User.create({
+      firstName: 'Cashier',
+      lastName: 'User',
+      email: 'cashier@medilink.com',
+      password: 'Cashier123',
+      username: 'cashier',
+      phone: '+251955555555',
+      role: 'cashier',
+      pharmacyId: pharmacy1._id,
+      isActive: true,
+      status: 'active',
+      isEmailVerified: true
+    });
+    console.log('✅ Created Cashier\n');
+
+    await User.findByIdAndUpdate(pharmacyOwner._id, {
       pharmacyId: pharmacy1._id,
       role: 'pharmacy_admin'
     });
@@ -201,7 +190,7 @@ const seedData = async () => {
     const painRelief = await Category.create({
       name: 'Pain Relief',
       slug: 'pain-relief',
-      description: 'Medications for pain management and relief',
+      description: 'Pain management',
       isActive: true,
       displayOrder: 1
     });
@@ -209,275 +198,141 @@ const seedData = async () => {
     const antibiotics = await Category.create({
       name: 'Antibiotics',
       slug: 'antibiotics',
-      description: 'Antibiotic medications for bacterial infections',
+      description: 'Antibiotics',
       isActive: true,
       displayOrder: 2
     });
 
-    const vitamins = await Category.create({
-      name: 'Vitamins & Supplements',
-      slug: 'vitamins-supplements',
-      description: 'Essential vitamins and dietary supplements',
-      isActive: true,
-      displayOrder: 3
-    });
+    await Category.create({ name: 'Vitamins', slug: 'vitamins', isActive: true });
+    await Category.create({ name: 'Cold and Flu', slug: 'cold-flu', isActive: true });
 
-    const coldFlu = await Category.create({
-      name: 'Cold & Flu',
-      slug: 'cold-flu',
-      description: 'Medications for cold and flu symptoms',
-      isActive: true,
-      displayOrder: 4
-    });
-
-    console.log(`✅ Created ${4} categories\n`);
+    console.log(`✅ Created Categories\n`);
 
     // Create Medicines
     console.log('💊 Creating medicines...');
-    const medicines = await Medicine.create([
-      {
-        name: 'Paracetamol',
-        brand: 'Tylenol',
-        genericName: 'Acetaminophen',
-        category: painRelief._id,
-        description: 'Effective pain reliever and fever reducer',
-        price: 50,
-        quantity: 500,
-        unit: 'tablet',
-        dosage: '500mg',
-        manufacturer: 'Johnson & Johnson',
-        expiryDate: new Date('2026-12-31'),
-        manufactureDate: new Date('2024-01-15'),
-        batchNumber: 'BATCH-2024-001',
-        requiresPrescription: false,
-        pharmacyId: pharmacy1._id,
-        usageInstructions: 'Take 1-2 tablets every 4-6 hours as needed. Do not exceed 8 tablets in 24 hours.',
-        warnings: ['Do not use with other acetaminophen-containing products', 'Consult doctor if symptoms persist'],
-        storage: 'Store at room temperature away from moisture and heat',
-        isActive: true,
-        rating: 4.6,
-        reviewCount: 234,
-        soldCount: 1250
-      },
-      {
-        name: 'Amoxicillin',
-        brand: 'Amoxil',
-        genericName: 'Amoxicillin',
-        category: antibiotics._id,
-        description: 'Broad-spectrum antibiotic for bacterial infections',
-        price: 120,
-        quantity: 300,
-        unit: 'capsule',
-        dosage: '500mg',
-        manufacturer: 'GlaxoSmithKline',
-        expiryDate: new Date('2026-06-30'),
-        manufactureDate: new Date('2024-02-01'),
-        batchNumber: 'BATCH-2024-002',
-        requiresPrescription: true,
-        pharmacyId: pharmacy1._id,
-        usageInstructions: 'Take as prescribed by your doctor. Complete the full course even if you feel better.',
-        warnings: ['May cause allergic reactions', 'Inform doctor if you have penicillin allergy'],
-        sideEffects: ['Nausea', 'Diarrhea', 'Skin rash'],
-        storage: 'Store at room temperature, away from light and moisture',
-        isActive: true,
-        rating: 4.5,
-        reviewCount: 156,
-        soldCount: 890
-      },
-      {
-        name: 'Vitamin C',
-        brand: 'Nature Made',
-        genericName: 'Ascorbic Acid',
-        category: vitamins._id,
-        description: 'Essential vitamin for immune system support',
-        price: 80,
-        quantity: 600,
-        unit: 'tablet',
-        dosage: '1000mg',
-        manufacturer: 'Nature Made',
-        expiryDate: new Date('2027-03-31'),
-        manufactureDate: new Date('2024-03-15'),
-        batchNumber: 'BATCH-2024-003',
-        requiresPrescription: false,
-        pharmacyId: pharmacy2._id,
-        usageInstructions: 'Take 1 tablet daily with food',
-        warnings: ['High doses may cause stomach upset'],
-        storage: 'Store in a cool, dry place',
-        isActive: true,
-        rating: 4.8,
-        reviewCount: 421,
-        soldCount: 2100
-      },
-      {
-        name: 'Ibuprofen',
-        brand: 'Advil',
-        genericName: 'Ibuprofen',
-        category: painRelief._id,
-        description: 'Anti-inflammatory pain reliever',
-        price: 65,
-        quantity: 450,
-        unit: 'tablet',
-        dosage: '200mg',
-        manufacturer: 'Pfizer',
-        expiryDate: new Date('2026-09-30'),
-        manufactureDate: new Date('2024-01-20'),
-        batchNumber: 'BATCH-2024-004',
-        requiresPrescription: false,
-        pharmacyId: pharmacy2._id,
-        usageInstructions: 'Take 1-2 tablets every 4-6 hours as needed with food or milk',
-        warnings: ['May increase risk of heart attack or stroke', 'Not for children under 12'],
-        sideEffects: ['Stomach upset', 'Heartburn', 'Dizziness'],
-        storage: 'Store at room temperature',
-        isActive: true,
-        rating: 4.7,
-        reviewCount: 312,
-        soldCount: 1680
-      },
-      {
-        name: 'Cough Syrup',
-        brand: 'Robitussin',
-        genericName: 'Dextromethorphan',
-        category: coldFlu._id,
-        description: 'Cough suppressant for dry cough',
-        price: 95,
-        quantity: 200,
-        unit: 'bottle',
-        dosage: '10mg/5ml',
-        manufacturer: 'Pfizer',
-        expiryDate: new Date('2026-08-31'),
-        manufactureDate: new Date('2024-02-10'),
-        batchNumber: 'BATCH-2024-005',
-        requiresPrescription: false,
-        pharmacyId: pharmacy1._id,
-        usageInstructions: 'Take 10ml every 4 hours as needed. Do not exceed 6 doses in 24 hours.',
-        warnings: ['Do not use with other cough medicines', 'Not for children under 4'],
-        storage: 'Store at room temperature, do not refrigerate',
-        isActive: true,
-        rating: 4.4,
-        reviewCount: 178,
-        soldCount: 567
+    let medicines;
+    try {
+      medicines = await Medicine.create([
+        {
+          name: 'Paracetamol',
+          brand: 'Tylenol',
+          genericName: 'Acetaminophen',
+          category: 'otc',
+          therapeuticClass: 'Pain Relief',
+          description: 'Effective pain reliever',
+          price: {
+            basePrice: 50,
+            currency: 'ETB'
+          },
+          stockQuantity: 500,
+          unit: 'tablet',
+          dosageForm: 'tablet',
+          strength: '500mg',
+          packSize: '10x10',
+          manufacturer: 'Johnson & Johnson',
+          expiryDate: new Date('2026-12-31'),
+          requiresPrescription: false,
+          availableAt: [pharmacy1._id],
+          addedBy: pharmacyOwner._id,
+          usageInstructions: 'Take 1-2 tablets every 4-6 hours.',
+          isActive: true,
+          location: {
+            type: 'Point',
+            coordinates: [38.74, 9.03]
+          }
+        },
+        {
+          name: 'Amoxicillin',
+          brand: 'Amoxil',
+          genericName: 'Amoxicillin',
+          category: 'prescription',
+          therapeuticClass: 'Antibiotics',
+          description: 'Broad-spectrum antibiotic',
+          price: { basePrice: 120, currency: 'ETB' },
+          stockQuantity: 300,
+          unit: 'capsule',
+          dosageForm: 'capsule',
+          strength: '500mg',
+          packSize: '10x10',
+          manufacturer: 'GlaxoSmithKline',
+          expiryDate: new Date('2026-06-30'),
+          requiresPrescription: true,
+          availableAt: [pharmacy1._id],
+          addedBy: pharmacyOwner._id,
+          isActive: true,
+          location: { type: 'Point', coordinates: [38.74, 9.03] }
+        }
+      ]);
+    } catch (err) {
+      console.error('MEDICINE ERROR:', err.message);
+      if (err.errors) {
+        Object.keys(err.errors).forEach(key => {
+          console.error(`Field [${key}]: ${err.errors[key].message}`);
+        });
       }
-    ]);
+      throw err;
+    }
 
     console.log(`✅ Created ${medicines.length} medicines\n`);
-
     // Create Sample Orders
     console.log('📦 Creating orders...');
-    const order1 = await Order.create({
-      orderNumber: `ORD-${Date.now()}-00001`,
+    await Order.create({
+      orderNumber: `ORD-${Date.now()}-0001`,
       customer: customer._id,
       pharmacy: pharmacy1._id,
       items: [
         {
           medicine: medicines[0]._id,
-          name: 'Paracetamol',
-          price: 50,
+          name: medicines[0].name,
+          price: medicines[0].price.basePrice,
           quantity: 2,
-          subtotal: 100
-        },
-        {
-          medicine: medicines[4]._id,
-          name: 'Cough Syrup',
-          price: 95,
-          quantity: 1,
-          subtotal: 95
+          subtotal: medicines[0].price.basePrice * 2
         }
       ],
-      totalAmount: 195,
+      totalAmount: medicines[0].price.basePrice * 2,
       deliveryFee: 20,
-      tax: 9.75,
-      discount: 0,
-      finalAmount: 224.75,
+      tax: 5,
+      finalAmount: (medicines[0].price.basePrice * 2) + 25,
       status: 'delivered',
       paymentStatus: 'paid',
-      paymentMethod: 'card',
-      paymentDetails: {
-        transactionId: 'TXN-2024-001',
-        paidAt: new Date('2024-11-10')
-      },
-      deliveryAddress: {
-        street: '456 Customer Ave',
-        city: 'Addis Ababa',
-        state: 'Addis Ababa',
-        zipCode: '1001',
-        country: 'Ethiopia'
-      },
-      deliveryPerson: deliveryPerson._id,
-      statusHistory: [
-        { status: 'pending', timestamp: new Date('2024-11-10T08:00:00'), note: 'Order placed' },
-        { status: 'confirmed', timestamp: new Date('2024-11-10T08:15:00'), note: 'Order confirmed by pharmacy' },
-        { status: 'preparing', timestamp: new Date('2024-11-10T08:30:00'), note: 'Preparing order' },
-        { status: 'out_for_delivery', timestamp: new Date('2024-11-10T10:00:00'), note: 'Out for delivery' },
-        { status: 'delivered', timestamp: new Date('2024-11-10T11:30:00'), note: 'Delivered successfully' }
-      ],
-      estimatedDeliveryTime: new Date('2024-11-10T12:00:00'),
-      actualDeliveryTime: new Date('2024-11-10T11:30:00'),
-      rating: 5,
-      review: 'Great service, fast delivery!'
+      paymentMethod: 'cash',
+      deliveryAddress: customer.address
     });
 
-    const order2 = await Order.create({
-      orderNumber: `ORD-${Date.now()}-00002`,
+    await Order.create({
+      orderNumber: `ORD-${Date.now()}-0002`,
       customer: customer._id,
-      pharmacy: pharmacy2._id,
+      pharmacy: pharmacy1._id,
       items: [
         {
-          medicine: medicines[2]._id,
-          name: 'Vitamin C',
-          price: 80,
-          quantity: 3,
-          subtotal: 240
+          medicine: medicines[1]._id,
+          name: medicines[1].name,
+          price: medicines[1].price.basePrice,
+          quantity: 1,
+          subtotal: medicines[1].price.basePrice
         }
       ],
-      totalAmount: 240,
+      totalAmount: medicines[1].price.basePrice,
       deliveryFee: 20,
-      tax: 12,
-      discount: 25,
-      finalAmount: 247,
-      status: 'out_for_delivery',
-      paymentStatus: 'paid',
-      paymentMethod: 'mobile_money',
-      paymentDetails: {
-        transactionId: 'TXN-2024-002',
-        paidAt: new Date()
-      },
-      deliveryAddress: {
-        street: '456 Customer Ave',
-        city: 'Addis Ababa',
-        state: 'Addis Ababa',
-        zipCode: '1001',
-        country: 'Ethiopia'
-      },
-      deliveryPerson: deliveryPerson._id,
-      statusHistory: [
-        { status: 'pending', timestamp: new Date(), note: 'Order placed' },
-        { status: 'confirmed', timestamp: new Date(), note: 'Order confirmed' },
-        { status: 'out_for_delivery', timestamp: new Date(), note: 'Out for delivery' }
-      ],
-      estimatedDeliveryTime: new Date(Date.now() + 2 * 60 * 60 * 1000) // 2 hours from now
+      tax: 10,
+      finalAmount: medicines[1].price.basePrice + 30,
+      status: 'pending',
+      paymentStatus: 'pending',
+      paymentMethod: 'card',
+      deliveryAddress: customer.address
     });
-
-    console.log(`✅ Created ${2} orders\n`);
-
+    console.log('✅ Created 2 sample orders\n');
     console.log('🎉 Database seeding completed successfully!');
-    console.log('\n📊 Summary:');
-    console.log(`   - Users: 4 (1 admin, 1 pharmacy owner, 1 customer, 1 delivery)`);
-    console.log(`   - Pharmacies: 2`);
-    console.log(`   - Categories: 4`);
-    console.log(`   - Medicines: 5`);
-    console.log(`   - Orders: 2`);
-    console.log('\n✅ You can now view the schema in MongoDB Compass!');
-    console.log(`   Database: medilink`);
-    console.log(`   Connection: ${MONGO_URI}\n`);
+    process.exit(0);
 
   } catch (error) {
     console.error('❌ Error seeding database:', error);
+    process.exit(1);
   } finally {
-    await mongoose.connection.close();
-    console.log('👋 Database connection closed');
-    process.exit(0);
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
   }
 };
 
-// Run the seed function
 seedData();

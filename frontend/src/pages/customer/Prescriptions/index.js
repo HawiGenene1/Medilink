@@ -120,7 +120,7 @@ const Prescriptions = () => {
 
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={18}>
-          <Card bordered={false} className="clinical-card">
+          <Card variant="borderless" className="clinical-card">
             <Table
               columns={columns}
               dataSource={prescriptions}

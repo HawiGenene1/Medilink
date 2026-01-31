@@ -1,12 +1,12 @@
 // frontend/src/components/pharmacy-staff/PrescriptionReview/index.js
 import React, { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Table, 
-  Button, 
-  Modal, 
-  Badge, 
-  Spinner, 
+import {
+  Container,
+  Table,
+  Button,
+  Modal,
+  Badge,
+  Spinner,
   Alert,
   Row,
   Col
@@ -46,14 +46,14 @@ const PrescriptionReview = () => {
     try {
       setActionLoading(true);
       setActionError(null);
-      
+
       await prescriptionsAPI.updateStatus(id, status, reviewNotes);
-      
+
       // Update local state
-      setPrescriptions(prev => 
+      setPrescriptions(prev =>
         prev.filter(prescription => prescription._id !== id)
       );
-      
+
       if (selectedPrescription?._id === id) {
         setSelectedPrescription(null);
         setShowModal(false);
@@ -93,10 +93,10 @@ const PrescriptionReview = () => {
   return (
     <Container className="py-4">
       <h2 className="mb-4">Prescription Review</h2>
-      
+
       {error && <Alert variant="danger">{error}</Alert>}
       {actionError && <Alert variant="danger" onClose={() => setActionError(null)} dismissible>{actionError}</Alert>}
-      
+
       {prescriptions.length === 0 ? (
         <Alert variant="info">No pending prescriptions to review.</Alert>
       ) : (
@@ -192,7 +192,7 @@ const PrescriptionReview = () => {
                   )}
                 </Col>
               </Row>
-              
+
               <div className="mb-3">
                 <label htmlFor="reviewNotes" className="form-label">Review Notes (Optional)</label>
                 <textarea
@@ -204,10 +204,10 @@ const PrescriptionReview = () => {
                   placeholder="Add any notes about this review..."
                 ></textarea>
               </div>
-              
+
               <div className="text-center">
                 <img
-                  src={`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${selectedPrescription.imageUrl}`}
+                  src={`${(process.env.REACT_APP_API_URL || 'http://localhost:5000/api').replace('/api', '')}${selectedPrescription.imageUrl}`}
                   alt="Prescription"
                   className="img-fluid"
                   style={{ maxHeight: '500px' }}

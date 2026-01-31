@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { medicinesAPI } from '../../../services/api/medicines';
 import { Row, Col, Card, Input, Button, List, Tag, Select, Space, Typography, Avatar, Tooltip, Empty } from 'antd';
 import {
     SearchOutlined,
@@ -24,53 +25,72 @@ const MedicineSearch = () => {
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Mock Data: Medicines available at specific pharmacies
-    const medicines = [
+    const MOCK_MEDICINES = [
         {
-            id: 1,
+            id: 'mock-1',
             name: 'Amoxicillin 500mg',
             pharmacy: 'Kenema Pharmacy',
             price: '150 ETB',
             distance: '0.5 km',
             stock: 'In Stock',
-            location: { lat: 9.03, lng: 38.74 },
+            location: { lat: 9.0320, lng: 38.7469 },
             image: 'https://via.placeholder.com/64?text=AMX'
         },
         {
-            id: 2,
+            id: 'mock-2',
             name: 'Paracetamol 500mg',
-            pharmacy: 'Red Cross Pharmacy',
-            price: '25 ETB',
+            pharmacy: 'City Pharma',
+            price: '45 ETB',
             distance: '1.2 km',
-            stock: 'Low Stock',
-            location: { lat: 9.04, lng: 38.75 },
-            image: 'https://via.placeholder.com/64?text=PARA'
+            stock: 'In Stock',
+            location: { lat: 9.0300, lng: 38.7500 },
+            image: 'https://via.placeholder.com/64?text=PCM'
         },
         {
-            id: 3,
-            name: 'Amoxicillin 500mg', // Same medicine, different pharmacy
-            pharmacy: 'Abyssinia Pharma',
-            price: '145 ETB',
-            distance: '2.0 km',
-            stock: 'In Stock',
-            location: { lat: 9.02, lng: 38.76 },
-            image: 'https://via.placeholder.com/64?text=AMX'
-        },
-        {
-            id: 4,
-            name: 'Ibuprofen 400mg',
-            pharmacy: 'City Pharmacy',
-            price: '80 ETB',
-            distance: '0.8 km',
-            stock: 'In Stock',
-            location: { lat: 9.035, lng: 38.745 },
-            image: 'https://via.placeholder.com/64?text=IBU'
+            id: 'mock-3',
+            name: 'Vitamin C 1000mg',
+            pharmacy: 'Red Cross Store',
+            price: '85 ETB',
+            distance: '2.1 km',
+            stock: 'Limited',
+            location: { lat: 9.0350, lng: 38.7550 },
+            image: 'https://via.placeholder.com/64?text=VIT'
         }
     ];
 
+    const [medicines, setMedicines] = useState(MOCK_MEDICINES);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchMedicines = async () => {
+            try {
+                const response = await medicinesAPI.list();
+                if (response.data && response.data.success) {
+                    const realMedicines = response.data.data.map(m => ({
+                        id: m._id,
+                        name: m.name,
+                        pharmacy: m.availableAt?.[0]?.name || 'Local Pharmacy',
+                        price: `${m.price?.basePrice || 0} ETB`,
+                        priceValue: m.price?.basePrice,
+                        distance: 'Nearby',
+                        stock: m.stockQuantity > 0 ? 'In Stock' : 'Out of Stock',
+                        image: 'https://via.placeholder.com/64?text=MED',
+                        realId: m._id
+                    }));
+                    setMedicines([...realMedicines, ...MOCK_MEDICINES]);
+                }
+            } catch (error) {
+                console.error("Failed to fetch medicines", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchMedicines();
+    }, []);
+
     const filteredMedicines = medicines.filter(m =>
-        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.pharmacy.toLowerCase().includes(searchQuery.toLowerCase())
+        (m.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.pharmacy || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (

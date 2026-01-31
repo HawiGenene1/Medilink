@@ -43,9 +43,9 @@ const protect = async (req, res, next) => {
 
       // Attach user to request object
       req.user = {
-        id: user._id,
+        id: user._id, // Standard ID field
         _id: user._id, // Add _id for direct compatibility with models
-        userId: user._id,
+        userId: user._id, // Legacy compatibility
         email: user.email,
         role: user.role,
         pharmacyId: user.pharmacyId,

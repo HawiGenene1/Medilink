@@ -146,7 +146,7 @@ const MedicineDetail = () => {
             <Row gutter={[40, 40]}>
                 {/* Product Section */}
                 <Col xs={24} lg={15}>
-                    <Card className="medicine-main-detail-card" bordered={false}>
+                    <Card className="medicine-main-detail-card" variant="borderless">
                         <Row gutter={32}>
                             <Col xs={24} md={8}>
                                 <div className="product-image-container">

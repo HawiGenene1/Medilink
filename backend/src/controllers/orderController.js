@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 // Order Controller for handling order-related operations
 
 const Order = require('../models/Order');
@@ -13,8 +12,7 @@ const logger = require('../utils/logger');
  * @access  Private (Customer)
  */
 const createOrder = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+
 
   try {
     const errors = validationResult(req);
@@ -42,20 +40,19 @@ const createOrder = async (req, res) => {
 
     // Process each item in the order
     for (const item of items) {
-      const medicine = await Medicine.findById(item.medicineId).session(session);
+      const medicine = await Medicine.findById(item.medicineId);
       if (!medicine) {
-        await session.abortTransaction();
-        session.endSession();
+
         return res.status(404).json({
           success: false,
-          message: `Medicine with ID ${item.medicineId} not found`
+          message: `Medicine with ID ${item.medicineId} not found`,
+          medicineId: item.medicineId
         });
       }
 
       // Check if medicine is in stock
       if (medicine.stockQuantity < item.quantity) {
-        await session.abortTransaction();
-        session.endSession();
+
         return res.status(400).json({
           success: false,
           message: `Insufficient stock for ${medicine.name}. Available: ${medicine.stockQuantity}`
@@ -63,49 +60,53 @@ const createOrder = async (req, res) => {
       }
 
       // Calculate item subtotal
-      const subtotal = medicine.price * item.quantity;
+      const itemPrice = (medicine.price && typeof medicine.price === 'object') ? medicine.price.basePrice : medicine.price;
+      const subtotal = itemPrice * item.quantity;
       totalAmount += subtotal;
 
       // Add to order items
       orderItems.push({
         medicine: medicine._id,
         name: medicine.name,
-        price: medicine.price,
+        price: itemPrice,
         quantity: item.quantity,
         subtotal
       });
 
       // Update stock quantity
       medicine.stockQuantity -= item.quantity;
-      itemUpdates.push(medicine.save({ session }));
+      itemUpdates.push(medicine.save());
     }
 
-    // Calculate delivery fee (could be based on distance, order amount, etc.)
-    const deliveryFee = calculateDeliveryFee(deliveryAddress, totalAmount);
+    // Determine the pharmacy for this order (from the first item)
+    const firstMedicine = await Medicine.findById(items[0].medicineId);
+    const pharmacyId = firstMedicine?.availableAt[0];
 
-    // Calculate tax (example: 15% of subtotal)
+    // Calculate delivery fee
+    const deliveryFee = 50; // Fixed fee for demo or use calculateDeliveryFee(deliveryAddress, totalAmount);
+
+    // Calculate tax (15%)
     const tax = totalAmount * 0.15;
 
     // Calculate final amount
     const finalAmount = totalAmount + deliveryFee + tax;
 
-    // Check if prescription is required for any item
+    // Check if prescription is required
     const requiresPrescription = orderItems.some(item =>
       item.requiresPrescription && !prescriptionImage
     );
 
     if (requiresPrescription) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).json({
         success: false,
-        message: 'Prescription is required for one or more items in your order'
+        message: 'Prescription is required for one or more items'
       });
     }
 
     // Create order
     const order = new Order({
       customer: req.user.userId,
+      pharmacy: pharmacyId, // CRITICAL: Added missing pharmacy field
       items: orderItems,
       totalAmount,
       deliveryFee,
@@ -125,14 +126,13 @@ const createOrder = async (req, res) => {
     });
 
     // Save order
-    await order.save({ session });
+    await order.save();
 
     // Update stock quantities
     await Promise.all(itemUpdates);
 
     // Commit transaction
-    await session.commitTransaction();
-    session.endSession();
+
 
     // Log order creation
     logger.info(`Order ${order.orderNumber} created by user ${req.user.userId}`);
@@ -152,8 +152,7 @@ const createOrder = async (req, res) => {
     });
 
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+
     logger.error('Order creation failed:', error);
     return res.status(500).json({
       success: false,
@@ -263,15 +262,13 @@ const getOrderDetails = async (req, res) => {
  * @access  Private (Customer)
  */
 const cancelOrder = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+
 
   try {
-    const order = await Order.findById(req.params.orderId).session(session);
+    const order = await Order.findById(req.params.orderId);
 
     if (!order) {
-      await session.abortTransaction();
-      session.endSession();
+
       return res.status(404).json({
         success: false,
         message: 'Order not found'
@@ -280,8 +277,7 @@ const cancelOrder = async (req, res) => {
 
     // Check if user is the owner of the order
     if (order.customer.toString() !== req.user.userId) {
-      await session.abortTransaction();
-      session.endSession();
+
       return res.status(403).json({
         success: false,
         message: 'Not authorized to cancel this order'
@@ -290,8 +286,7 @@ const cancelOrder = async (req, res) => {
 
     // Check if order can be cancelled
     if (!['pending', 'confirmed', 'preparing'].includes(order.status)) {
-      await session.abortTransaction();
-      session.endSession();
+
       return res.status(400).json({
         success: false,
         message: `Cannot cancel order in ${order.status} status`
@@ -310,14 +305,12 @@ const cancelOrder = async (req, res) => {
     for (const item of order.items) {
       await Medicine.findByIdAndUpdate(
         item.medicine,
-        { $inc: { stockQuantity: item.quantity } },
-        { session }
+        { $inc: { stockQuantity: item.quantity } }
       );
     }
 
-    await order.save({ session });
-    await session.commitTransaction();
-    session.endSession();
+    await order.save();
+
 
     // Send cancellation notification (implementation not shown)
     // await sendOrderCancellationEmail(order);
@@ -328,8 +321,7 @@ const cancelOrder = async (req, res) => {
     });
 
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+
     logger.error('Failed to cancel order:', error);
     return res.status(500).json({
       success: false,

@@ -59,7 +59,7 @@ const handleChapaCallback = asyncHandler(async (req, res) => {
             // Update order
             if (payment.order) {
                 payment.order.paymentStatus = 'paid';
-                payment.order.status = 'PREPARING';
+                payment.order.status = 'preparing';
                 payment.order.paymentDetails = {
                     transactionId: trx_ref,
                     paidAt: new Date()
@@ -146,7 +146,7 @@ const handleChapaWebhook = asyncHandler(async (req, res) => {
 
             if (payment.order) {
                 payment.order.paymentStatus = 'paid';
-                payment.order.status = 'PREPARING';
+                payment.order.status = 'preparing';
                 await payment.order.save();
 
                 // Automatic Invoice Generation

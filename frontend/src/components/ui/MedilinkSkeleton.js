@@ -7,7 +7,7 @@ const MedilinkSkeleton = ({ type = 'card', count = 1 }) => {
         switch (type) {
             case 'card':
                 return (
-                    <Card key={index} className="medilink-skeleton-card" bordered={false}>
+                    <Card key={index} className="medilink-skeleton-card" variant="borderless">
                         <Skeleton active avatar paragraph={{ rows: 2 }} />
                     </Card>
                 );

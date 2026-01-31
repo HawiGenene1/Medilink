@@ -191,7 +191,7 @@ const Settings = () => {
                 <Text type="secondary">Manage your identity, clinical preferences, and security.</Text>
             </div>
 
-            <Card bordered={false} className="settings-main-card">
+            <Card variant="borderless" className="settings-main-card">
                 <Tabs
                     activeKey={activeTab}
                     onChange={setActiveTab}

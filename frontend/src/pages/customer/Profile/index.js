@@ -270,13 +270,13 @@ const Profile = () => {
 
             <Row gutter={8}>
               <Col span={12}>
-                <Card size="small" bordered={false} style={{ background: '#f8f9fa' }}>
+                <Card size="small" variant="borderless" style={{ background: '#f8f9fa' }}>
                   <Text type="secondary" style={{ fontSize: '12px' }}>Orders</Text><br />
                   <Text strong>12</Text>
                 </Card>
               </Col>
               <Col span={12}>
-                <Card size="small" bordered={false} style={{ background: '#f8f9fa' }}>
+                <Card size="small" variant="borderless" style={{ background: '#f8f9fa' }}>
                   <Text type="secondary" style={{ fontSize: '12px' }}>Rx Files</Text><br />
                   <Text strong>4</Text>
                 </Card>

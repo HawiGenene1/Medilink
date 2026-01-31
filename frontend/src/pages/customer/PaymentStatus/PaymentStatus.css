@@ -1,0 +1,252 @@
+.payment-status-container {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+    min-height: 100vh;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.chapa-receipt {
+    background: white;
+    width: 100%;
+    max-width: 800px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: #333;
+}
+
+/* Header */
+.receipt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    border-bottom: 4px solid #82c91e;
+    /* Green accent */
+}
+
+.logo-area {
+    font-size: 24px;
+    font-weight: 800;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-green {
+    color: #82c91e;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.receipt-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #82c91e;
+    text-transform: uppercase;
+}
+
+/* Info Section */
+.info-section {
+    display: flex;
+    justify-content: space-between;
+    padding: 30px 40px;
+    gap: 40px;
+}
+
+.info-column h3 {
+    color: #82c91e;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.info-column h4 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #000;
+}
+
+.info-row {
+    display: flex;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+
+.info-label {
+    font-weight: 700;
+    width: 100px;
+    color: #374151;
+}
+
+.info-value {
+    color: #4b5563;
+}
+
+/* Details Section */
+.details-section {
+    padding: 0 40px;
+}
+
+.details-header-row {
+    display: flex;
+    margin-bottom: 0;
+}
+
+.details-header-row .green-bar {
+    background-color: #82c91e;
+    color: white;
+    padding: 10px 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    flex: 2;
+    font-size: 14px;
+}
+
+.details-header-row .dark-bar {
+    background-color: #111827;
+    color: white;
+    padding: 10px 20px;
+    font-family: monospace;
+    font-size: 14px;
+    flex: 1;
+    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.details-table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+}
+
+.detail-row {
+    display: flex;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.detail-row:nth-child(even) {
+    background-color: #f9fafb;
+}
+
+.detail-label {
+    flex: 1;
+    font-weight: 600;
+    color: #4b5563;
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-label span.amharic {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: normal;
+}
+
+.detail-value {
+    flex: 1;
+    font-weight: 700;
+    color: #111827;
+    text-align: right;
+}
+
+.detail-value.paid {
+    color: #059669;
+    /* Green for paid */
+}
+
+/* Footer Totals */
+.footer-section {
+    display: flex;
+    justify-content: flex-end;
+    /* Align to right */
+    padding: 30px 40px;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 20px;
+    position: relative;
+}
+
+.stamp {
+    position: absolute;
+    left: 40px;
+    top: 20px;
+    width: 120px;
+    height: 120px;
+    border: 4px double #2563eb;
+    border-radius: 50%;
+    color: #2563eb;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    transform: rotate(-15deg);
+    opacity: 0.8;
+    text-align: center;
+}
+
+.totals-table {
+    width: 300px;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.total-row.final {
+    border-top: 2px solid #e5e7eb;
+    margin-top: 8px;
+    padding-top: 8px;
+    font-weight: 800;
+    font-size: 18px;
+    color: #111827;
+}
+
+/* Action Bar */
+.action-bar {
+    background-color: #111827;
+    color: white;
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.contact-info {
+    display: flex;
+    gap: 20px;
+    font-size: 13px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.thank-you {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 14px;
+}
+
+/* Loading/Error States */
+.fullscreen-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    flex-direction: column;
+}

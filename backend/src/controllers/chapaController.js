@@ -1,8 +1,8 @@
 const asyncHandler = require('express-async-handler');
+const { v4: uuidv4 } = require('uuid');
 const ChapaService = require('../services/chapaService');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
-const { v4: uuidv4 } = require('uuid');
 
 // @desc    Initialize Chapa Payment
 // @route   POST /api/payments/chapa/initialize
@@ -17,37 +17,109 @@ const initializeChapaPayment = asyncHandler(async (req, res) => {
         throw new Error('Order not found');
     }
 
+    // Guard: Prevent re-paying for an already paid order
+    if (order.paymentStatus === 'paid') {
+        const existingPayment = await Payment.findOne({ order: orderId, paymentStatus: 'completed' });
+        return res.status(200).json({
+            success: true,
+            alreadyPaid: true,
+            message: 'This order has already been paid successfully.',
+            txRef: existingPayment?.transactionId
+        });
+    }
+
+    // Guard: Check for an existing pending payment and reuse its checkout URL if possible
+    const pendingPayment = await Payment.findOne({ order: orderId, paymentStatus: 'pending' }).sort({ createdAt: -1 });
+    if (pendingPayment && pendingPayment.metadata?.get('checkoutUrl')) {
+        return res.status(200).json({
+            success: true,
+            checkoutUrl: pendingPayment.metadata.get('checkoutUrl'),
+            txRef: pendingPayment.transactionId,
+            message: 'Resuming existing payment session.'
+        });
+    }
+
     // Generate unique transaction reference
     const txRef = `TX-${uuidv4()}`;
 
     // Prepare user data
-    const customerName = order.customer.name || `${order.customer.firstName} ${order.customer.lastName}`;
-    const [firstName, lastName] = customerName.split(' ');
+    if (!order.customer) {
+        console.error('Order customer not found/populated for order:', orderId);
+        res.status(400);
+        throw new Error('Order customer information is missing');
+    }
+
+    const firstName = order.customer.firstName || 'User';
+    const lastName = order.customer.lastName || 'User';
+    const email = order.customer.email || 'customer@example.com';
+    const phone = phoneNumber || order.customer.phone || '0911223344';
 
     // Determine actual payment method string for DB
     const dbPaymentMethod = ['telebirr', 'mpesa', 'cbebirr', 'amole', 'awashbirr'].includes(paymentMethod)
         ? 'mobile_money'
         : (paymentMethod || 'card');
 
+    console.log(`Initializing Payment for Order: ${orderId}, Method: ${paymentMethod}, Target DB Method: ${dbPaymentMethod}`);
+
+    // DEMO MODE: Simulate successful payment
+    const isDemoMode = String(process.env.PAYMENT_DEMO_MODE).toLowerCase().trim() === 'true';
+    if (isDemoMode) {
+        const demoTxRef = `TX-DEMO-${uuidv4()}`;
+        console.log(`[DEMO MODE] Simulating success for order ${orderId}`);
+
+        try {
+            await Payment.create({
+                order: orderId,
+                transactionId: demoTxRef,
+                amount: order.finalAmount,
+                paymentMethod: dbPaymentMethod,
+                paymentStatus: 'completed',
+                paidAt: Date.now(),
+                customer: order.customer._id,
+                pharmacy: order.pharmacy?._id || order.pharmacy, // Handle both object and ID
+                metadata: { selectedProvider: paymentMethod, demo: true }
+            });
+
+            order.paymentStatus = 'paid';
+            order.status = 'confirmed';
+            await order.save();
+
+            return res.status(200).json({
+                success: true,
+                checkoutUrl: null,
+                publicKey: 'DEMO',
+                txRef: demoTxRef,
+                data: { demo: true }
+            });
+        } catch (demoError) {
+            console.error('[DEMO MODE] Failed to create payment/update order:', demoError);
+            res.status(500);
+            throw new Error(`Demo payment simulation failed: ${demoError.message}`);
+        }
+    }
+
     try {
+        console.log(`Calling Chapa API for order ${orderId}...`);
         // Call Chapa Service
         const chapaResponse = await ChapaService.initializePayment({
             amount: order.finalAmount,
             currency: 'ETB',
-            email: order.customer.email,
-            firstName: firstName || 'User',
-            lastName: lastName || 'User',
-            phoneNumber: phoneNumber || order.customer.phone,
-            paymentMethod: paymentMethod, // Pass specific method (e.g., 'telebirr')
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            phoneNumber: phone,
+            paymentMethod: paymentMethod,
             txRef: txRef,
             returnUrl: returnUrl,
             customization: {
-                title: `Payment for Order ${order.orderNumber}`,
+                title: `Order ${order.orderNumber}`,
                 description: 'Medilink Pharmacy Order'
             }
         });
 
-        if (chapaResponse.status === 'success') {
+        console.log('Chapa API Response:', JSON.stringify(chapaResponse));
+
+        if (chapaResponse.success) {
             // Create Pending Payment Record
             await Payment.create({
                 order: orderId,
@@ -56,9 +128,9 @@ const initializeChapaPayment = asyncHandler(async (req, res) => {
                 paymentMethod: dbPaymentMethod,
                 paymentStatus: 'pending',
                 customer: order.customer._id,
-                pharmacy: order.pharmacy._id,
+                pharmacy: order.pharmacy?._id || order.pharmacy,
                 metadata: {
-                    selectedProvider: paymentMethod, // Store provider (e.g. telebirr)
+                    selectedProvider: paymentMethod,
                     checkoutUrl: chapaResponse.data.checkout_url
                 }
             });
@@ -70,12 +142,13 @@ const initializeChapaPayment = asyncHandler(async (req, res) => {
                 txRef: txRef
             });
         } else {
+            console.error('Chapa initialization failed business logic:', chapaResponse.message);
             res.status(400);
             throw new Error(chapaResponse.message || 'Chapa initialization failed');
         }
 
     } catch (error) {
-        console.error('Chapa Controller Error:', error);
+        console.error('Chapa Controller Catch Block:', error);
         res.status(500);
         throw new Error(error.message || 'Payment initialization failed');
     }
@@ -91,6 +164,33 @@ const verifyChapaPayment = asyncHandler(async (req, res) => {
     if (!payment) {
         res.status(404);
         throw new Error('Payment record not found');
+    }
+
+    // DEMO MODE: Bypass verification for demo transactions
+    if (txRef.startsWith('TX-DEMO-')) {
+        payment.paymentStatus = 'completed';
+        payment.paidAt = Date.now();
+        await payment.save();
+
+        const order = await Order.findById(payment.order);
+        if (order) {
+            order.paymentStatus = 'paid';
+            order.status = 'confirmed';
+            await order.save();
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Payment verified successfully (Demo Mode)',
+            data: {
+                status: 'success',
+                amount: payment.amount,
+                currency: 'ETB',
+                tx_ref: txRef,
+                first_name: 'Demo',
+                last_name: 'User'
+            }
+        });
     }
 
     try {

@@ -36,8 +36,11 @@ export const FavoritesProvider = ({ children }) => {
             const medicineList = response.data.map(fav => fav.medicine || fav);
             setFavorites(medicineList);
         } catch (error) {
-            console.error('Failed to fetch favorites', error);
-            // Don't show error message on initial load to avoid annoyance
+            if (error.response?.status !== 404) {
+                console.error('Failed to fetch favorites', error);
+            } else {
+                setFavorites([]);
+            }
         } finally {
             setLoading(false);
         }

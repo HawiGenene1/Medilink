@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Badge, Result, Tag, Alert, Input } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Result, Tag, Alert, Input, Descriptions, Badge, message } from 'antd';
 import {
     EnvironmentOutlined,
     SafetyCertificateOutlined,
@@ -12,9 +12,8 @@ import {
     MessageOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useCart } from '../../../contexts/CartContext';
-import { ordersAPI } from '../../../services/api/orders';
-import { message, Spin } from 'antd';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Checkout.css';
@@ -31,18 +30,16 @@ const { Title, Text, Paragraph } = Typography;
 
 const Checkout = () => {
     const navigate = useNavigate();
+    const { user } = useAuth(); // Get user from auth context
     const { cartItems, subtotal, clearCart } = useCart();
     const [currentStep, setCurrentStep] = useState(0);
+    const [paymentMethod, setPaymentMethod] = useState('telebirr');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [loading, setLoading] = useState(false);
-
-    // Mock Data
-    const addresses = [
-        { id: 'addr-1', label: 'Home', fullAddress: 'Bole, House 456, Addis Ababa', isDefault: true },
-        { id: 'addr-2', label: 'Office', fullAddress: 'Kazanchis, Nani Building 4th Floor, Addis Ababa', isDefault: false },
-    ];
-
-    const [selectedAddress, setSelectedAddress] = useState('addr-1');
-    const [paymentMethod, setPaymentMethod] = useState('chapa');
+    const [orderData, setOrderData] = useState(null);
+    const [paymentResult, setPaymentResult] = useState(null);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [isPaymentInitializing, setIsPaymentInitializing] = useState(false);
 
     // Location State
     const [mapCenter, setMapCenter] = useState([9.0227, 38.7460]); // Addis Ababa default
@@ -119,7 +116,8 @@ const Checkout = () => {
         if (cartItems.length > 0 && cartItems[0].pharmacyId) {
             const fetchPharmacy = async () => {
                 try {
-                    const response = await fetch(`http://localhost:5000/api/pharmacy/${cartItems[0].pharmacyId}`);
+                    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                    const response = await fetch(`${apiUrl}/pharmacy/${cartItems[0].pharmacyId}`);
                     const data = await response.json();
                     if (data.success && data.data.location?.coordinates) {
                         const [lng, lat] = data.data.location.coordinates;
@@ -146,6 +144,8 @@ const Checkout = () => {
         }
     }, [cartItems, currentStep]);
 
+    // Script loader removed - switching to backend-driven payment initialization
+
     const handleNext = () => {
         if (currentStep === 0 && !isLocationConfirmed) {
             return; // Safety rule
@@ -168,135 +168,154 @@ const Checkout = () => {
     };
     const handlePrev = () => setCurrentStep(prev => prev - 1);
 
-    const [showChapa, setShowChapa] = useState(false);
-
-    // Load Chapa Inline Script
-    useEffect(() => {
-        const script = document.createElement('script');
-        script.src = "https://js.chapa.co/v1/inline.js";
-        script.crossOrigin = "anonymous"; // Enable error details for cross-origin scripts
-        script.async = true;
-        document.body.appendChild(script);
-        return () => {
-            if (document.body.contains(script)) {
-                document.body.removeChild(script);
-            }
-        };
-    }, []);
-
     const handlePlaceOrder = async () => {
+        if (loading || isPaymentInitializing) return;
+
+        setLoading(true);
+        setIsPaymentInitializing(true);
+        setErrorMessage('');
+
         try {
-            setLoading(true);
-            const address = addresses.find(a => a.id === selectedAddress);
-
-            // 1. Create Order
-            const orderPayload = {
-                items: cartItems.map(item => ({
-                    medicineId: item.id || item._id, // Handle both id formats
-                    quantity: item.quantity,
-                    price: item.priceValue
-                })),
-                shippingAddress: address.fullAddress,
-                paymentMethod: 'chapa', // Force Chapa as generic provider
-                deliveryFee: 50
+            const hexifyId = (id) => {
+                if (!id) return id;
+                const idStr = String(id);
+                if (idStr.length === 24 && /^[0-9a-fA-F]{24}$/.test(idStr)) return idStr;
+                return idStr.padStart(24, '0').slice(-24).toLowerCase();
             };
 
-            const orderRes = await ordersAPI.createOrder(orderPayload);
-            const order = orderRes.data.data || orderRes.data; // Adjust based on API response structure
-            const orderId = order._id || order.id || order.orderId;
+            const isDev = process.env.NODE_ENV === 'development';
 
-            if (!orderId) throw new Error('Failed to create order');
+            // STRICT VALIDATION: Reject any item without a valid real MongoDB ID
+            const validItemsForOrder = cartItems.filter(item => {
+                const id = hexifyId(item.id || item._id);
+                // Must be 24-char hex string
+                return id && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
+            });
 
-            // 2. Initialize Chapa Payment (To create DB record & get keys)
-            const paymentPayload = {
-                orderId: orderId,
-                amount: subtotal + 50,
-                paymentMethod: paymentMethod, // Selected specific provider (telebirr, etc)
-                returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
-                phoneNumber: '0911234567' // TODO: Get from user profile
-            };
+            if (validItemsForOrder.length === 0) {
+                throw new Error("Invalid items in cart. Please clear usage of mock data.");
+            }
 
-            const paymentRes = await ordersAPI.initializeChapaPayment(paymentPayload);
+            if (validItemsForOrder.length !== cartItems.length) {
+                throw new Error("Some items in your cart are invalid/mock data. Please clear cart and re-add.");
+            }
 
-            if (paymentRes.data.success) {
-                // 3. Initialize Chapa Inline
+            // Ensure all items sent to backend HAVE valid-looking hex IDs
+            const finalizedItems = validItemsForOrder.map(item => ({
+                medicineId: hexifyId(item.id || item._id),
+                quantity: item.quantity,
+                price: item.priceValue
+            }));
+
+            const checkoutSubtotal = validItemsForOrder.reduce((acc, item) => acc + (item.priceValue * item.quantity), 0);
+
+
+            // Step 1: Create Order in Backend
+            const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+            const orderResponse = await fetch(`${apiUrl}/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    items: finalizedItems,
+                    // notes: deliveryNotes, // Move notes to top level
+                    deliveryInstructions: deliveryNotes, // Map to deliveryInstructions
+
+                    // Address Object matching Mongoose Schema exactly
+                    deliveryAddress: {
+                        street: locationLabel,
+                        city: 'Addis Ababa',
+                        country: 'Ethiopia',
+                        // notes: deliveryNotes, // REMOVED: Schema doesn't have notes in deliveryAddress
+                        coordinates: isLocationConfirmed ? {
+                            latitude: selectedAddressCoords[0],
+                            longitude: selectedAddressCoords[1]
+                        } : undefined // Map lat/lng to latitude/longitude
+                    },
+                    paymentMethod: paymentMethod === 'cash' ? 'cash' : 'chapa'
+                })
+            });
+
+            const orderData = await orderResponse.json();
+
+            if (!orderData.success) {
+                // detailed error message from backend (validation errors etc)
+                const detailedError = orderData.error || orderData.message || 'Failed to create order';
+                throw new Error(detailedError);
+            }
+
+            const newOrderId = orderData.data.orderId;
+            const customerName = user.name || (user.firstName + ' ' + (user.lastName || ''));
+            const [firstName, lastName] = customerName.split(' ');
+
+            // Step 2: Handle Payment
+            if (paymentMethod === 'cash') {
                 clearCart();
-                setShowChapa(true); // Hide our button, show Chapa container
-                setLoading(false);
+                setPaymentResult({ txRef: 'COD-' + newOrderId });
+                setCurrentStep(4);
+            } else {
+                // Step 2b: Initialize Chapa Payment via Backend (More Robust)
+                const chapaInitResponse = await fetch(`${apiUrl}/payments/chapa/initialize`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        orderId: newOrderId,
+                        paymentMethod: paymentMethod, // 'telebirr', 'card', etc.
+                        phoneNumber: phoneNumber,
+                        returnUrl: `${window.location.origin}/customer/orders/${newOrderId}/payment-status`
+                    })
+                });
 
-                // Debug logging
-                console.log('Chapa Initialization Response:', paymentRes.data);
+                const chapaInitData = await chapaInitResponse.json();
 
-                if (window.ChapaCheckout) {
-                    try {
-                        if (!paymentRes.data.publicKey) {
-                            throw new Error('Chapa Public Key is missing from backend response');
-                        }
-
-                        const chapa = new window.ChapaCheckout({
-                            publicKey: paymentRes.data.publicKey,
-                            amount: (subtotal + 50).toString(),
-                            currency: 'ETB',
-                            tx_ref: paymentRes.data.txRef, // Link to backend payment
-                            email: "israel@negade.et", // TODO: Get from user profile
-                            first_name: "Israel",
-                            last_name: "Goytom",
-                            title: "Medilink Payment",
-                            description: `Payment for Order ${order.orderNumber}`,
-                            callbackUrl: "https://example.com/callbackurl", // Optional
-                            returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
-                            customizations: {
-                                buttonText: 'Pay Now',
-                                styles: `
-                                    .chapa-pay-button { 
-                                        background-color: #1890ff; 
-                                        color: white;
-                                        width: 100%;
-                                        padding: 10px;
-                                        border-radius: 4px;
-                                        font-weight: bold;
-                                        cursor: pointer;
-                                    }
-                                    .chapa-pay-button:hover {
-                                        background-color: #40a9ff;
-                                    }
-                                `
-                            }
-                        });
-
-                        console.log('Initializing Chapa form...');
-                        chapa.initialize('chapa-inline-form');
-                    } catch (chapaError) {
-                        console.error('Chapa Constructor Error:', chapaError);
-                        message.error(`Payment System Error: ${chapaError.message}`);
-                        setShowChapa(false); // Re-enable Pay button
+                if (chapaInitData.success) {
+                    if (chapaInitData.alreadyPaid) {
+                        message.info('Order already settled. Redirecting to receipt...');
+                        setTimeout(() => {
+                            clearCart();
+                            navigate(`/customer/orders/${newOrderId}/payment-status`);
+                        }, 1500);
+                        return;
+                    }
+                    if (chapaInitData.checkoutUrl) {
+                        // Redirect to Chapa Hosted/Hosted Page (Very Reliable)
+                        window.location.href = chapaInitData.checkoutUrl;
+                    } else {
+                        // Success but no URL = Either Direct Charge (STK Push) or Demo Mode
+                        message.success(chapaInitData.data?.demo
+                            ? 'Payment completed successfully! (Demo Mode)'
+                            : 'Payment prompt sent to your phone!');
+                        setIsPaymentInitializing(false);
+                        setLoading(false);
+                        // Delay slightly before redirecting so they see the message
+                        setTimeout(() => {
+                            clearCart();
+                            navigate(`/customer/orders/${newOrderId}/payment-status`);
+                        }, 2000);
                     }
                 } else {
-                    message.error("Payment gateway script not loaded. Please refresh.");
-                    setShowChapa(false);
+                    throw new Error(chapaInitData.message || 'Payment system could not be initialized. Please try again.');
                 }
-
-            } else {
-                throw new Error('Payment initialization failed');
             }
 
         } catch (error) {
-            console.error('Checkout Error:', error);
-            const errorMsg = error.response?.data?.message || error.message || 'Failed to place order. Please try again.';
-            if (error.response?.data?.errors) {
-                message.error(error.response.data.errors.map(e => e.msg).join(', '));
-            } else {
-                message.error(errorMsg);
-            }
+            console.error('Order/Payment failed', error);
+            setErrorMessage(error.message || 'Failed to place order. Please try again.');
+            setIsPaymentInitializing(false);
             setLoading(false);
+        } finally {
+            // Loading stays true if popup successfully opens
+            if (paymentMethod === 'cash') setLoading(false);
         }
     };
 
     return (
         <div className="checkout-container">
-            {/* Chapa Inline Container */}
-            <div id="chapa-inline-form" style={{ marginTop: 20 }}></div>
-
             <Button
                 type="text"
                 icon={<ArrowLeftOutlined />}
@@ -310,6 +329,7 @@ const Checkout = () => {
                 <Steps current={currentStep} items={steps} className="medilink-steps" />
             </div>
 
+            {/* Chapa Native Modal will open here via chapa.open() */}
             <Row gutter={[32, 32]} style={{ marginTop: '40px' }}>
                 {/* Main Flow Content */}
                 <Col xs={24} lg={16}>
@@ -443,16 +463,14 @@ const Checkout = () => {
                                 >
                                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
                                         {[
-                                            {
-                                                id: 'chapa',
-                                                name: 'Secure Online Payment (Chapa)',
-                                                desc: 'Pay via Telebirr, CBE Birr, Amole, Awash, or Card'
-                                            },
-                                            {
-                                                id: 'cash',
-                                                name: 'Cash on Delivery',
-                                                desc: 'Pay when your medicine arrives'
-                                            },
+                                            { id: 'telebirr', name: 'TeleBirr', desc: 'Secure mobile payment by Ethio Telecom' },
+                                            { id: 'mpesa', name: 'M-Pesa', desc: 'Safaricom mobile money' },
+                                            { id: 'cbebirr', name: 'CBE Birr', desc: 'Quick payment via Commercial Bank of Ethiopia' },
+                                            { id: 'coopay', name: 'Coopay-Ebirr', desc: 'Cooperative Bank of Oromia mobile money' },
+                                            { id: 'awashbirr', name: 'Awash Birr', desc: 'Bank of Abyssinia mobile payment' },
+                                            { id: 'yaya', name: 'Yaya Wallet', desc: 'Digital wallet for instant payments' },
+                                            { id: 'card', name: 'Debit/Credit Card', desc: 'Visa, Mastercard via Chapa' },
+                                            { id: 'cash', name: 'Cash on Delivery', desc: 'Pay when your medicine arrives' },
                                         ].map(pm => (
                                             <Card
                                                 key={pm.id}
@@ -469,14 +487,24 @@ const Checkout = () => {
                                                         <Text type="secondary" style={{ fontSize: '12px' }}>{pm.desc}</Text>
                                                     </Col>
                                                     <Col>
-                                                        <div className="payment-icon-placeholder" style={{
-                                                            backgroundImage: pm.id === 'chapa' ? 'url(https://chapa.co/assets/img/chapa-logo.png)' : 'none',
-                                                            backgroundSize: 'contain',
-                                                            backgroundRepeat: 'no-repeat',
-                                                            backgroundPosition: 'center'
-                                                        }} />
+                                                        <div className="payment-icon-placeholder" />
                                                     </Col>
                                                 </Row>
+                                                {paymentMethod === pm.id && pm.id !== 'cash' && (
+                                                    <div style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
+                                                        <Text type="secondary">Enter your {pm.name} Phone Number</Text>
+                                                        <Input
+                                                            placeholder="0911223344"
+                                                            style={{ marginTop: '8px' }}
+                                                            value={phoneNumber}
+                                                            onChange={e => setPhoneNumber(e.target.value)}
+                                                            variant="filled"
+                                                        />
+                                                        <Text type="secondary" style={{ fontSize: '11px', display: 'block', marginTop: '4px' }}>
+                                                            You will receive a prompt on your phone to authorize the payment.
+                                                        </Text>
+                                                    </div>
+                                                )}
                                             </Card>
                                         ))}
                                     </Space>
@@ -521,6 +549,16 @@ const Checkout = () => {
                                     </div>
                                 </Card>
 
+                                {errorMessage && (
+                                    <Alert
+                                        message="Error"
+                                        description={errorMessage}
+                                        type="error"
+                                        showIcon
+                                        style={{ marginTop: '16px' }}
+                                    />
+                                )}
+
                                 <div style={{ marginTop: '24px' }}>
                                     <Paragraph type="secondary" style={{ fontSize: '13px' }}>
                                         By placing this order, you agree to MediLink's patient terms of service and clinical compliance guidelines.
@@ -535,8 +573,16 @@ const Checkout = () => {
                                     Continue
                                 </Button>
                             ) : (
-                                <Button type="primary" size="large" onClick={handlePlaceOrder} block className="place-order-btn" loading={loading} disabled={showChapa}>
-                                    Pay & Place Order
+                                <Button
+                                    type="primary"
+                                    size="large"
+                                    onClick={handlePlaceOrder}
+                                    block
+                                    className="place-order-btn"
+                                    loading={loading || isPaymentInitializing}
+                                    disabled={(paymentMethod !== 'cash' && !phoneNumber) || isPaymentInitializing}
+                                >
+                                    {isPaymentInitializing ? 'Initializing Payment...' : 'Confirm & Pay'}
                                 </Button>
                             )}
                         </div>
@@ -574,7 +620,38 @@ const Checkout = () => {
                                 Go to My Orders
                             </Button>,
                         ]}
-                    />
+                    >
+                        {paymentResult && (
+                            <div className="payment-success-details" style={{ background: '#f6ffed', border: '1px solid #b7eb8f', padding: '16px', borderRadius: '8px', marginTop: '24px' }}>
+                                <Descriptions title="Payment Information" column={1} size="small">
+                                    <Descriptions.Item label="Transaction ID">
+                                        <Text copyable strong>{paymentResult.txRef}</Text>
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Provider">
+                                        <Tag color="blue">{paymentMethod.toUpperCase()}</Tag>
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Status">
+                                        <Badge status="success" text="Charge Initiated" />
+                                    </Descriptions.Item>
+                                    {paymentResult.data?.checkout_url && (
+                                        <Descriptions.Item label="Reference">
+                                            <a href={paymentResult.data.checkout_url} target="_blank" rel="noreferrer">Chapa Receipt</a>
+                                        </Descriptions.Item>
+                                    )}
+                                </Descriptions>
+                            </div>
+                        )}
+                    </Result>
+                    {paymentMethod !== 'cash' && (
+                        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                            <Alert
+                                message="Payment in Progress"
+                                description="Please check your phone for the authorization prompt. Your order will be updated once payment is confirmed."
+                                type="info"
+                                showIcon
+                            />
+                        </div>
+                    )}
                 </div>
             )}
         </div>

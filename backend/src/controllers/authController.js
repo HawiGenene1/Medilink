@@ -127,7 +127,8 @@ const login = async (req, res) => {
       });
     }
 
-    // Check status
+    // Check account status
+    // Allow delivery and pharmacy_admin to login even if pending (to complete onboarding)
     console.log('LOGIN DEBUG: Checking status. Role:', user.role, 'Status:', user.status);
     if (user.status !== 'active' && !(user.status === 'pending' && (user.role === 'delivery' || user.role === 'pharmacy_admin'))) {
       let statusMessage = 'Your account is pending approval.';

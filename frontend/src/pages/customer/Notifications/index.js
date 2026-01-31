@@ -142,7 +142,7 @@ const Notifications = () => {
                 </Space>
             </div>
 
-            <Card bordered={false} className="notifications-card">
+            <Card variant="borderless" className="notifications-card">
                 <Tabs defaultActiveKey="1" className="noti-tabs" items={tabItems} />
             </Card>
 

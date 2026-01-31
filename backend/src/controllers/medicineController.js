@@ -28,8 +28,11 @@ const getMedicines = async (req, res) => {
       query = query.sort(sortField);
     }
 
-    const medicines = await query.exec();
-    return res.json(medicines);
+    const medicines = await query.populate('availableAt', 'name').exec();
+    return res.json({
+      success: true,
+      data: medicines
+    });
   } catch (error) {
     console.error('getMedicines error:', error);
     return res.status(500).json({ success: false, message: 'Server error fetching medicines' });
@@ -39,9 +42,12 @@ const getMedicines = async (req, res) => {
 const getMedicineById = async (req, res) => {
   try {
     const { id } = req.params;
-    const medicine = await Medicine.findById(id).exec();
+    const medicine = await Medicine.findById(id).populate('availableAt', 'name').exec();
     if (!medicine) return res.status(404).json({ success: false, message: 'Medicine not found' });
-    return res.json(medicine);
+    return res.json({
+      success: true,
+      data: medicine
+    });
   } catch (error) {
     console.error('getMedicineById error:', error);
     return res.status(500).json({ success: false, message: 'Server error fetching medicine' });

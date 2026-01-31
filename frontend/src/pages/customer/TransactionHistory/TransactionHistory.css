@@ -1,0 +1,24 @@
+.transaction-history-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.transaction-history-container .ant-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transaction-history-container .ant-table-wrapper {
+    margin-top: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .transaction-history-container {
+        padding: 16px;
+    }
+
+    .transaction-history-container .ant-card {
+        margin: 0;
+    }
+}

@@ -12,7 +12,6 @@ app.use(cors());
 app.use(express.json()); // parse JSON requests
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use("/api/test", require("./routes/testRoutes"));
 
 // Connect to MongoDB
 const MONGO_URI = process.env.MONGODB_URI;
@@ -31,7 +30,6 @@ const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
 const pharmacyRoutes = require('./routes/pharmacyRoutes');
 const userRoutes = require('./routes/userRoutes');
 const cashierRoutes = require('./routes/cashierRoutes');
-// const customerRoutes = require('./routes/customerRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const chapaRoutes = require('./routes/chapaRoutes');
@@ -53,16 +51,25 @@ app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
 // Cashier Routes
 app.use('/api/cashier', cashierRoutes);
 
-// Customer Routes (Disabled - Currently Empty)
-// app.use('/api/customer', customerRoutes);
-
 // Order & Prescription Routes
 app.use('/api/orders', orderRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 
 // Delivery & Payment Routes
 app.use('/api/delivery', deliveryRoutes);
-app.use('/api/chapa', chapaRoutes);
+app.use('/api/payments/chapa', chapaRoutes);
+
+// Notifications & Favorites
+try {
+  app.use('/api/notifications', require('./routes/notificationRoutes'));
+} catch (e) {
+  console.warn('Notification routes not mounted:', e.message);
+}
+try {
+  app.use('/api/favorites', require('./routes/favoriteRoutes'));
+} catch (e) {
+  console.warn('Favorite routes not mounted:', e.message);
+}
 
 // Admin Routes
 try {

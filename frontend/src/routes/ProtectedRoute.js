@@ -21,7 +21,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         alignItems: 'center',
         height: '100vh'
       }}>
-        <Spin size="large" tip="Loading..." />
+        <Spin size="large" tip="Loading...">
+          <div style={{ padding: 50 }} />
+        </Spin>
       </div>
     );
   }

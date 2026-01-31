@@ -140,11 +140,8 @@ const OrderTracking = () => {
                 }
                 // Case 2: Only ID is available (or partial data), fetch full details
                 else if (typeof orderData.pharmacy === 'object' && orderData.pharmacy._id) {
-                    // Since orderData.pharmacy might just be populated with name/address but not location
-                    // We might need to fetch it if location is missing. 
-                    // OR ensure the backend populates it. 
-                    // For now, let's try to fetch if we have an ID but no coordinates
-                    fetch(`http://localhost:5000/api/pharmacy/${orderData.pharmacy._id}`)
+                    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                    fetch(`${apiUrl}/pharmacy/${orderData.pharmacy._id}`)
                         .then(res => res.json())
                         .then(data => {
                             if (data.success && data.data.location?.coordinates) {
@@ -236,7 +233,7 @@ const OrderTracking = () => {
             <Row gutter={[24, 24]}>
                 {/* Map Section */}
                 <Col xs={24} lg={16}>
-                    <Card className="map-card-wrapper" bordered={false}>
+                    <Card className="map-card-wrapper" variant="borderless">
                         <div
                             ref={mapRef}
                             style={{ height: '500px', width: '100%', borderRadius: '16px', overflow: 'hidden' }}

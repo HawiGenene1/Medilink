@@ -21,31 +21,8 @@ const CustomerDashboard = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
 
-    // Mock Data for Search Results
-    const searchResults = searchQuery ? [
-        {
-            id: 'med-1',
-            name: 'Paracetamol 500mg',
-            genericName: 'Acetaminophen',
-            prescriptionRequired: false,
-            category: 'Pain Relief',
-            pharmacies: [
-                { id: 'ph-1', name: 'Kenema Pharmacy', rating: 4.8, distance: '0.5 km', price: '45 ETB', available: true },
-                { id: 'ph-2', name: 'Abyssinia Pharma', rating: 4.5, distance: '1.2 km', price: '48 ETB', available: true },
-                { id: 'ph-3', name: 'Red Cross', rating: 4.9, distance: '2.5 km', price: '42 ETB', available: false },
-            ]
-        },
-        {
-            id: 'med-2',
-            name: 'Amoxicillin 250mg',
-            genericName: 'Amoxicillin',
-            prescriptionRequired: true,
-            category: 'Antibiotics',
-            pharmacies: [
-                { id: 'ph-1', name: 'Kenema Pharmacy', rating: 4.8, distance: '0.5 km', price: '120 ETB', available: true },
-            ]
-        }
-    ] : [];
+    // Mock Data for Search Results (Removed invalid mock IDs)
+    const searchResults = [];
 
     // Mock Data for Dashboard
     const stats = {

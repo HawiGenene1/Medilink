@@ -48,7 +48,9 @@ const VerifyEmail = () => {
         <div className="verify-email-container">
             {status === 'verifying' && (
                 <div className="verify-status">
-                    <Spin size="large" tip="Activating your account..." />
+                    <Spin size="large" tip="Activating your account...">
+                        <div style={{ padding: 20 }} />
+                    </Spin>
                 </div>
             )}
 

@@ -210,7 +210,7 @@ medicineSchema.index({ requiresPrescription: 1, isActive: 1 });
 medicineSchema.index({ 'price.discount': -1, isActive: 1 });
 
 // Pre-save hook to update searchText
-medicineSchema.pre('save', function (next) {
+medicineSchema.pre('save', function () {
   this.searchText = [
     this.name,
     this.genericName,
@@ -220,7 +220,6 @@ medicineSchema.pre('save', function (next) {
     ...(this.activeIngredients?.map(i => i.name) || []),
     ...(this.tags || [])
   ].filter(Boolean).join(' ');
-  next();
 });
 
 // Static method for search
