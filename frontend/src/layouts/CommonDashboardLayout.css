@@ -16,9 +16,9 @@
 
 /* Sidebar */
 .desktop-sider {
-    box-shadow: 1px 0 0 0 var(--border-color);
+    /* box-shadow: 1px 0 0 0 var(--border-color); */
     z-index: 10;
-    background: #ffffff !important;
+    /* transition: all 0.2s; */
 }
 
 .sidebar-logo {
@@ -65,8 +65,7 @@
 }
 
 .sidebar-menu .ant-menu-item-selected {
-    background-color: var(--primary-light) !important;
-    color: var(--primary-color) !important;
+    /* Let Ant Design handle theme colors */
     font-weight: 600;
 }
 
@@ -82,8 +81,6 @@
 
 /* Header */
 .dashboard-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
     padding: 0 32px;
     display: flex;
     align-items: center;
@@ -120,17 +117,13 @@
 }
 
 .search-input {
-    background: var(--bg-main) !important;
+    /* background set via JS token */
     border-radius: 12px !important;
     padding: 8px 16px !important;
     transition: all 0.3s ease !important;
 }
 
-.search-input:hover,
-.search-input:focus {
-    background: #ffffff !important;
-    box-shadow: 0 0 0 2px var(--primary-light) !important;
-}
+/* .search-input:hover, .search-input:focus styles removed */
 
 .header-right {
     display: flex;

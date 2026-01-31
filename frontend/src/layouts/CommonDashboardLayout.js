@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Input, Avatar, Badge, Dropdown, Button, Drawer, Space, Typography } from 'antd';
+import { Layout, Menu, Input, Avatar, Badge, Dropdown, Button, Drawer, Space, Typography, theme } from 'antd';
 import {
     MenuUnfoldOutlined,
     MenuFoldOutlined,
@@ -12,24 +12,26 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
+import { useUI } from '../contexts/UIContext';
 import './CommonDashboardLayout.css';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
-const SidebarContent = ({ collapsed, navigate, location, menuItems, handleMenuClick }) => (
+const SidebarContent = ({ collapsed, navigate, location, menuItems, handleMenuClick, token }) => (
     <div className="sidebar-container">
-        <div className="sidebar-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-            <div className="logo-icon-box">ML</div>
-            {!collapsed && <span className="logo-text">MediLink</span>}
+        <div className="sidebar-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer', borderColor: token.colorBorderSecondary }}>
+            <div className="logo-icon-box" style={{ background: token.colorPrimary }}>ML</div>
+            {!collapsed && <span className="logo-text" style={{ color: token.colorText }}>MediLink</span>}
         </div>
         <Menu
-            theme="light"
+            theme={token.isDark ? 'dark' : 'light'}
             mode="inline"
             selectedKeys={[location.pathname]}
             onClick={handleMenuClick}
             items={menuItems}
             className="sidebar-menu"
+            style={{ borderRight: 'none', background: 'transparent' }}
         />
     </div>
 );
@@ -40,10 +42,21 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
     const [locationModalOpen, setLocationModalOpen] = useState(false);
     const [currentLocation, setCurrentLocation] = useState('Addis Ababa');
     const [searchValue, setSearchValue] = useState('');
+
+    // Hooks
     const { user, logout } = useAuth();
     const { unreadCount } = useNotifications();
+    const { theme: appTheme } = useUI();
+    const { token } = theme.useToken();
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Helper to determine if we are in dark mode effectively
+    // appTheme from UIContext is 'light' | 'dark'
+    const isDark = appTheme === 'dark';
+
+    // Augment token with isDark for easy passing
+    const extendedToken = { ...token, isDark };
 
     const toggle = () => {
         setCollapsed(!collapsed);
@@ -83,8 +96,15 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
         }
     ];
 
+    // Dynamic Header Style
+    const headerStyle = {
+        background: token.colorBgContainer,
+        borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        boxShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.03)'
+    };
+
     return (
-        <Layout className="dashboard-layout">
+        <Layout className="dashboard-layout" style={{ background: token.colorBgLayout }}>
             {/* Desktop Sidebar */}
             <Sider
                 trigger={null}
@@ -92,7 +112,11 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                 collapsed={collapsed}
                 className="desktop-sider"
                 width={260}
-                theme="light"
+                theme={isDark ? 'dark' : 'light'}
+                style={{
+                    background: token.colorBgContainer,
+                    borderRight: `1px solid ${token.colorBorderSecondary}`
+                }}
             >
                 <SidebarContent
                     collapsed={collapsed}
@@ -100,6 +124,7 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                     location={location}
                     menuItems={menuItems}
                     handleMenuClick={handleMenuClick}
+                    token={extendedToken}
                 />
             </Sider>
 
@@ -108,31 +133,36 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                 placement="left"
                 onClose={() => setMobileDrawerOpen(false)}
                 open={mobileDrawerOpen}
-                styles={{ body: { padding: 0 } }}
+                styles={{
+                    body: { padding: 0 }
+                }}
                 width={260}
                 closable={false}
             >
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: token.colorBgContainer }}>
                     <SidebarContent
                         collapsed={collapsed}
                         navigate={navigate}
                         location={location}
                         menuItems={menuItems}
                         handleMenuClick={handleMenuClick}
+                        token={extendedToken}
                     />
                 </div>
             </Drawer>
 
-            <Layout className="site-layout">
-                <Header className="dashboard-header">
+            <Layout className="site-layout" style={{ background: 'transparent' }}>
+                <Header className="dashboard-header" style={headerStyle}>
                     <div className="header-left">
                         {React.createElement(collapsed ? MenuUnfoldOutlined : MenuFoldOutlined, {
                             className: 'trigger desktop-trigger',
                             onClick: toggle,
+                            style: { color: token.colorText }
                         })}
                         {React.createElement(MenuUnfoldOutlined, {
                             className: 'trigger mobile-trigger',
                             onClick: () => setMobileDrawerOpen(true),
+                            style: { color: token.colorText }
                         })}
 
                         {/* Search Bar - only for customer */}
@@ -140,7 +170,7 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                             <div className="header-search">
                                 <Input
                                     placeholder="Search medicine (e.g. Paracetamol)"
-                                    prefix={<SearchOutlined className="text-secondary" />}
+                                    prefix={<SearchOutlined style={{ color: token.colorTextDescription }} />}
                                     bordered={false}
                                     className="search-input"
                                     value={searchValue}
@@ -151,6 +181,10 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                                     onPressEnter={(e) => {
                                         if (onSearch) onSearch(e.target.value);
                                     }}
+                                    style={{
+                                        background: token.colorFillAlter,
+                                        color: token.colorText
+                                    }}
                                 />
                             </div>
                         )}
@@ -158,7 +192,14 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
 
                     <div className="header-right">
                         {role === 'customer' && (
-                            <div className="header-location" onClick={() => setLocationModalOpen(true)}>
+                            <div
+                                className="header-location"
+                                onClick={() => setLocationModalOpen(true)}
+                                style={{
+                                    background: token.colorFillAlter,
+                                    color: token.colorText
+                                }}
+                            >
                                 <span className="label-text">📍 {currentLocation}</span>
                             </div>
                         )}
@@ -170,6 +211,7 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                                 icon={<BellOutlined />}
                                 size="large"
                                 onClick={() => navigate(`/${role}/notifications`)}
+                                style={{ color: token.colorText }}
                             />
                         </Badge>
 
@@ -179,9 +221,11 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                                     size="default"
                                     icon={<UserOutlined />}
                                     src={user?.avatar}
-                                    style={{ backgroundColor: '#1E88E5' }}
+                                    style={{ backgroundColor: token.colorPrimary }}
                                 />
-                                <span className="username hidden-mobile">{user?.firstName || 'User'}</span>
+                                <span className="username hidden-mobile" style={{ color: token.colorText }}>
+                                    {user?.firstName || 'User'}
+                                </span>
                             </div>
                         </Dropdown>
                     </div>
