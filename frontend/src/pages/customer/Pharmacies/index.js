@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, List, Avatar, Button, Tag, Space, Input, Rate } from 'antd';
+import { Row, Col, Card, Typography, List, Avatar, Button, Tag, Space, Input, Rate, theme } from 'antd';
 import {
     EnvironmentOutlined,
     SearchOutlined,
@@ -44,6 +44,8 @@ const Pharmacies = () => {
     const [radius, setRadius] = useState(5); // 5km radius
     const [medicineOptions, setMedicineOptions] = useState([]);
     const [loadingLocation, setLoadingLocation] = useState(false);
+
+    const { token } = theme.useToken();
 
     const mapRef = React.useRef(null);
     const mapInstance = React.useRef(null);
@@ -190,11 +192,11 @@ const Pharmacies = () => {
                 const marker = L.marker(ph.pos)
                     .addTo(mapInstance.current)
                     .bindPopup(`
-                        <div class="map-popup-content">
-                            <strong style="color: #1E88E5">${ph.name}</strong><br />
-                            <span style="font-size: 12px; color: #666">${ph.address}</span><br />
+                        <div class="map-popup-content" style="color: ${token.colorText}; background: ${token.colorBgContainer}">
+                            <strong style="color: ${token.colorPrimary}">${ph.name}</strong><br />
+                            <span style="font-size: 12px; color: ${token.colorTextSecondary}">${ph.address}</span><br />
                             <div style="margin-top: 8px">
-                                <span style="background: #1E88E5; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px">View Details</span>
+                                <span style="background: ${token.colorPrimary}; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px">View Details</span>
                             </div>
                         </div>
                     `);
@@ -210,7 +212,10 @@ const Pharmacies = () => {
                 mapInstance.current = null;
             }
         };
-    }, []);
+    }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // Update markers when tokens change (requires re-initialization or simplified approach)
+    // For simplicity, we rely on initial mount. If theme flips, user might need refresh for map popups or we'd add complex effect.
 
     // Update map view when selectedPharmacy changes
     useEffect(() => {
@@ -225,8 +230,17 @@ const Pharmacies = () => {
         <div className="pharmacies-page fade-in">
             <div className="pharmacies-layout">
                 {/* Sidebar */}
-                <div className="pharmacy-sidebar">
-                    <div className="sidebar-header">
+                <div
+                    className="pharmacy-sidebar"
+                    style={{
+                        background: token.colorBgContainer,
+                        borderRight: `1px solid ${token.colorBorderSecondary}`
+                    }}
+                >
+                    <div
+                        className="sidebar-header"
+                        style={{ borderBottom: `1px solid ${token.colorBorderSecondary}` }}
+                    >
                         <Title level={3} style={{ margin: 0 }}>Nearby Pharmacies</Title>
                         <Text type="secondary">Found {filteredPharmacies.length} providers near you</Text>
 
@@ -286,6 +300,10 @@ const Pharmacies = () => {
                                 <div
                                     className={`pharmacy-list-card ${selectedPharmacy?.id === item.id ? 'selected' : ''}`}
                                     onClick={() => setSelectedPharmacy(item)}
+                                    style={{
+                                        borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                                        background: selectedPharmacy?.id === item.id ? token.colorFillAlter : 'transparent'
+                                    }}
                                 >
                                     <Row gutter={16} align="middle">
                                         <Col flex="48px">
@@ -293,7 +311,10 @@ const Pharmacies = () => {
                                                 shape="square"
                                                 size={48}
                                                 icon={<ShopOutlined />}
-                                                style={{ background: '#E3F2FD', color: '#1E88E5' }}
+                                                style={{
+                                                    background: token.colorFillSecondary,
+                                                    color: token.colorPrimary
+                                                }}
                                             />
                                         </Col>
                                         <Col flex="auto">
@@ -316,12 +337,18 @@ const Pharmacies = () => {
                 </div>
 
                 {/* Map Area */}
-                <div className="pharmacy-map-area">
+                <div className="pharmacy-map-area" style={{ background: token.colorFillAlter }}>
                     <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
 
                     {/* Floating Info Card */}
                     {selectedPharmacy && (
-                        <Card className="selected-pharmacy-floating-card slide-up">
+                        <Card
+                            className="selected-pharmacy-floating-card slide-up"
+                            style={{
+                                background: token.colorBgContainer,
+                                border: `1px solid ${token.colorBorderSecondary}`
+                            }}
+                        >
                             <Row justify="space-between" align="top">
                                 <Col flex="auto">
                                     <Title level={4} style={{ margin: 0 }}>{selectedPharmacy.name}</Title>
