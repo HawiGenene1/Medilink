@@ -36,7 +36,9 @@ const { Option } = Select;
 const MOCK_MEDICINES = [
     {
         _id: 'med-1',
-        name: 'Paracetamol 500mg',
+        name: 'Paracetamol',
+        dosage: '500',
+        dosageUnit: 'mg',
         category: 'Pain Relief',
         manufacturer: 'PharmaCorp',
         price: 25.50,
@@ -79,7 +81,17 @@ const MOCK_MEDICINES = [
 const OwnerInventory = () => {
     const { user } = useAuth();
     const isDev = process.env.NODE_ENV === 'development';
-    const [medicines, setMedicines] = useState(isDev ? MOCK_MEDICINES : []);
+
+    // Initialize medicines from localStorage if available, otherwise use mock data
+    const getInitialMedicines = () => {
+        if (isDev) {
+            const stored = localStorage.getItem('inventoryMedicines');
+            return stored ? JSON.parse(stored) : MOCK_MEDICINES;
+        }
+        return [];
+    };
+
+    const [medicines, setMedicines] = useState(getInitialMedicines());
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMedicine, setEditingMedicine] = useState(null);
@@ -98,9 +110,16 @@ const OwnerInventory = () => {
             // const response = await pharmacyOwnerAPI.getMedicines();
             // setMedicines(response.data.data);
 
-            // For now, use mock data
+            // For development, use localStorage or mock data
             if (isDev) {
-                setMedicines(MOCK_MEDICINES);
+                const stored = localStorage.getItem('inventoryMedicines');
+                if (stored) {
+                    setMedicines(JSON.parse(stored));
+                } else {
+                    // First time - save mock data to localStorage
+                    localStorage.setItem('inventoryMedicines', JSON.stringify(MOCK_MEDICINES));
+                    setMedicines(MOCK_MEDICINES);
+                }
             }
         } catch (error) {
             console.error('Fetch Medicines Error:', error);
@@ -143,7 +162,14 @@ const OwnerInventory = () => {
             // await pharmacyOwnerAPI.deleteMedicine(id);
 
             // For mock data
-            setMedicines(medicines.filter(med => med._id !== id));
+            const updatedMedicines = medicines.filter(med => med._id !== id);
+            setMedicines(updatedMedicines);
+
+            // Persist to localStorage in development
+            if (isDev) {
+                localStorage.setItem('inventoryMedicines', JSON.stringify(updatedMedicines));
+            }
+
             message.success('Medicine deleted successfully');
         } catch (error) {
             message.error('Failed to delete medicine');
@@ -157,9 +183,11 @@ const OwnerInventory = () => {
                 expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null
             };
 
+            let updatedMedicines;
+
             if (editingMedicine) {
                 // Update existing medicine
-                const updatedMedicines = medicines.map(med =>
+                updatedMedicines = medicines.map(med =>
                     med._id === editingMedicine._id ? { ...med, ...medicineData } : med
                 );
                 setMedicines(updatedMedicines);
@@ -170,8 +198,14 @@ const OwnerInventory = () => {
                     _id: `med-${Date.now()}`,
                     ...medicineData
                 };
-                setMedicines([...medicines, newMedicine]);
+                updatedMedicines = [...medicines, newMedicine];
+                setMedicines(updatedMedicines);
                 message.success('Medicine added successfully');
+            }
+
+            // Persist to localStorage in development
+            if (isDev) {
+                localStorage.setItem('inventoryMedicines', JSON.stringify(updatedMedicines));
             }
 
             setIsModalOpen(false);
@@ -192,7 +226,11 @@ const OwnerInventory = () => {
             title: 'Medicine Name',
             dataIndex: 'name',
             key: 'name',
-            render: (text) => <Text strong>{text}</Text>
+            render: (text, record) => (
+                <Text strong>
+                    {text} {record.dosage ? `(${record.dosage}${record.dosageUnit || 'mg'})` : ''}
+                </Text>
+            )
         },
         {
             title: 'Category',
@@ -273,7 +311,6 @@ const OwnerInventory = () => {
                         <Title level={2} style={{ marginBottom: 0 }}>
                             <MedicineBoxOutlined /> Inventory Management
                         </Title>
-                        {isDev && <Tag color="orange">Mock Data</Tag>}
                     </Space>
                     <div style={{ marginTop: 8 }}>
                         <Text type="secondary">
@@ -338,9 +375,33 @@ const OwnerInventory = () => {
                                 label="Medicine Name"
                                 rules={[{ required: true, message: 'Please enter medicine name' }]}
                             >
-                                <Input placeholder="e.g., Paracetamol 500mg" />
+                                <Input placeholder="e.g., Paracetamol" />
                             </Form.Item>
                         </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="dosage"
+                                label="Dosage/Strength"
+                                rules={[{ required: true, message: 'Please enter dosage' }]}
+                            >
+                                <Input
+                                    placeholder="e.g., 500mg, 250mg, 1000mg"
+                                    addonAfter={
+                                        <Form.Item name="dosageUnit" noStyle initialValue="mg">
+                                            <Select style={{ width: 70 }}>
+                                                <Option value="mg">mg</Option>
+                                                <Option value="g">g</Option>
+                                                <Option value="ml">ml</Option>
+                                                <Option value="mcg">mcg</Option>
+                                            </Select>
+                                        </Form.Item>
+                                    }
+                                />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Row gutter={16}>
                         <Col span={12}>
                             <Form.Item
                                 name="category"
@@ -405,7 +466,10 @@ const OwnerInventory = () => {
                                 label="Expiry Date"
                                 rules={[{ required: true, message: 'Please select expiry date' }]}
                             >
-                                <DatePicker style={{ width: '100%' }} />
+                                <DatePicker
+                                    style={{ width: '100%' }}
+                                    disabledDate={(current) => current && current < dayjs().startOf('day')}
+                                />
                             </Form.Item>
                         </Col>
                     </Row>

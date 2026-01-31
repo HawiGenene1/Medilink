@@ -97,6 +97,11 @@ const pharmacySchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  approvalStatus: {
+    type: String,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    default: 'APPROVED' // Pharmacies in this model are already active/approved
+  },
   totalOrders: {
     type: Number,
     default: 0
