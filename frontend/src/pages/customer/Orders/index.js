@@ -182,9 +182,10 @@ const Orders = () => {
               key="chapa"
               icon={<DownloadOutlined />}
               onClick={handleOpenChapaReceipt}
+              className="chapa-receipt-btn"
               style={{ backgroundColor: '#00af41', color: '#fff', border: 'none' }}
             >
-              Chapa Receipt
+              Official Chapa Receipt
             </Button>
           ),
           selectedOrder?.status === 'delivered' && <Button key="reorder" type="primary">Reorder Items</Button>

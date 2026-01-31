@@ -119,22 +119,32 @@ const PaymentStatus = () => {
                             paymentRef && (
                                 <Button
                                     key="receipt"
+                                    type="primary"
                                     onClick={() => window.open(`https://chapa.link/payment-receipt/${paymentRef}`, '_blank')}
+                                    style={{ backgroundColor: '#00af41', borderColor: '#00af41' }}
                                 >
-                                    View Receipt
+                                    View Official Chapa Receipt
                                 </Button>
                             ),
                             <Button key="invoice" onClick={() => navigate(`/customer/orders/${orderId}/invoice`)}>
                                 Medilink Invoice
                             </Button>,
-                            <Button type="primary" key="orders" onClick={() => navigate('/customer/orders')}>
-                                View My Orders
+                            <Button key="orders" onClick={() => navigate('/customer/orders')}>
+                                View My Orders (History)
                             </Button>,
                             <Button key="home" onClick={() => navigate('/')}>
-                                Back to Home
+                                Home
                             </Button>
                         ]}
-                    />
+                    >
+                        <Alert
+                            message="Persistent Success Page"
+                            description="This page will remain active for at least 5 minutes. You can also always find your official Chapa receipt in the 'My Orders' history page later."
+                            type="success"
+                            showIcon
+                            style={{ marginTop: 24, borderRadius: 12 }}
+                        />
+                    </Result>
                 );
 
             case 'failed':

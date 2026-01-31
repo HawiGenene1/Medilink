@@ -73,3 +73,36 @@
         margin-top: 16px;
     }
 }
+
+.chapa-receipt-btn {
+    background-color: #00af41 !important;
+    border-color: #00af41 !important;
+    color: white !important;
+    font-weight: 600 !important;
+    height: 40px !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 4px 12px rgba(0, 175, 65, 0.2) !important;
+    transition: all 0.3s ease !important;
+}
+
+.chapa-receipt-btn:hover {
+    background-color: #008f35 !important;
+    border-color: #008f35 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(0, 175, 65, 0.3) !important;
+}
+
+.chapa-ref-badge {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: monospace;
+    margin-top: 8px;
+    display: inline-block;
+}
