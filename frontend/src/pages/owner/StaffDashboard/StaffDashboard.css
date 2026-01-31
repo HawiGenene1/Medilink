@@ -1,0 +1,22 @@
+.staff-dashboard {
+    padding: 8px;
+}
+
+.staff-stat-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s;
+}
+
+.staff-stat-card:hover {
+    transform: translateY(-4px);
+}
+
+.staff-stat-card .ant-statistic-title {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.staff-stat-card .ant-statistic-content-prefix {
+    margin-right: 12px;
+}

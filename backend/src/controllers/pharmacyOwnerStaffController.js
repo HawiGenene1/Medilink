@@ -40,7 +40,7 @@ const createStaff = asyncHandler(async (req, res, next) => {
             email,
             phone,
             password,
-            role: 'cashier', // Mapper role for system consistency
+            role: role || 'staff', // Use provided role or default to staff
             pharmacyId
         });
 

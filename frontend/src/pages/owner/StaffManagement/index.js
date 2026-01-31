@@ -356,6 +356,7 @@ const StaffManagement = () => {
                                 <Select>
                                     <Option value="pharmacist">Pharmacist</Option>
                                     <Option value="cashier">Cashier</Option>
+                                    <Option value="staff">Staff</Option>
                                 </Select>
                             </Form.Item>
                         </Col>
