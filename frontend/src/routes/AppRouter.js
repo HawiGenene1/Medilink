@@ -22,6 +22,7 @@ import ForgotPassword from '../pages/auth/ForgotPassword';
 import Home from '../pages/Home';
 import MedicineList from '../pages/medicines/MedicineList';
 import MedicineDetail from '../pages/medicines/MedicineDetail';
+import Pharmacies from '../pages/customer/Pharmacies';
 
 // Customer Pages
 import CustomerDashboard from '../pages/customer/Dashboard';
@@ -85,6 +86,7 @@ const AppRouter = () => {
         <Route path="/" element={<Home />} />
         <Route path="/medicines" element={<MedicineList />} />
         <Route path="/medicines/:id" element={<MedicineDetail />} />
+        <Route path="/pharmacies" element={<Pharmacies />} />
       </Route>
 
       {/* Auth Routes */}
