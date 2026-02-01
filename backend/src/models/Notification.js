@@ -2,11 +2,6 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
   title: {
     type: String,
     required: true,
@@ -17,29 +12,35 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  type: {
+  pharmacyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Pharmacy',
+    required: true
+  },
+  roleTarget: {
     type: String,
-    enum: ['order_update', 'promotion', 'system', 'account'],
-    default: 'system'
+    enum: ['OWNER', 'STAFF'],
+    required: true
   },
   isRead: {
     type: Boolean,
     default: false
   },
-  link: {
+  type: {
     type: String,
-    trim: true
+    enum: ['new_order', 'low_stock', 'expired_medicine', 'near_expiry', 'out_of_stock', 'system'],
+    default: 'system'
   },
   metadata: {
     type: mongoose.Schema.Types.Mixed
   }
-}, { 
+}, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
 });
 
 // Index for faster querying
-notificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
+notificationSchema.index({ pharmacyId: 1, roleTarget: 1, isRead: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);
