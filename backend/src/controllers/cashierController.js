@@ -208,8 +208,45 @@ exports.verifyPaymentStatus = async (req, res) => {
 
     const payment = await Payment.findOne({ order: orderId }).sort({ createdAt: -1 });
 
-    if (!payment || !payment.transactionId) {
-      return res.status(404).json({ success: false, message: 'No initiated payment found for this order' });
+    // FIX: If no payment record exists (e.g., Cash order), create one now
+    if (!payment) {
+      if (order.paymentMethod === 'cash' || !order.paymentMethod) {
+        // Create a new Cash Payment record
+        payment = await Payment.create({
+          order: orderId,
+          customer: order.customer,
+          pharmacy: order.pharmacy,
+          amount: order.finalAmount,
+          paymentMethod: 'cash',
+          paymentStatus: 'pending',
+          transactionId: `CASH-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Generate internal ref
+          metadata: { verifiedBy: req.user._id }
+        });
+      } else {
+        return res.status(404).json({ success: false, message: 'No initiated payment found for this order' });
+      }
+    }
+
+    // Handle Cash Verification immediately
+    if (payment.paymentMethod === 'cash') {
+      order.paymentStatus = 'paid';
+      order.status = 'confirmed'; // Auto-confirm
+      await order.save();
+
+      payment.paymentStatus = 'completed';
+      payment.paidAt = Date.now();
+      await payment.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Cash payment confirmed successfully',
+        data: { status: 'paid', paymentMethod: 'cash' }
+      });
+    }
+
+    if (!payment.transactionId) {
+      // Should not happen for cash now, but safety check
+      return res.status(404).json({ success: false, message: 'Invalid payment record (missing transactionId)' });
     }
 
     const verification = await chapaService.verifyPayment(payment.transactionId);
