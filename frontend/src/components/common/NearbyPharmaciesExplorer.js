@@ -81,10 +81,17 @@ const NearbyPharmaciesExplorer = () => {
                 attributionControl: false
             }).setView([9.0227, 38.7460], 13);
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{y}/{x}{r}.png', {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png', {
                 maxZoom: 19,
-                attribution: '&copy; CartoDB'
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(mapInstance.current);
+
+            // Force recalculate size after a short delay
+            setTimeout(() => {
+                if (mapInstance.current) {
+                    mapInstance.current.invalidateSize();
+                }
+            }, 500);
         }
 
         return () => {
