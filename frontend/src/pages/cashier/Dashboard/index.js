@@ -91,7 +91,7 @@ const CashierDashboard = () => {
   const [shiftModalVisible, setShiftModalVisible] = useState(false);
   const [currentShift, setCurrentShift] = useState(null);
   const [alerts, setAlerts] = useState([]);
-  
+
   // State for Persistent Success Modal
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState(null);
@@ -129,9 +129,9 @@ const CashierDashboard = () => {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       // Shift & Alerts
       try {
@@ -184,7 +184,7 @@ const CashierDashboard = () => {
         message.error('Connectivity issue: Failed to load latest data');
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -197,7 +197,7 @@ const CashierDashboard = () => {
         // FIXED: Use controlled modal state instead of static method
         setSuccessOrderId(orderId);
         setSuccessModalVisible(true);
-        fetchData();
+        fetchData(true); // Silent refresh to keep modal open
       }
     } catch (error) {
       Modal.error({
