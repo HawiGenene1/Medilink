@@ -22,7 +22,9 @@ const MedicineList = () => {
       setLoading(true);
       try {
         const response = await api.get('/medicines', { params: filters });
-        setMedicines(response.data);
+        // Handle both direct array and { success: true, data: [...] } structures
+        const medicineData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        setMedicines(medicineData);
       } catch (error) {
         console.error('Error fetching medicines:', error);
       } finally {
@@ -86,7 +88,7 @@ const MedicineList = () => {
 
       {/* Medicine Grid */}
       <Row xs={1} md={2} lg={4} className="g-4">
-        {medicines.map(medicine => (
+        {Array.isArray(medicines) && medicines.map(medicine => (
           <Col key={medicine._id}>
             <Card className="h-100">
               <Card.Img

@@ -17,7 +17,8 @@ const MedicineDetail = () => {
     const fetchMedicine = async () => {
       try {
         const res = await api.get(`/medicines/${id}`);
-        setMedicine(res.data);
+        const medicineData = res.data?.data || res.data;
+        setMedicine(medicineData);
       } catch (err) {
         setError('Failed to load medicine details');
         console.error(err);
