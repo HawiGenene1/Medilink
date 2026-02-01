@@ -38,6 +38,27 @@ const Settings = () => {
     const [deleteStep, setDeleteStep] = useState(0);
     const [confirmText, setConfirmText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+    const [passwordForm] = Form.useForm();
+
+    const handlePasswordUpdate = async (values) => {
+        if (values.newPassword !== values.confirmPassword) {
+            message.error('New passwords do not match');
+            return;
+        }
+        setLoading(true);
+        try {
+            await api.put('/users/profile', {
+                currentPassword: values.currentPassword,
+                password: values.newPassword
+            });
+            message.success('Password updated successfully!');
+            passwordForm.resetFields();
+        } catch (error) {
+            message.error(error.response?.data?.message || 'Failed to update password');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleDeleteFinal = async () => {
         setIsDeleting(true);
@@ -94,17 +115,22 @@ const Settings = () => {
         <div className="settings-section fade-in">
             <Title level={4}>Change Password</Title>
             <Paragraph type="secondary">Ensure clinical data security by using a strong password.</Paragraph>
-            <Form layout="vertical" style={{ maxWidth: '400px', marginTop: '24px' }}>
-                <Form.Item label="Current Password" name="currentPassword">
+            <Form
+                form={passwordForm}
+                layout="vertical"
+                style={{ maxWidth: '400px', marginTop: '24px' }}
+                onFinish={handlePasswordUpdate}
+            >
+                <Form.Item label="Current Password" name="currentPassword" rules={[{ required: true, message: 'Current password is required' }]}>
                     <Input.Password iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)} />
                 </Form.Item>
-                <Form.Item label="New Password" name="newPassword">
+                <Form.Item label="New Password" name="newPassword" rules={[{ required: true, min: 6 }]}>
                     <Input.Password iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)} />
                 </Form.Item>
-                <Form.Item label="Confirm New Password" name="confirmPassword">
+                <Form.Item label="Confirm New Password" name="confirmPassword" rules={[{ required: true }]}>
                     <Input.Password iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)} />
                 </Form.Item>
-                <Button type="primary">Update Password</Button>
+                <Button type="primary" htmlType="submit" loading={loading}>Update Password</Button>
             </Form>
 
 

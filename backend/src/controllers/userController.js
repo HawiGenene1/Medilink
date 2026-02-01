@@ -83,6 +83,13 @@ exports.updateUserProfile = async (req, res) => {
 
         // Handle Password Change
         if (req.body.password) {
+            if (!req.body.currentPassword) {
+                return res.status(400).json({ message: 'Current password is required to set a new one' });
+            }
+            const isMatch = await user.comparePassword(req.body.currentPassword);
+            if (!isMatch) {
+                return res.status(401).json({ message: 'Current password is incorrect' });
+            }
             user.password = req.body.password;
             user.passwordChangedAt = Date.now() - 1000;
         }

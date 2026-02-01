@@ -505,6 +505,32 @@ const getEarningsStats = async (req, res) => {
             status: t.isPaidToDriver ? 'Paid' : 'Completed'
         }));
 
+        // Calculate daily earnings for the last 7 days
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const dailyEarnings = await Order.aggregate([
+            {
+                $match: {
+                    courier: new mongoose.Types.ObjectId(driverId),
+                    status: 'delivered',
+                    actualArrivalTime: { $gte: sevenDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$actualArrivalTime" } },
+                    amount: { $sum: "$courierEarnings" }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        // Fetch weekly goal from profile
+        const profile = await DeliveryProfile.findOne({ userId: driverId });
+        const weeklyGoal = profile?.weeklyGoal || 1000;
+
         res.json({
             success: true,
             data: {
@@ -513,7 +539,9 @@ const getEarningsStats = async (req, res) => {
                 completedDeliveries,
                 todayEarnings: stats.length > 0 ? stats[0].todayEarnings : 0,
                 thisWeekEarnings: stats.length > 0 ? stats[0].thisWeekEarnings : 0,
-                recentTransactions: formattedTransactions
+                recentTransactions: formattedTransactions,
+                dailyEarnings,
+                weeklyGoal
             }
         });
     } catch (error) {
@@ -676,6 +704,38 @@ const getDeliveryProfile = async (req, res) => {
     }
 };
 
+/**
+ * @route   PUT /api/delivery/profile
+ * @desc    Update delivery profile (vehicle info, etc.)
+ * @access  Private (Delivery)
+ */
+const updateDeliveryProfile = async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id;
+        const { vehicleDetails, personalDetails, weeklyGoal } = req.body;
+
+        const updates = {};
+        if (vehicleDetails) updates.vehicleDetails = vehicleDetails;
+        if (personalDetails) updates.personalDetails = personalDetails;
+        if (typeof weeklyGoal === 'number') updates.weeklyGoal = weeklyGoal;
+
+        const profile = await DeliveryProfile.findOneAndUpdate(
+            { userId },
+            { $set: updates },
+            { new: true, runValidators: true }
+        );
+
+        if (!profile) {
+            return res.status(404).json({ success: false, message: 'Profile not found' });
+        }
+
+        res.json({ success: true, message: 'Profile updated', data: profile });
+    } catch (error) {
+        logger.error('Error updating delivery profile:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
 module.exports = {
     findNearbyDrivers,
     requestDelivery,
@@ -688,5 +748,6 @@ module.exports = {
     getEarningsStats,
     getAvailableRequests,
     getDeliveryProfile,
+    updateDeliveryProfile,
     requestPayout
 };

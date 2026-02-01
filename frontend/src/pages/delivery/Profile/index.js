@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Avatar, Typography, Descriptions, Button, Row, Col, Tag, Divider, Modal, Form, Input, message, App, Space } from 'antd';
-import { UserOutlined, EditOutlined, CarOutlined, PhoneOutlined, MailOutlined } from '@ant-design/icons';
+import { UserOutlined, EditOutlined, CarOutlined, PhoneOutlined, CalendarOutlined, BgColorsOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
 
@@ -10,7 +10,10 @@ const DeliveryProfile = () => {
     const { user, refreshUser } = useAuth();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    // Modals State
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+
     const [form] = Form.useForm();
     const [updating, setUpdating] = useState(false);
 
@@ -76,9 +79,6 @@ const DeliveryProfile = () => {
                                 <Descriptions.Item label={<Text type="secondary">Phone</Text>}>{user?.phone || 'Not set'}</Descriptions.Item>
                                 <Descriptions.Item label={<Text type="secondary">Joined</Text>}>{formatDate(user?.createdAt)}</Descriptions.Item>
                                 <Descriptions.Item label={<Text type="secondary">Deliveries</Text>}>{profile?.totalDeliveries || 0}</Descriptions.Item>
-                                <Descriptions.Item label={<Text type="secondary">Rating</Text>}>
-                                    <Tag color="gold" style={{ border: 'none' }}>★ {profile?.rating || '5.0'}</Tag>
-                                </Descriptions.Item>
                             </Descriptions>
                         </div>
 
@@ -105,7 +105,6 @@ const DeliveryProfile = () => {
                     <Card
                         title={<><CarOutlined /> Vehicle Information</>}
                         style={{ borderRadius: '12px', marginBottom: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                        extra={<Button type="link">Update Info</Button>}
                     >
                         <Row align="middle" gutter={24}>
                             <Col>
@@ -132,6 +131,12 @@ const DeliveryProfile = () => {
                                 </Space>
                             </Col>
                         </Row>
+                        {profile?.vehicleDetails?.color && (
+                            <div style={{ marginTop: '16px' }}>
+                                <Tag icon={<BgColorsOutlined />}>{profile.vehicleDetails.color}</Tag>
+                                <Tag icon={<CalendarOutlined />}>{profile.vehicleDetails.year || '2022'}</Tag>
+                            </div>
+                        )}
                     </Card>
 
                     <Card
@@ -143,7 +148,7 @@ const DeliveryProfile = () => {
                             <Descriptions.Item label="Last Name">{user?.lastName}</Descriptions.Item>
                             <Descriptions.Item label="Email Address">{user?.email}</Descriptions.Item>
                             <Descriptions.Item label="Phone Number">{user?.phone || 'N/A'}</Descriptions.Item>
-                            <Descriptions.Item label="Emergency Contact">N/A</Descriptions.Item>
+                            <Descriptions.Item label="Emergency Contact">{profile?.personalDetails?.emergencyContact?.name || 'N/A'}</Descriptions.Item>
                         </Descriptions>
                     </Card>
                 </Col>

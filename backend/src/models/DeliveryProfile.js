@@ -113,7 +113,11 @@ const deliveryProfileSchema = new mongoose.Schema({
     },
     submittedAt: Date,
     reviewedAt: Date,
-    reviewerNotes: String
+    reviewerNotes: String,
+    weeklyGoal: {
+        type: Number,
+        default: 1000
+    }
 }, {
     timestamps: true
 });

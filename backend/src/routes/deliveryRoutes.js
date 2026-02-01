@@ -13,6 +13,7 @@ const {
     getEarningsStats,
     getAvailableRequests,
     getDeliveryProfile,
+    updateDeliveryProfile,
     requestPayout
 } = require('../controllers/deliveryController');
 
@@ -33,6 +34,7 @@ router.put('/complete', authorize('delivery'), completeDelivery);
 router.get('/active', authorize('delivery'), getActiveDeliveries);
 router.get('/history', authorize('delivery'), getDeliveryHistory);
 router.get('/profile', authorize('delivery'), getDeliveryProfile);
+router.put('/profile', authorize('delivery'), updateDeliveryProfile);
 router.get('/earnings', authorize('delivery'), getEarningsStats);
 router.post('/payout/request', authorize('delivery'), requestPayout);
 
