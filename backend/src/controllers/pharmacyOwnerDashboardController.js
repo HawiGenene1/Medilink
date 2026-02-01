@@ -13,6 +13,8 @@ const ErrorResponse = require('../utils/errorResponse');
  */
 const getDashboardStats = asyncHandler(async (req, res, next) => {
     const pharmacyId = req.owner.pharmacyId;
+    console.log('[Dashboard] Fetching stats for pharmacy:', pharmacyId);
+    console.log('[Dashboard] Owner data:', req.owner);
 
     if (!pharmacyId) {
         return next(new ErrorResponse('No pharmacy associated with this owner', 400));
@@ -239,9 +241,44 @@ const getReports = asyncHandler(async (req, res, next) => {
         { $limit: 12 }
     ]);
 
+    // 3. Summary stats
+    const [pendingOrders, totalOrders, totalSalesStats, lowStockCount, staffCount] = await Promise.all([
+        Order.countDocuments({ pharmacy: pharmacyId, status: 'pending' }),
+        Order.countDocuments({ pharmacy: pharmacyId }),
+        Order.aggregate([
+            {
+                $match: {
+                    pharmacy: new mongoose.Types.ObjectId(pharmacyId),
+                    status: { $in: ['delivered', 'completed'] }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalRevenue: { $sum: '$finalAmount' }
+                }
+            }
+        ]),
+        Inventory.countDocuments({
+            pharmacy: pharmacyId,
+            isActive: true,
+            $expr: { $lte: ['$quantity', '$reorderLevel'] }
+        }),
+        PharmacyStaff.countDocuments({ pharmacy: pharmacyId, isActive: true })
+    ]);
+
+    const totalRevenue = totalSalesStats.length > 0 ? totalSalesStats[0].totalRevenue : 0;
+
     res.json({
         success: true,
         data: {
+            summary: {
+                totalRevenue,
+                totalOrders,
+                pendingOrders,
+                lowStockCount,
+                staffCount
+            },
             salesTrends,
             staffTrends
         }

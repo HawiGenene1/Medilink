@@ -69,8 +69,8 @@ const OwnerDashboard = () => {
         ]
     };
 
-    const [loading, setLoading] = useState(!isDev);
-    const [data, setData] = useState(isDev ? mockData : null);
+    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState(null);
 
     useEffect(() => {
         fetchDashboardData();
@@ -78,18 +78,19 @@ const OwnerDashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            if (!isDev) setLoading(true);
+            setLoading(true);
             const response = await pharmacyOwnerAPI.getDashboard();
 
             if (response.data.success && response.data.data) {
-                // If API returns data, use it. If it returns 0s and we are in dev, maybe use mock?
-                // For now, if success, use real data.
+                // If API returns data, use it. 
                 setData(response.data.data);
             }
         } catch (error) {
             console.error('Fetch Dashboard Error:', error);
-            if (!isDev && error.response?.status !== 401) {
-                message.error('An error occurred while fetching statistics');
+            if (error.response?.status !== 401) {
+                const errorMsg = error.response?.data?.message || 'An error occurred while fetching statistics';
+                message.error(errorMsg);
+                console.error('Backend error details:', error.response?.data);
             }
         } finally {
             setLoading(false);
@@ -137,6 +138,18 @@ const OwnerDashboard = () => {
                     </Tag>
                 );
             },
+        },
+        {
+            title: 'Payment',
+            dataIndex: 'paymentStatus',
+            key: 'paymentStatus',
+            render: (status) => {
+                let color = 'default';
+                if (status === 'PAID') color = 'green';
+                if (status === 'PENDING') color = 'orange';
+                if (status === 'FAILED') color = 'red';
+                return <Tag color={color}>{status || 'PENDING'}</Tag>;
+            }
         },
         {
             title: 'Date',

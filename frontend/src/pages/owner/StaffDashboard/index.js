@@ -35,15 +35,23 @@ const StaffDashboard = () => {
             ]);
 
             if (ordersRes.status === 'fulfilled' && ordersRes.value.data.success) {
-                setOrders(ordersRes.value.data.data);
+                const fetchedOrders = ordersRes.value.data.data;
+                setOrders(Array.isArray(fetchedOrders) ? fetchedOrders : []);
             } else if (ordersRes.status === 'rejected') {
-                message.warning('Could not sync latest orders. Please check your connection.');
+                const errorStatus = ordersRes.reason?.response?.status;
+                if (errorStatus === 403) {
+                    message.error('Order Sync Failed: You are not properly linked to a pharmacy.');
+                } else {
+                    message.warning('Could not sync latest orders. Please check your connection.');
+                }
             }
 
             if (inventoryRes.status === 'fulfilled' && inventoryRes.value.data.success) {
                 // Filter for low stock items (quantity <= reorderLevel)
                 const inventory = inventoryRes.value.data.data;
-                const lowStock = inventory.filter(item => item.quantity <= item.reorderLevel);
+                const lowStock = Array.isArray(inventory)
+                    ? inventory.filter(item => item.quantity <= item.reorderLevel)
+                    : [];
                 setAlerts(lowStock);
             } else if (inventoryRes.status === 'rejected') {
                 message.warning('Could not load inventory alerts.');
@@ -81,6 +89,17 @@ const StaffDashboard = () => {
                 if (['delivered', 'completed'].includes(status)) color = 'cyan';
                 return <Tag color={color}>{status.toUpperCase().replace('_', ' ')}</Tag>;
             }
+        },
+        {
+            title: 'Payment',
+            dataIndex: 'paymentStatus',
+            key: 'payment',
+            render: (status, record) => (
+                <Space direction="vertical" size={0}>
+                    <Tag color={status === 'PAID' ? 'green' : 'orange'} size="small">{status || 'PENDING'}</Tag>
+                    <Text type="secondary" style={{ fontSize: '10px' }}>{record.paymentMethod?.replace('_', ' ')}</Text>
+                </Space>
+            )
         },
         {
             title: 'Created',
