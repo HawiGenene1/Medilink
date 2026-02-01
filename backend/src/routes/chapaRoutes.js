@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { initializeChapaPayment, verifyChapaPayment, cancelChapaPayment } = require('../controllers/chapaController');
+const { initializeChapaPayment, verifyChapaPayment, cancelChapaPayment, syncOrderPayment } = require('../controllers/chapaController');
 const { authenticate } = require('../middleware/authMiddleware');
 
 router.post('/initialize', authenticate, initializeChapaPayment);

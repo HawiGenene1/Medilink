@@ -173,16 +173,21 @@ const Orders = () => {
   const handleOpenChapaReceipt = () => {
     const ref = selectedOrder?.paymentDetails?.chapaReference;
     if (ref) {
-      // Use chapa.link as primary but maybe mention chapa.co if they have DNS issues
       window.open(`https://chapa.link/payment-receipt/${ref}`, '_blank');
     } else {
-      message.warning('Official Chapa reference ID not found for this order. Try "Sync Receipt" first.');
+      if (selectedOrder?.paymentMethod === 'cash') {
+        message.info('This order was paid by Cash. Official Chapa receipts are only available for online payments.');
+      } else {
+        message.warning('Official Chapa reference ID not found. Use "Sync Receipt" to recover it.');
+      }
     }
   };
 
   const modalFooter = [
     <Button key="close" onClick={() => setDetailsVisible(false)}>Close</Button>,
-    selectedOrder?.paymentStatus === 'paid' && !selectedOrder?.paymentDetails?.chapaReference && (
+    selectedOrder?.paymentStatus === 'paid' &&
+    selectedOrder?.paymentMethod === 'chapa' &&
+    !selectedOrder?.paymentDetails?.chapaReference && (
       <Button
         key="sync"
         onClick={() => handleSyncReceipt(selectedOrder?._id)}
@@ -192,7 +197,9 @@ const Orders = () => {
         Sync Receipt
       </Button>
     ),
-    selectedOrder?.paymentStatus === 'paid' && selectedOrder?.paymentDetails?.chapaReference && (
+    selectedOrder?.paymentStatus === 'paid' &&
+    selectedOrder?.paymentMethod === 'chapa' &&
+    selectedOrder?.paymentDetails?.chapaReference && (
       <Button
         key="chapa"
         icon={<DownloadOutlined />}
@@ -202,6 +209,12 @@ const Orders = () => {
       >
         Official Chapa Receipt
       </Button>
+    ),
+    selectedOrder?.paymentStatus === 'paid' &&
+    selectedOrder?.paymentMethod === 'cash' && (
+      <Tag color="blue" style={{ marginLeft: 8, padding: '4px 8px' }}>
+        Verified Cash Payment
+      </Tag>
     ),
     selectedOrder?.status === 'delivered' && <Button key="reorder" type="primary">Reorder Items</Button>
   ];
