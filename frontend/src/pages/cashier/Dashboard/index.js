@@ -91,6 +91,10 @@ const CashierDashboard = () => {
   const [shiftModalVisible, setShiftModalVisible] = useState(false);
   const [currentShift, setCurrentShift] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  
+  // State for Persistent Success Modal
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -190,19 +194,9 @@ const CashierDashboard = () => {
       const res = await cashierAPI.verifyPayment(orderId);
       if (res.data.success) {
         // FIXED: Replaced fleeting message with persistent Modal as per user request
-        Modal.success({
-          title: 'Payment Verified & Receipt Generated',
-          content: 'The payment has been successfully verified. The receipt (invoice) is ready.',
-          okText: 'Close',
-          closable: true,
-          // secondary action to view invoice immediately
-          footer: (_, { OkBtn, CancelBtn }) => (
-            <>
-              <Button onClick={() => navigate(`/customer/orders/${orderId}/invoice`)}>View Full Invoice</Button>
-              <OkBtn />
-            </>
-          ),
-        });
+        // FIXED: Use controlled modal state instead of static method
+        setSuccessOrderId(orderId);
+        setSuccessModalVisible(true);
         fetchData();
       }
     } catch (error) {
@@ -946,6 +940,31 @@ const CashierDashboard = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Persistent Success Modal */}
+      <Modal
+        title={
+          <Space>
+            <CheckCircleOutlined style={{ color: '#52c41a' }} />
+            <span>Payment Verified & Receipt Generated</span>
+          </Space>
+        }
+        open={successModalVisible}
+        onOk={() => setSuccessModalVisible(false)}
+        onCancel={() => setSuccessModalVisible(false)}
+        footer={[
+          <Button key="invoice" type="primary" onClick={() => navigate(`/customer/orders/${successOrderId}/invoice`)}>
+            View Full Invoice
+          </Button>,
+          <Button key="close" onClick={() => setSuccessModalVisible(false)}>
+            Close
+          </Button>
+        ]}
+      >
+        <p>The payment has been successfully verified.</p>
+        <p>You can now view and print the official invoice.</p>
+      </Modal>
+
     </div>
   );
 };
