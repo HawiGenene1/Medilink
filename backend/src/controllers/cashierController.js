@@ -256,7 +256,8 @@ exports.verifyPaymentStatus = async (req, res) => {
       order.status = 'processing';
       await order.save();
 
-      payment.status = 'success';
+      payment.paymentStatus = 'completed';  // FIXED: was payment.status
+      payment.paidAt = Date.now();
       await payment.save();
 
       return res.status(200).json({
