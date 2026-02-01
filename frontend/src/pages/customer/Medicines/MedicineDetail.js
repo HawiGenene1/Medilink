@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { medicinesAPI } from '../../../services/api/medicines';
 import { Row, Col, Card, Typography, Button, Tag, Space, Tabs, InputNumber, Divider, Alert, Avatar } from 'antd';
 import {
     ShoppingCartOutlined,
@@ -29,19 +30,42 @@ const MedicineDetail = () => {
     const [quantity, setQuantity] = useState(1);
     const [rxUploaded, setRxUploaded] = useState(false);
 
-    // Mock Medicine Data
-    const medicine = {
-        name: 'Amoxicillin 250mg',
-        genericName: 'Amoxicillin trihydrate',
-        price: '120 ETB',
-        prescriptionRequired: true,
-        category: 'Antibiotics',
-        usage: 'Specifically used to treat bacterial infections like pneumonia and bronchitis.',
-        dosage: 'Take 1 capsule three times daily for 7 days. Complete the full course.',
-        warnings: 'Avoid use if you are allergic to penicillin. May cause drowsiness.',
-        storage: 'Store in a cool, dry place away from sunlight.',
-        expiry: 'Oct 2026'
-    };
+    const [medicine, setMedicine] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchMedicine = async () => {
+            try {
+                const response = await medicinesAPI.getById(id);
+                if (response.data && response.data.success) {
+                    const m = response.data.data;
+                    setMedicine({
+                        id: m._id,
+                        _id: m._id,
+                        name: m.name,
+                        genericName: m.genericName || m.name,
+                        price: `${m.price?.basePrice || 0} ETB`,
+                        priceValue: m.price?.basePrice,
+                        prescriptionRequired: m.requiresPrescription,
+                        category: m.category,
+                        usage: m.description || 'No description available.',
+                        dosage: 'Dosage instructions not specified.',
+                        warnings: 'No specific warnings available.',
+                        storage: 'Standard storage conditions apply.',
+                        expiry: m.expiryDate ? new Date(m.expiryDate).toLocaleDateString() : 'N/A'
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch medicine detail", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchMedicine();
+    }, [id]);
+
+    if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading...</div>;
+    if (!medicine) return <div style={{ padding: '50px', textAlign: 'center' }}>Medicine not found</div>;
 
     const PharmaciesList = () => (
         <div className="pharmacies-tab-list">

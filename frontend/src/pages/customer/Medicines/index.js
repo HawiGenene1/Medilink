@@ -25,40 +25,7 @@ const MedicineSearch = () => {
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
     const [searchQuery, setSearchQuery] = useState('');
 
-    const MOCK_MEDICINES = [
-        {
-            id: 'mock-1',
-            name: 'Amoxicillin 500mg',
-            pharmacy: 'Kenema Pharmacy',
-            price: '150 ETB',
-            distance: '0.5 km',
-            stock: 'In Stock',
-            location: { lat: 9.0320, lng: 38.7469 },
-            image: 'https://via.placeholder.com/64?text=AMX'
-        },
-        {
-            id: 'mock-2',
-            name: 'Paracetamol 500mg',
-            pharmacy: 'City Pharma',
-            price: '45 ETB',
-            distance: '1.2 km',
-            stock: 'In Stock',
-            location: { lat: 9.0300, lng: 38.7500 },
-            image: 'https://via.placeholder.com/64?text=PCM'
-        },
-        {
-            id: 'mock-3',
-            name: 'Vitamin C 1000mg',
-            pharmacy: 'Red Cross Store',
-            price: '85 ETB',
-            distance: '2.1 km',
-            stock: 'Limited',
-            location: { lat: 9.0350, lng: 38.7550 },
-            image: 'https://via.placeholder.com/64?text=VIT'
-        }
-    ];
-
-    const [medicines, setMedicines] = useState(MOCK_MEDICINES);
+    const [medicines, setMedicines] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -68,6 +35,7 @@ const MedicineSearch = () => {
                 if (response.data && response.data.success) {
                     const realMedicines = response.data.data.map(m => ({
                         id: m._id,
+                        _id: m._id,
                         name: m.name,
                         pharmacy: m.availableAt?.[0]?.name || 'Local Pharmacy',
                         price: `${m.price?.basePrice || 0} ETB`,
@@ -77,7 +45,7 @@ const MedicineSearch = () => {
                         image: 'https://via.placeholder.com/64?text=MED',
                         realId: m._id
                     }));
-                    setMedicines([...realMedicines, ...MOCK_MEDICINES]);
+                    setMedicines(realMedicines);
                 }
             } catch (error) {
                 console.error("Failed to fetch medicines", error);
@@ -88,7 +56,7 @@ const MedicineSearch = () => {
         fetchMedicines();
     }, []);
 
-    const filteredMedicines = medicines.filter(m =>
+    const filteredMedicines = (medicines || []).filter(m =>
         (m.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.pharmacy || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
