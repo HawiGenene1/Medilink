@@ -1,32 +1,50 @@
-import React from 'react';
-import { Card, Avatar, Typography, Descriptions, Button, Row, Col, Tag, Divider } from 'antd';
-import { UserOutlined, EditOutlined, CarOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Card, Avatar, Typography, Descriptions, Button, Row, Col, Tag, Divider, Modal, Form, Input, message, App } from 'antd';
+import { UserOutlined, EditOutlined, CarOutlined, PhoneOutlined, MailOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
-
 import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 
 const DeliveryProfile = () => {
-    const { user } = useAuth();
-    const [profile, setProfile] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
+    const { user, refreshUser } = useAuth();
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [form] = Form.useForm();
+    const [updating, setUpdating] = useState(false);
 
-    React.useEffect(() => {
-        const fetchProfile = async () => {
-            try {
-                const response = await api.get('/delivery/profile');
-                if (response.data.success) {
-                    setProfile(response.data.data);
-                }
-            } catch (error) {
-                console.error('Error fetching profile:', error);
-            } finally {
-                setLoading(false);
+    const fetchProfile = async () => {
+        try {
+            const response = await api.get('/delivery/profile');
+            if (response.data.success) {
+                setProfile(response.data.data);
             }
-        };
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchProfile();
     }, []);
+
+    const handleUpdate = async (values) => {
+        setUpdating(true);
+        try {
+            await api.put('/users/profile', values);
+            message.success('Profile updated successfully!');
+            setIsEditModalVisible(false);
+            await refreshUser();
+            await fetchProfile();
+        } catch (error) {
+            message.error(error.response?.data?.message || 'Failed to update profile');
+        } finally {
+            setUpdating(false);
+        }
+    };
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
@@ -39,64 +57,157 @@ const DeliveryProfile = () => {
 
             <Row gutter={[24, 24]}>
                 <Col xs={24} md={8}>
-                    <Card style={{ textAlign: 'center', borderRadius: '12px' }}>
+                    <Card style={{ textAlign: 'center', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                         <Avatar
                             size={120}
                             icon={<UserOutlined />}
                             src={user?.avatar}
                             style={{ marginBottom: '16px', backgroundColor: '#1E88E5' }}
                         />
-                        <Title level={3}>{user?.firstName} {user?.lastName}</Title>
+                        <Title level={3} style={{ marginBottom: 0 }}>{user?.firstName} {user?.lastName}</Title>
                         <Text type="secondary">{user?.email}</Text>
                         <br />
-                        <Tag color="green" style={{ marginTop: '12px' }}>ACTIVE RIDER</Tag>
+                        <Tag color="blue" style={{ marginTop: '12px', borderRadius: '4px' }}>VERIFIED PARTNER</Tag>
 
                         <Divider />
 
                         <div style={{ textAlign: 'left' }}>
                             <Descriptions column={1} size="small">
-                                <Descriptions.Item label="Phone">{user?.phone || 'Not set'}</Descriptions.Item>
-                                <Descriptions.Item label="Joined">{formatDate(user?.createdAt)}</Descriptions.Item>
-                                <Descriptions.Item label="Total Deliveries">{profile?.totalDeliveries || 0}</Descriptions.Item>
-                                <Descriptions.Item label="Rating">{profile?.rating || 'New'}</Descriptions.Item>
+                                <Descriptions.Item label={<Text type="secondary">Phone</Text>}>{user?.phone || 'Not set'}</Descriptions.Item>
+                                <Descriptions.Item label={<Text type="secondary">Joined</Text>}>{formatDate(user?.createdAt)}</Descriptions.Item>
+                                <Descriptions.Item label={<Text type="secondary">Deliveries</Text>}>{profile?.totalDeliveries || 0}</Descriptions.Item>
+                                <Descriptions.Item label={<Text type="secondary">Rating</Text>}>
+                                    <Tag color="gold" style={{ border: 'none' }}>★ {profile?.rating || '5.0'}</Tag>
+                                </Descriptions.Item>
                             </Descriptions>
                         </div>
 
-                        <Button type="primary" icon={<EditOutlined />} block style={{ marginTop: '16px' }}>
+                        <Button
+                            type="primary"
+                            icon={<EditOutlined />}
+                            block
+                            style={{ marginTop: '24px', height: '40px', borderRadius: '8px' }}
+                            onClick={() => {
+                                form.setFieldsValue({
+                                    firstName: user?.firstName,
+                                    lastName: user?.lastName,
+                                    phone: user?.phone
+                                });
+                                setIsEditModalVisible(true);
+                            }}
+                        >
                             Edit Profile
                         </Button>
                     </Card>
                 </Col>
 
                 <Col xs={24} md={16}>
-                    <Card title="Vehicle Information" style={{ borderRadius: '12px', marginBottom: '24px' }} extra={<Button type="link">Update</Button>}>
-                        <Row align="middle" gutter={16}>
+                    <Card
+                        title={<><CarOutlined /> Vehicle Information</>}
+                        style={{ borderRadius: '12px', marginBottom: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                        extra={<Button type="link">Update Info</Button>}
+                    >
+                        <Row align="middle" gutter={24}>
                             <Col>
-                                <Avatar size={64} icon={<CarOutlined />} style={{ backgroundColor: '#f0f5ff', color: '#1890ff' }} />
+                                <div style={{
+                                    width: '80px',
+                                    height: '80px',
+                                    background: '#f0f5ff',
+                                    borderRadius: '16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <CarOutlined style={{ fontSize: '32px', color: '#1E88E5' }} />
+                                </div>
                             </Col>
-                            <Col>
+                            <Col flex="1">
                                 <Title level={4} style={{ margin: 0 }}>
-                                    {profile?.vehicleDetails?.make || 'Vehicle'} {profile?.vehicleDetails?.model || ''}
+                                    {profile?.vehicleDetails?.make || 'Standard'} {profile?.vehicleDetails?.model || 'Vehicle'}
                                 </Title>
-                                <Text type="secondary">
-                                    {profile?.vehicleDetails?.type?.toUpperCase() || 'Not Set'} • {profile?.vehicleDetails?.color || 'Color'} • {profile?.vehicleDetails?.licensePlate || 'NO PLATE'}
-                                </Text>
+                                <Space split={<Divider type="vertical" />}>
+                                    <Text type="secondary">{profile?.vehicleDetails?.type?.toUpperCase() || 'DELIVERY'}</Text>
+                                    <Text type="secondary">{profile?.vehicleDetails?.licensePlate || 'NO PLATE'}</Text>
+                                    <Text style={{ color: '#52c41a' }}>Verified</Text>
+                                </Space>
                             </Col>
                         </Row>
                     </Card>
 
-                    <Card title="Personal Details" style={{ borderRadius: '12px' }}>
-                        <Descriptions layout="vertical" bordered>
-                            <Descriptions.Item label="Full Name">{user?.firstName} {user?.lastName}</Descriptions.Item>
-                            <Descriptions.Item label="Email">{user?.email}</Descriptions.Item>
-                            <Descriptions.Item label="Phone Number">{user?.phone}</Descriptions.Item>
-                            <Descriptions.Item label="Date of Birth">15 May 1992</Descriptions.Item>
-                            <Descriptions.Item label="Address">456 Fast Lane, Speed City, CA</Descriptions.Item>
-                            <Descriptions.Item label="Emergency Contact">Speedy Contact (Peer)</Descriptions.Item>
+                    <Card
+                        title="Personal Details"
+                        style={{ borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                    >
+                        <Descriptions layout="vertical" bordered size="middle" column={{ xxl: 3, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }}>
+                            <Descriptions.Item label="First Name">{user?.firstName}</Descriptions.Item>
+                            <Descriptions.Item label="Last Name">{user?.lastName}</Descriptions.Item>
+                            <Descriptions.Item label="Email Address">{user?.email}</Descriptions.Item>
+                            <Descriptions.Item label="Phone Number">{user?.phone || 'N/A'}</Descriptions.Item>
+                            <Descriptions.Item label="Emergency Contact">N/A</Descriptions.Item>
                         </Descriptions>
                     </Card>
                 </Col>
             </Row>
+
+            {/* Edit Profile Modal */}
+            <Modal
+                title="Edit My Profile"
+                open={isEditModalVisible}
+                onCancel={() => setIsEditModalVisible(false)}
+                footer={null}
+                centered
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleUpdate}
+                    style={{ marginTop: '16px' }}
+                >
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="firstName"
+                                label="First Name"
+                                rules={[{ required: true, message: 'Required' }]}
+                            >
+                                <Input prefix={<UserOutlined />} placeholder="First Name" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="lastName"
+                                label="Last Name"
+                                rules={[{ required: true, message: 'Required' }]}
+                            >
+                                <Input prefix={<UserOutlined />} placeholder="Last Name" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Form.Item
+                        name="phone"
+                        label="Phone Number"
+                        rules={[{ required: true, message: 'Required' }]}
+                    >
+                        <Input prefix={<PhoneOutlined />} placeholder="Phone Number" />
+                    </Form.Item>
+
+                    <div style={{ textAlign: 'right', marginTop: '16px' }}>
+                        <Button
+                            style={{ marginRight: '8px' }}
+                            onClick={() => setIsEditModalVisible(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={updating}
+                        >
+                            Save Changes
+                        </Button>
+                    </div>
+                </Form>
+            </Modal>
         </div>
     );
 };
