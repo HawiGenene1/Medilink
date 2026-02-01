@@ -1,50 +1,62 @@
-/* Pharmacies Page Styles */
+/* Pharmacies Page Styles - Premium Redesign */
 .pharmacies-page {
-    height: calc(100vh - 120px);
-    margin: -24px;
-    overflow: hidden;
+    min-height: 100vh;
+    padding-top: 110px;
+    /* Offset for fixed floating navbar */
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
 }
 
 .pharmacies-layout {
     display: flex;
-    height: 100%;
+    flex: 1;
+    max-height: calc(100vh - 110px);
+    overflow: hidden;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.03);
 }
 
 .pharmacy-sidebar {
-    width: 380px;
-    /* background: white; handled by JS */
+    width: 420px;
+    background: white;
     border-right: 1px solid #E2E8F0;
     display: flex;
     flex-direction: column;
     z-index: 10;
-    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.05);
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.04);
 }
 
 .sidebar-header {
-    padding: 24px;
-    /* border-bottom: handled by JS */
+    padding: 32px 24px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-/* ... existing styles ... */
+.pharmacy-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+}
 
 .pharmacy-list-card {
     padding: 20px 24px;
     cursor: pointer;
     transition: all 0.2s ease;
-    /* border-bottom: handled by JS */
+    border-bottom: 1px solid #f9f9f9;
 }
 
-/* .pharmacy-list-card:hover removed - handled by JS/default */
+.pharmacy-list-card:hover {
+    background: #f1f5f9;
+}
 
 .pharmacy-list-card.selected {
-    /* background: handled by JS */
     border-left: 4px solid #1E88E5;
-    /* Keep accent border or move to JS */
+    background: #eff6ff;
 }
 
 .ph-name {
     display: block;
-    font-size: 15px;
+    font-size: 16px;
+    font-weight: 600;
     margin-bottom: 2px;
 }
 
@@ -57,28 +69,18 @@
 .pharmacy-map-area {
     flex: 1;
     position: relative;
-    /* background: #F1F5F9; handled by JS */
 }
 
 .selected-pharmacy-floating-card {
     position: absolute;
-    bottom: 24px;
-    left: 24px;
-    right: 24px;
+    bottom: 32px;
+    left: 32px;
+    right: 32px;
     z-index: 1000;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    border: none;
-}
-
-.map-popup-content {
-    min-width: 180px;
-    padding: 4px;
-}
-
-/* Animations */
-.slide-up {
-    animation: slideUp 0.3s ease-out;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
 }
 
 /* User Location Marker */
@@ -113,15 +115,6 @@
     }
 }
 
-/* Ant Design Range customization */
-.ant-slider-track {
-    background-color: #1E88E5 !important;
-}
-
-.ant-slider-handle::after {
-    box-shadow: 0 0 0 2px #1E88E5 !important;
-}
-
 @keyframes slideUp {
     from {
         transform: translateY(100%);
@@ -131,5 +124,27 @@
     to {
         transform: translateY(0);
         opacity: 1;
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@media (max-width: 992px) {
+    .pharmacy-sidebar {
+        width: 320px;
+    }
+}
+
+@media (max-width: 768px) {
+    .pharmacies-layout {
+        flex-direction: column;
+        max-height: none;
+    }
+
+    .pharmacy-sidebar {
+        width: 100%;
+        height: 50vh;
     }
 }
