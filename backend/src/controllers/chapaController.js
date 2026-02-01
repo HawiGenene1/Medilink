@@ -29,6 +29,10 @@ const initializeChapaPayment = asyncHandler(async (req, res) => {
     }
 
     // Guard: Check for an existing pending payment and reuse its checkout URL if possible
+    // Guard: Check for an existing pending payment and reuse its checkout URL if possible
+    // FIX: We are disabling this reuse logic because Chapa sessions expire. 
+    // If a user retries, we MUST generate a new session reference to avoid "Session Expired" errors.
+    /*
     const pendingPayment = await Payment.findOne({ order: orderId, paymentStatus: 'pending' }).sort({ createdAt: -1 });
     if (pendingPayment && pendingPayment.metadata?.get('checkoutUrl')) {
         return res.status(200).json({
@@ -38,6 +42,7 @@ const initializeChapaPayment = asyncHandler(async (req, res) => {
             message: 'Resuming existing payment session.'
         });
     }
+    */
 
     // Generate unique transaction reference
     const txRef = `TX-${uuidv4()}`;
