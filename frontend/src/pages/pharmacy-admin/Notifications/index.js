@@ -63,7 +63,7 @@ const PharmacyAdminNotifications = () => {
         <div style={{ padding: '24px' }}>
             <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={2}>System Notifications</Title>
+                    <Title level={2}>Notification</Title>
                     <Text type="secondary">Platform alerts and important updates</Text>
                 </div>
                 <Button icon={<CheckCircleOutlined />} onClick={fetchAlerts}>
