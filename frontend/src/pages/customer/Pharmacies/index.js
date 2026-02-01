@@ -55,6 +55,7 @@ const Pharmacies = () => {
     const mapInstance = useRef(null);
     const markersRef = useRef({});
     const userMarkerRef = useRef(null);
+    const radiusCircleRef = useRef(null);
 
     // Fetch Pharmacies
     useEffect(() => {
@@ -144,7 +145,11 @@ const Pharmacies = () => {
                     setUserLocation(pos);
                     setLoadingLocation(false);
                     if (mapInstance.current) {
-                        mapInstance.current.setView(pos, 15);
+                        // Calculate zoom level based on radius
+                        // Radius 1km -> Zoom 15, Radius 20km -> Zoom 11
+                        const zoom = Math.max(11, 15 - Math.floor(radius / 5));
+                        mapInstance.current.setView(pos, zoom);
+
                         if (userMarkerRef.current) {
                             userMarkerRef.current.setLatLng(pos);
                         } else {
@@ -156,6 +161,21 @@ const Pharmacies = () => {
                             userMarkerRef.current = L.marker(pos, { icon: userIcon })
                                 .addTo(mapInstance.current)
                                 .bindPopup("You are here");
+                        }
+
+                        // Update Radius Circle
+                        if (radiusCircleRef.current) {
+                            radiusCircleRef.current.setLatLng(pos);
+                            radiusCircleRef.current.setRadius(radius * 1000);
+                        } else {
+                            radiusCircleRef.current = L.circle(pos, {
+                                radius: radius * 1000,
+                                color: token.colorPrimary,
+                                fillColor: token.colorPrimary,
+                                fillOpacity: 0.1,
+                                weight: 1,
+                                dashArray: '5, 10'
+                            }).addTo(mapInstance.current);
                         }
                     }
                 },
@@ -197,6 +217,9 @@ const Pharmacies = () => {
 
         return () => {
             if (mapInstance.current) {
+                userMarkerRef.current = null;
+                radiusCircleRef.current = null;
+                markersRef.current = {};
                 mapInstance.current.remove();
                 mapInstance.current = null;
             }
@@ -230,6 +253,19 @@ const Pharmacies = () => {
             if (marker) marker.openPopup();
         }
     }, [selectedPharmacy]);
+
+    // Handle Radius Change on Map
+    useEffect(() => {
+        if (userLocation && radiusCircleRef.current) {
+            radiusCircleRef.current.setRadius(radius * 1000);
+
+            // Optionally adjust zoom when radius changes significantly
+            if (mapInstance.current) {
+                const zoom = Math.max(11, 15 - Math.floor(radius / 5));
+                mapInstance.current.setZoom(zoom);
+            }
+        }
+    }, [radius]);
 
     const resetFilters = () => {
         setSearchQuery('');

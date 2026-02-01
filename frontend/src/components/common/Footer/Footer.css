@@ -2,7 +2,7 @@
 .footer-section {
   background: #f8f9fa;
   /* Light Gray Background */
-  padding: 30px 0 10px;
+  padding: 15px 0 5px;
   border-top: 1px solid #e9ecef;
   margin-top: auto;
 }
@@ -68,8 +68,8 @@
 }
 
 .footer-bottom {
-  margin-top: 30px;
-  padding-top: 20px;
+  margin-top: 15px;
+  padding-top: 10px;
   border-top: 1px solid #e9ecef;
   display: flex;
   justify-content: space-between;

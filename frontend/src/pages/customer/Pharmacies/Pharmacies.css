@@ -1,8 +1,8 @@
 /* Pharmacies Page Styles - Premium Redesign */
 .pharmacies-page {
     min-height: 100vh;
-    padding-top: 110px;
-    /* Offset for fixed floating navbar */
+    padding-top: 80px;
+    /* Offset for fixed floating navbar - reduced */
     background: #f8f9fa;
     display: flex;
     flex-direction: column;
@@ -11,10 +11,11 @@
 .pharmacies-layout {
     display: flex;
     flex: 1;
-    max-height: calc(100vh - 110px);
+    max-height: calc(100vh - 80px);
     overflow: hidden;
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.03);
 }
+
 
 .pharmacy-sidebar {
     width: 420px;
