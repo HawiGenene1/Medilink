@@ -60,7 +60,7 @@ const CashierDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 8, total: 0 });
   const [soundEnabled, setSoundEnabled] = useState(user?.settings?.notificationsEnabled ?? true);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(user?.settings?.autoRefresh ?? true);
 
   // Sync activeTab with URL
   useEffect(() => {
@@ -634,6 +634,7 @@ const CashierDashboard = () => {
                                 const res = await updateProfile({
                                   settings: {
                                     notificationsEnabled: soundEnabled,
+                                    autoRefresh: autoRefreshEnabled,
                                     theme: 'light'
                                   }
                                 });

@@ -109,6 +109,10 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ['light', 'dark'],
       default: 'light'
+    },
+    autoRefresh: {
+      type: Boolean,
+      default: true
     }
   },
   resetToken: { type: String, default: null },
