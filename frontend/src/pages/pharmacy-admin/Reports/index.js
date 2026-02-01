@@ -269,7 +269,7 @@ const Reports = () => {
                                                     cx="50%"
                                                     cy="50%"
                                                     outerRadius={100}
-                                                    label={(entry) => entry._id}
+                                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                                                 >
                                                     {reportData.geographic.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={['#1890ff', '#722ed1', '#13c2c2', '#52c41a', '#faad14', '#f5222d'][index % 6]} />
@@ -288,7 +288,9 @@ const Reports = () => {
                                         renderItem={item => (
                                             <List.Item>
                                                 <Text>{item._id || 'Unknown'}</Text>
-                                                <Text type="secondary">{item.count} pharmacies</Text>
+                                                <Text type="secondary">
+                                                    {((item.count / (reportData.overview?.totalPharmacies || 1)) * 100).toFixed(1)}% ({item.count})
+                                                </Text>
                                             </List.Item>
                                         )}
                                     />
