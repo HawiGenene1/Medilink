@@ -385,14 +385,20 @@ const updatePharmacyStatus = async (req, res) => {
         pharmacy.isActive = isActive;
         await pharmacy.save();
 
-        // Send notification email
+        // Send notification email (non-blocking, don't wait for it)
         const action = isActive ? 'activated' : 'suspended';
-        await sendEmail({
+
+        // Send email in background - don't await it
+        sendEmail({
             to: pharmacy.email,
             subject: `Pharmacy Account ${action.charAt(0).toUpperCase() + action.slice(1)}`,
             text: `Dear ${pharmacy.ownerName},\n\nYour pharmacy account has been ${action}.\n\n${reason ? `Reason: ${reason}\n\n` : ''}If you have any questions, please contact our support team.\n\nBest regards,\nMediLink Team`
+        }).catch(err => {
+            // Log email error but don't block the response
+            logger.error('Error sending status notification email:', err);
         });
 
+        // Respond immediately without waiting for email
         res.json({
             success: true,
             message: `Pharmacy ${action} successfully`,
