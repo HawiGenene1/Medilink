@@ -13,8 +13,8 @@ const invoiceSchema = new mongoose.Schema({
     },
     payment: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Payment',
-        required: true
+        ref: 'Payment'
+        // Not required - cash orders might not have Payment record immediately
     },
     customer: {
         type: mongoose.Schema.Types.ObjectId,
