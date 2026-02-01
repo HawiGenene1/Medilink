@@ -83,10 +83,10 @@ const Footer = () => {
         </Row>
 
         <div className="footer-bottom">
-          <Text type="secondary">© 2024 MediLink. All Rights Reserved.</Text>
+          <Text type="secondary">© 2026 MediLink. All Rights Reserved.</Text>
           <div className="trust-badges">
             {/* Placeholders for trust badges */}
-            <Text type="secondary" style={{ fontSize: '12px' }}>Secure Payments by Telebirr & CBE</Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>Secure Payments by Chapa</Text>
           </div>
         </div>
       </div>
