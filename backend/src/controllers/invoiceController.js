@@ -2,7 +2,6 @@ const Invoice = require('../models/Invoice');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 
-/**
 const { generateReceiptPDF } = require('../utils/pdfGenerator');
 
 /**
@@ -19,7 +18,7 @@ exports.generateInvoice = async (orderId) => {
         if (existingInvoice) return existingInvoice;
 
         // Find associated payment
-        const payment = await Payment.findOne({ order: orderId, status: 'success' });
+        const payment = await Payment.findOne({ order: orderId, paymentStatus: 'completed' });
         // If payment not found, strict check:
         // if (!payment) throw new Error('Successful payment not found for this order');
 
@@ -69,19 +68,19 @@ exports.generateInvoice = async (orderId) => {
             pdfUrl: null
         });
 
-        // Generate PDF
-        // Using invoice number if available or generate one first
-        // Model pre-save hooks generate invoiceNumber, so we might need to save first or generate manually?
-        // Let's generate a temp number or rely on model. 
-        // Better: Save first to get Invoice Number, then Generate PDF, then Update.
-
         await invoice.save();
 
-        // Now generate PDF using the real invoice number
-        const pdfPath = await generateReceiptPDF(receiptData, invoice.invoiceNumber);
-
-        invoice.pdfUrl = pdfPath;
-        await invoice.save();
+        // Try to generate PDF (optional - don't fail if Puppeteer isn't installed)
+        try {
+            const pdfPath = await generateReceiptPDF(receiptData, invoice.invoiceNumber);
+            if (pdfPath) {
+                invoice.pdfUrl = pdfPath;
+                await invoice.save();
+            }
+        } catch (pdfError) {
+            console.error('PDF generation failed (non-critical):', pdfError.message);
+            // Continue without PDF - invoice is still valid
+        }
 
         return invoice;
     } catch (error) {
