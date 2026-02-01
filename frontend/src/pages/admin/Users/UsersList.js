@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table, Card, Button, Input, Select, Tag,
-    Space, Tooltip, Dropdown, Modal, message, Typography
+    Space, Tooltip, Dropdown, Modal, message, Typography, Avatar
 } from 'antd';
 import {
     SearchOutlined,
@@ -11,42 +11,101 @@ import {
     ExportOutlined,
     StopOutlined,
     CheckCircleOutlined,
-    EditOutlined
+    EditOutlined,
+    ReloadOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import adminService from '../../../services/api/admin';
 
 const { Option } = Select;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const UsersList = () => {
     const navigate = useNavigate();
-    const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+    const [pagination, setPagination] = useState({
+        current: 1,
+        pageSize: 10,
+        total: 0
+    });
+    const [filters, setFilters] = useState({
+        role: undefined,
+        status: undefined,
+        search: ''
+    });
 
-    // Mock Data
-    const dataSource = Array.from({ length: 46 }).map((_, i) => ({
-        key: i,
-        name: `User ${i}`,
-        email: `user${i}@medilink.com`,
-        role: i % 3 === 0 ? 'Admin' : (i % 2 === 0 ? 'Pharmacy Owner' : 'Customer'),
-        status: i % 10 === 0 ? 'Disabled' : 'Active',
-        lastLogin: '2 mins ago',
-        location: 'Addis Ababa'
-    }));
+    const fetchUsers = useCallback(async (page = 1, pageSize = 10, currentFilters = filters) => {
+        try {
+            setLoading(true);
+            const params = {
+                page,
+                limit: pageSize,
+                role: currentFilters.role,
+                status: currentFilters.status,
+                search: currentFilters.search
+            };
+            const response = await adminService.getAllUsers(params);
+            if (response.success) {
+                setUsers(response.data.map(u => ({
+                    ...u,
+                    key: u._id,
+                    name: `${u.firstName} ${u.lastName}`,
+                    lastLogin: u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never',
+                    location: u.city || 'N/A'
+                })));
+                setPagination({
+                    ...pagination,
+                    current: page,
+                    total: response.count
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            message.error('Failed to load users');
+        } finally {
+            setLoading(false);
+        }
+    }, [filters, pagination]);
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const handleTableChange = (newPagination, tableFilters, sorter) => {
+        fetchUsers(newPagination.current, newPagination.pageSize);
+    };
+
+    const handleFilterChange = (value, type) => {
+        const newFilters = { ...filters, [type]: value };
+        setFilters(newFilters);
+        fetchUsers(1, pagination.pageSize, newFilters);
+    };
+
+    const handleSearch = (e) => {
+        const value = e.target.value;
+        const newFilters = { ...filters, search: value };
+        setFilters(newFilters);
+        // Debounce search in real apps, for now simple:
+        if (value.length > 2 || value.length === 0) {
+            fetchUsers(1, pagination.pageSize, newFilters);
+        }
+    };
 
     const columns = [
         {
-            title: 'Name',
+            title: 'User',
             dataIndex: 'name',
             key: 'name',
             render: (text, record) => (
                 <Space>
-                    <div style={{ width: 32, height: 32, background: '#f0f0f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {text.charAt(0)}
-                    </div>
+                    <Avatar src={record.profileImage} style={{ backgroundColor: '#1E88E5' }}>
+                        {record.firstName?.charAt(0)}
+                    </Avatar>
                     <div>
-                        <div style={{ fontWeight: 500 }}>{text}</div>
-                        <div style={{ fontSize: '12px', color: '#888' }}>{record.email}</div>
+                        <div style={{ fontWeight: 600 }}>{text}</div>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>{record.email}</Text>
                     </div>
                 </Space>
             )
@@ -55,28 +114,32 @@ const UsersList = () => {
             title: 'Role',
             dataIndex: 'role',
             key: 'role',
-            filters: [
-                { text: 'Admin', value: 'Admin' },
-                { text: 'Pharmacy Owner', value: 'Pharmacy Owner' },
-                { text: 'Customer', value: 'Customer' },
-            ],
-            onFilter: (value, record) => record.role === value,
             render: role => {
-                let color = 'blue';
-                if (role === 'Admin') color = 'purple';
-                if (role === 'Pharmacy Owner') color = 'green';
-                return <Tag color={color}>{role}</Tag>;
+                const colors = {
+                    admin: 'purple',
+                    pharmacy_admin: 'green',
+                    cashier: 'blue',
+                    delivery: 'orange',
+                    customer: 'cyan'
+                };
+                return <Tag color={colors[role] || 'default'}>{role?.replace('_', ' ').toUpperCase()}</Tag>;
             }
         },
         {
             title: 'Status',
-            dataIndex: 'status',
-            key: 'status',
-            render: status => (
-                <Tag color={status === 'Active' ? 'success' : 'error'} icon={status === 'Active' ? <CheckCircleOutlined /> : <StopOutlined />}>
-                    {status}
+            dataIndex: 'isActive',
+            key: 'isActive',
+            render: isActive => (
+                <Tag color={isActive ? 'success' : 'error'} icon={isActive ? <CheckCircleOutlined /> : <StopOutlined />}>
+                    {isActive ? 'Active' : 'Disabled'}
                 </Tag>
             )
+        },
+        {
+            title: 'Joined',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            render: date => new Date(date).toLocaleDateString()
         },
         {
             title: 'Last Login',
@@ -84,23 +147,18 @@ const UsersList = () => {
             key: 'lastLogin',
         },
         {
-            title: 'Location',
-            dataIndex: 'location',
-            key: 'location',
-        },
-        {
             title: 'Action',
             key: 'action',
             render: (_, record) => (
                 <Space size="small">
                     <Tooltip title="View Details">
-                        <Button type="link" size="small" onClick={() => navigate(`/admin/users/${record.key}`)}>View</Button>
+                        <Button type="link" size="small" onClick={() => navigate(`/admin/users/${record._id}`)}>View</Button>
                     </Tooltip>
                     <Dropdown
                         menu={{
                             items: [
                                 { key: 'edit', label: 'Edit Role', icon: <EditOutlined /> },
-                                { key: 'disable', label: 'Disable Account', icon: <StopOutlined />, danger: true },
+                                { key: 'status', label: record.isActive ? 'Disable' : 'Enable', icon: <StopOutlined />, danger: record.isActive },
                             ]
                         }}
                     >
@@ -111,56 +169,80 @@ const UsersList = () => {
         },
     ];
 
-    const onSelectChange = (newSelectedRowKeys) => {
-        setSelectedRowKeys(newSelectedRowKeys);
-    };
-
     const rowSelection = {
         selectedRowKeys,
-        onChange: onSelectChange,
-    };
-
-    const handleBulkAction = (action) => {
-        message.success(`${action} applied to ${selectedRowKeys.length} users`);
-        setSelectedRowKeys([]);
+        onChange: (keys) => setSelectedRowKeys(keys),
     };
 
     return (
-        <div className="users-list-page">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-                <Title level={2}>User Management</Title>
-                <Button type="primary" icon={<UserAddOutlined />}>Create User</Button>
+        <div className="users-list-page fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, alignItems: 'center' }}>
+                <div>
+                    <Title level={2} style={{ marginBottom: 0 }}>User Directory</Title>
+                    <Text type="secondary">Manage platform accounts and permissions</Text>
+                </div>
+                <Space>
+                    <Button icon={<ReloadOutlined />} onClick={() => fetchUsers(pagination.current)}>Refresh</Button>
+                    <Button type="primary" icon={<UserAddOutlined />} className="premium-btn">Create User</Button>
+                </Space>
             </div>
 
-            <Card bordered={false}>
-                {/* Filters Bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 16 }}>
-                    <Space>
-                        <Input placeholder="Search users..." prefix={<SearchOutlined />} style={{ width: 250 }} />
-                        <Select placeholder="Filter by Status" style={{ width: 150 }} allowClear>
-                            <Option value="active">Active</Option>
-                            <Option value="disabled">Disabled</Option>
+            <Card bordered={false} className="premium-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
+                    <Space size="middle">
+                        <Input
+                            placeholder="Name, email, or phone..."
+                            prefix={<SearchOutlined />}
+                            style={{ width: 300 }}
+                            onChange={handleSearch}
+                            allowClear
+                        />
+                        <Select
+                            placeholder="All Roles"
+                            style={{ width: 160 }}
+                            allowClear
+                            onChange={(v) => handleFilterChange(v, 'role')}
+                        >
+                            <Option value="admin">System Admin</Option>
+                            <Option value="pharmacy_admin">Pharmacy Admin</Option>
+                            <Option value="cashier">Cashier</Option>
+                            <Option value="delivery">Delivery</Option>
+                            <Option value="customer">Customer</Option>
                         </Select>
-                        <Button icon={<FilterOutlined />}>More Filters</Button>
+                        <Select
+                            placeholder="Status"
+                            style={{ width: 120 }}
+                            allowClear
+                            onChange={(v) => handleFilterChange(v, 'status')}
+                        >
+                            <Option value="active">Active</Option>
+                            <Option value="inactive">Disabled</Option>
+                        </Select>
                     </Space>
 
                     <Space>
                         {selectedRowKeys.length > 0 && (
                             <Space>
-                                <Button onClick={() => handleBulkAction('Activate')}>Activate</Button>
-                                <Button danger onClick={() => handleBulkAction('Disable')}>Disable</Button>
+                                <Button>Activate</Button>
+                                <Button danger>Disable</Button>
                             </Space>
                         )}
-                        <Button icon={<ExportOutlined />}>Export CSV</Button>
+                        <Button icon={<ExportOutlined />}>Export</Button>
                     </Space>
                 </div>
 
                 <Table
                     rowSelection={rowSelection}
                     columns={columns}
-                    dataSource={dataSource}
+                    dataSource={users}
                     loading={loading}
-                    pagination={{ pageSize: 10, showSizeChanger: true }}
+                    pagination={{
+                        ...pagination,
+                        showSizeChanger: true,
+                        showTotal: (total) => `Total ${total} users`
+                    }}
+                    onChange={handleTableChange}
+                    className="medilink-table"
                 />
             </Card>
         </div>

@@ -10,7 +10,8 @@ const {
   approveRegistration,
   rejectRegistration,
   bulkExportData,
-  createDeliveryPerson
+  createDeliveryPerson,
+  getDashboardStats
 } = require('../controllers/adminController');
 const { logAdminAction } = require('../middleware/auditMiddleware');
 
@@ -68,13 +69,7 @@ router.post('/delivery-person', logAdminAction('CREATE_DELIVERY_PERSON', 'User')
 router.post('/data/export', logAdminAction('TRIGGER_EXPORT', 'System'), bulkExportData); // Mapped triggerExport -> bulkExportData
 
 // Analytics
-// const {
-//   getDashboardStats,
-//   getGrowthMetrics,
-//   getPharmacyPerformance
-// } = require('../controllers/admin/analyticsController'); // TODO: Implement Analytics
-
-// router.get('/analytics/dashboard', getDashboardStats);
+router.get('/analytics/dashboard', getDashboardStats);
 // router.get('/analytics/growth', getGrowthMetrics);
 // router.get('/analytics/pharmacies', getPharmacyPerformance);
 

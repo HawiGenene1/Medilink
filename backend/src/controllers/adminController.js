@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Pharmacy = require('../models/Pharmacy');
+const Order = require('../models/Order');
+const Medicine = require('../models/Medicine');
 const PendingPharmacy = require('../models/PendingPharmacy');
 const PendingDeliveryPerson = require('../models/PendingDeliveryPerson');
 const AuditLog = require('../models/AuditLog');
@@ -1089,6 +1091,112 @@ const createDeliveryPerson = async (req, res) => {
 // @desc    Bulk export data
 // @route   POST /api/admin/export
 // @access  Private/Admin
+// @desc    Get Admin Dashboard Statistics
+// @route   GET /api/admin/analytics/dashboard
+// @access  Private/Admin
+const getDashboardStats = async (req, res) => {
+  try {
+    // 1. Get counts
+    const totalUsers = await User.countDocuments({ role: 'customer' });
+    const totalPharmacies = await Pharmacy.countDocuments();
+    const totalOrders = await Order.countDocuments();
+
+    // 2. Calculate Total Revenue
+    const revenueData = await Order.aggregate([
+      { $match: { status: 'delivered' } },
+      { $group: { _id: null, total: { $sum: '$finalAmount' } } }
+    ]);
+    const totalRevenue = revenueData.length > 0 ? revenueData[0].total : 0;
+
+    // 2.1 Calculate Weekly Revenue Trend
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
+
+    const weeklyRevenue = await Order.aggregate([
+      { $match: { status: 'delivered', createdAt: { $gte: last7Days } } },
+      {
+        $group: {
+          _id: { $dayOfWeek: '$createdAt' },
+          amount: { $sum: '$finalAmount' }
+        }
+      },
+      { $sort: { '_id': 1 } }
+    ]);
+
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const formattedWeeklyRevenue = weeklyRevenue.map(item => ({
+      name: dayNames[item._id - 1],
+      revenue: item.amount
+    }));
+
+    // 3. Get User Growth (Last 7 months)
+    const sevenMonthsAgo = new Date();
+    sevenMonthsAgo.setMonth(sevenMonthsAgo.getMonth() - 7);
+
+    const userGrowth = await User.aggregate([
+      { $match: { createdAt: { $gte: sevenMonthsAgo } } },
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id': 1 } }
+    ]);
+
+    // Format userGrowth for frontend
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const formattedGrowth = userGrowth.map(item => ({
+      name: monthNames[item._id - 1],
+      users: item.count
+    }));
+
+    // 4. Get Order Status Distribution
+    const orderStatus = await Order.aggregate([
+      { $group: { _id: '$status', value: { $sum: 1 } } }
+    ]);
+    const formattedOrderStatus = orderStatus.map(item => ({
+      name: item._id.charAt(0).toUpperCase() + item._id.slice(1),
+      value: item.value
+    }));
+
+    // 5. Real System Alerts (Latest 5 Audit Logs)
+    const latestLogs = await AuditLog.find()
+      .populate('user', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    const recentAlerts = latestLogs.map(log => ({
+      id: log._id,
+      type: log.action === 'DELETE' || log.action === 'BLOCK' ? 'critical' : (log.action === 'REJECT' ? 'warning' : 'info'),
+      message: `${log.action}: ${log.description}`,
+      time: new Date(log.createdAt).toLocaleTimeString(),
+      fullTime: log.createdAt
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        stats: {
+          totalUsers,
+          activePharmacies: totalPharmacies,
+          totalOrders,
+          totalRevenue,
+          healthScore: 98 // Still mock for now, but can be derived from success/fail audits
+        },
+        userGrowth: formattedGrowth,
+        orderStatus: formattedOrderStatus,
+        weeklyRevenue: formattedWeeklyRevenue,
+        alerts: recentAlerts
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 const bulkExportData = async (req, res) => {
   try {
     const { type, format = 'json', filters = {} } = req.body;
@@ -1177,5 +1285,6 @@ module.exports = {
   bulkBlockPharmacies,
   bulkApprovePharmacies,
   bulkExportData,
-  createDeliveryPerson
+  createDeliveryPerson,
+  getDashboardStats
 };

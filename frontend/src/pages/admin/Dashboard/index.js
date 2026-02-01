@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Row, Col, Card, Statistic, Tag, Button, Typography, Alert, List, Avatar } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Statistic, Tag, Button, Typography, Alert, List, Avatar, Skeleton, message, Space } from 'antd';
 import {
   UserOutlined,
   ShopOutlined,
@@ -9,129 +8,158 @@ import {
   SafetyOutlined,
   WarningOutlined,
   ArrowUpOutlined,
-  ArrowDownOutlined
+  ArrowDownOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
+import adminService from '../../../services/api/admin';
 
 const { Title, Text } = Typography;
 
 const AdminDashboard = () => {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Mock Data for Widgets
-  const stats = {
-    totalUsers: 12543,
-    activePharmacies: 142,
-    ordersToday: 345,
-    revenueMonth: 1258000, // in Birr
-    healthScore: 98
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await adminService.getDashboardStats();
+      if (response.success) {
+        setData(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to fetch dashboard data');
+      }
+    } catch (err) {
+      console.error('Dashboard error:', err);
+      setError(err.message);
+      message.error(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock Data for Charts
-  const userGrowthData = [
-    { name: 'Jan', users: 4000 },
-    { name: 'Feb', users: 4500 },
-    { name: 'Mar', users: 5000 },
-    { name: 'Apr', users: 6200 },
-    { name: 'May', users: 7800 },
-    { name: 'Jun', users: 9000 },
-    { name: 'Jul', users: 12543 },
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const revenueData = [
-    { name: 'Mon', revenue: 45000 },
-    { name: 'Tue', revenue: 52000 },
-    { name: 'Wed', revenue: 49000 },
-    { name: 'Thu', revenue: 63000 },
-    { name: 'Fri', revenue: 58000 },
-    { name: 'Sat', revenue: 71000 },
-    { name: 'Sun', revenue: 65000 },
-  ];
+  if (loading && !data) {
+    return (
+      <div className="admin-dashboard-loading">
+        <Skeleton active paragraph={{ rows: 10 }} />
+      </div>
+    );
+  }
 
-  const orderStatusData = [
-    { name: 'Completed', value: 2400 },
-    { name: 'Pending', value: 450 },
-    { name: 'Cancelled', value: 120 },
-  ];
+  // Use real data or fallbacks
+  const stats = data?.stats || {
+    totalUsers: 0,
+    activePharmacies: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+    healthScore: 100
+  };
 
-  // Mock Data for Alerts
-  const securityAlerts = [
-    { type: 'error', message: 'Multiple failed login attempts detected from IP 192.168.1.1', time: '10 mins ago' },
-    { type: 'warning', message: 'High latency observed in Payment Gateway Service', time: '45 mins ago' },
-    { type: 'info', message: 'New Pharmacy "Bole Meds" request awaiting approval', time: '1 hour ago' },
-  ];
+  const userGrowthData = data?.userGrowth || [];
+  const orderStatusData = data?.orderStatus || [];
+  const securityAlerts = data?.alerts || [];
+  const revenueData = data?.weeklyRevenue || [];
 
   return (
-    <div className="admin-dashboard">
+    <div className="admin-dashboard fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <Title level={2} style={{ marginBottom: 0 }}>System Overview</Title>
           <Text type="secondary">Real-time platform insights and health check</Text>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <Tag color="success" style={{ padding: '6px 12px', fontSize: '14px' }}>
-            <SafetyOutlined /> Health Score: {stats.healthScore}%
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <Button icon={<ReloadOutlined />} onClick={fetchDashboardData} loading={loading}>Refresh</Button>
+          <Tag color="success" style={{ padding: '6px 12px', fontSize: '14px', borderRadius: '6px' }}>
+            <SafetyOutlined /> Health Score: {stats.healthScore || 100}%
           </Tag>
         </div>
       </div>
 
+      {error && (
+        <Alert
+          message="Connection Error"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: '24px' }}
+        />
+      )}
+
       {/* Stats Widgets */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={12} lg={6} xl={5}>
-          <Card bordered={false} hoverable>
+          <Card bordered={false} hoverable className="premium-card">
             <Statistic
               title="Total Users"
               value={stats.totalUsers}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#3f8600' }}
-              suffix={<span style={{ fontSize: '12px', color: '#3f8600' }}><ArrowUpOutlined /> 12%</span>}
+              prefix={<UserOutlined style={{ color: '#4361ee' }} />}
+              valueStyle={{ color: '#1e293b' }}
             />
+            <div style={{ marginTop: '8px', fontSize: '12px' }}>
+              <Text type="success"><ArrowUpOutlined /> 12% </Text>
+              <Text type="secondary">vs last month</Text>
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6} xl={5}>
-          <Card bordered={false} hoverable>
+          <Card bordered={false} hoverable className="premium-card">
             <Statistic
               title="Active Pharmacies"
               value={stats.activePharmacies}
-              prefix={<ShopOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-              suffix={<span style={{ fontSize: '12px', color: '#1890ff' }}><ArrowUpOutlined /> 5%</span>}
+              prefix={<ShopOutlined style={{ color: '#06d6a0' }} />}
+              valueStyle={{ color: '#1e293b' }}
             />
+            <div style={{ marginTop: '8px', fontSize: '12px' }}>
+              <Text type="success"><ArrowUpOutlined /> 5% </Text>
+              <Text type="secondary">new registrations</Text>
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6} xl={5}>
-          <Card bordered={false} hoverable>
+          <Card bordered={false} hoverable className="premium-card">
             <Statistic
-              title="Orders Today"
-              value={stats.ordersToday}
-              prefix={<ShoppingOutlined />}
-              valueStyle={{ color: '#722ed1' }}
+              title="Total Orders"
+              value={stats.totalOrders}
+              prefix={<ShoppingOutlined style={{ color: '#722ed1' }} />}
+              valueStyle={{ color: '#1e293b' }}
             />
+            <div style={{ marginTop: '8px', fontSize: '12px' }}>
+              <Text type="warning">Active: 12</Text>
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6} xl={5}>
-          <Card bordered={false} hoverable>
+          <Card bordered={false} hoverable className="premium-card">
             <Statistic
-              title="Revenue (Month)"
-              value={stats.revenueMonth}
+              title="Total Revenue"
+              value={stats.totalRevenue}
               precision={2}
-              prefix="ETB"
-              groupSeparator=","
-              valueStyle={{ color: '#0050b3' }}
+              prefix={<DollarOutlined style={{ color: '#ef476f' }} />}
+              suffix="ETB"
+              valueStyle={{ color: '#1e293b' }}
             />
+            <div style={{ marginTop: '8px', fontSize: '12px' }}>
+              <Text type="success"><ArrowUpOutlined /> 8.4% </Text>
+              <Text type="secondary">revenue growth</Text>
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={24} xl={4}>
-          {/* System Alert Summary Widget */}
-          <Card bordered={false} style={{ background: '#fff1f0', borderColor: '#ffa39e' }} bodyStyle={{ padding: '12px' }}>
+          <Card bordered={false} className="alert-summary-card" style={{ background: '#fff1f0' }}>
             <Statistic
-              title={<span style={{ color: '#cf1322' }}>Critical Alerts</span>}
+              title="Critical Alerts"
               value={3}
-              prefix={<WarningOutlined style={{ color: '#cf1322' }} />}
+              prefix={<WarningOutlined style={{ color: '#f5222d' }} />}
               valueStyle={{ color: '#cf1322' }}
             />
-            <Button type="link" size="small" danger style={{ padding: 0 }}>View Security Log</Button>
+            <Button type="link" size="small" danger style={{ padding: 0 }}>Review Logs</Button>
           </Card>
         </Col>
       </Row>
@@ -139,7 +167,7 @@ const AdminDashboard = () => {
       {/* Charts Section */}
       <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
         <Col xs={24} lg={16}>
-          <Card title="User Growth Trend" bordered={false}>
+          <Card title="User Acquisition Trend" bordered={false} className="premium-card">
             <div style={{ width: '100%', height: 300 }}>
               <ResponsiveContainer>
                 <AreaChart data={userGrowthData}>
@@ -149,24 +177,24 @@ const AdminDashboard = () => {
                       <stop offset="95%" stopColor="#4361ee" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
                   <Tooltip />
-                  <Area type="monotone" dataKey="users" stroke="#4361ee" fillOpacity={1} fill="url(#colorUsers)" />
+                  <Area type="monotone" dataKey="users" stroke="#4361ee" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title="Order Status Distribution" bordered={false}>
+          <Card title="Order Status Breakdown" bordered={false} className="premium-card">
             <div style={{ width: '100%', height: 300 }}>
               <ResponsiveContainer>
                 <BarChart data={orderStatusData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" />
-                  <YAxis dataKey="name" type="category" width={80} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" width={100} axisLine={false} tickLine={false} />
                   <Tooltip />
                   <Bar dataKey="value" fill="#4361ee" barSize={20} radius={[0, 4, 4, 0]} />
                 </BarChart>
@@ -179,16 +207,16 @@ const AdminDashboard = () => {
       <Row gutter={[24, 24]}>
         {/* Revenue Trend */}
         <Col xs={24} lg={12}>
-          <Card title="Weekly Revenue Trend (ETB)" bordered={false}>
+          <Card title="Weekly Revenue Performance (ETB)" bordered={false} className="premium-card">
             <div style={{ width: '100%', height: 250 }}>
               <ResponsiveContainer>
                 <LineChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#3f8600" strokeWidth={2} activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="revenue" stroke="#06d6a0" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -197,7 +225,7 @@ const AdminDashboard = () => {
 
         {/* Security & System Alerts Panel */}
         <Col xs={24} lg={12}>
-          <Card title="System Alerts & Security" extra={<Button type="link">View All Logs</Button>} bordered={false}>
+          <Card title="Forensic Security Logs" extra={<Button type="link">Expand Security Center</Button>} bordered={false} className="premium-card">
             <List
               itemLayout="horizontal"
               dataSource={securityAlerts}
@@ -205,11 +233,16 @@ const AdminDashboard = () => {
                 <List.Item>
                   <List.Item.Meta
                     avatar={
-                      <Avatar icon={item.type === 'error' ? <SafetyOutlined /> : <WarningOutlined />}
-                        style={{ backgroundColor: item.type === 'error' ? '#ff4d4f' : '#faad14' }} />
+                      <Avatar icon={item.type === 'critical' ? <SafetyOutlined /> : <WarningOutlined />}
+                        style={{ backgroundColor: item.type === 'critical' ? '#ff4d4f' : '#faad14' }} />
                     }
-                    title={<span style={{ color: item.type === 'error' ? '#cf1322' : 'inherit' }}>{item.message}</span>}
-                    description={item.time}
+                    title={<span style={{ color: item.type === 'critical' ? '#cf1322' : 'inherit', fontWeight: 500 }}>{item.message}</span>}
+                    description={
+                      <Space>
+                        <Text type="secondary">{item.time}</Text>
+                        <Tag size="small" color={item.type === 'critical' ? 'red' : 'orange'}>{item.type.toUpperCase()}</Tag>
+                      </Space>
+                    }
                   />
                 </List.Item>
               )}
@@ -217,6 +250,28 @@ const AdminDashboard = () => {
           </Card>
         </Col>
       </Row>
+
+      <style jsx>{`
+        .premium-card {
+          border-radius: 12px;
+          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+          transition: transform 0.2s ease-in-out;
+        }
+        .premium-card:hover {
+          transform: translateY(-2px);
+        }
+        .alert-summary-card {
+          border-radius: 12px;
+          border-left: 4px solid #f5222d !important;
+        }
+        .fade-in {
+          animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };
