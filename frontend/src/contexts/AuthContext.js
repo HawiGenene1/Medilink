@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       if (email.includes('admin')) role = 'admin';
       if (email.includes('cashier')) role = 'cashier';
       if (email.includes('delivery')) role = 'delivery';
-      if (email.includes('owner')) role = 'PHARMACY_OWNER';
+      if (email.includes('owner') || email.includes('pharmacy')) role = 'PHARMACY_OWNER';
       if (email.includes('staff')) role = 'staff';
 
       // Restore operational permissions from localStorage if available
@@ -110,17 +110,20 @@ export const AuthProvider = ({ children }) => {
         operationalPermissions = {};
       }
 
+      // Create a dummy JWT with the role encoded
+      const STABLE_MOCK_PHARMACY_ID = '65a7d5c9f1a2b3c4d5e6f701';
+      const mockToken = `header.${btoa(JSON.stringify({ email, role }))}.signature`;
+
       const mockUser = {
         _id: 'mock-user-' + role,
         email,
         firstName: role.toUpperCase(),
         lastName: 'User',
         role: role,
+        pharmacyId: STABLE_MOCK_PHARMACY_ID,
+        pharmacyName: 'MediLink Demo Pharmacy',
         operationalPermissions: operationalPermissions
       };
-
-      // Create a dummy JWT with the role encoded
-      const mockToken = `header.${btoa(JSON.stringify({ email, role }))}.signature`;
 
       setUser(mockUser);
       setIsAuthenticated(true);

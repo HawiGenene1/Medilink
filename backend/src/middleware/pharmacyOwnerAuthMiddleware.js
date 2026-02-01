@@ -6,7 +6,7 @@ const asyncHandler = require('./async');
 const ErrorResponse = require('../utils/errorResponse');
 
 // Stable mock IDs for development
-const STABLE_MOCK_PHARMACY_ID = '507f1f77bcf86cd799439011';
+const STABLE_MOCK_PHARMACY_ID = '65a7d5c9f1a2b3c4d5e6f701';
 const STABLE_MOCK_OWNER_ID = '507f191e810c19729de160e1';
 
 /**

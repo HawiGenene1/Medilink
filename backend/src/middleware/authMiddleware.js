@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const PharmacyStaff = require("../models/PharmacyStaff");
 const PharmacyOwner = require("../models/PharmacyOwner");
@@ -27,16 +28,46 @@ const protect = async (req, res, next) => {
         const payloadJson = Buffer.from(payloadBase64, 'base64').toString();
         const decoded = JSON.parse(payloadJson);
 
+        const STABLE_MOCK_PHARMACY_ID = '65a7d5c9f1a2b3c4d5e6f701';
         const user = await User.findOne({ email: decoded.email });
-        if (user) {
-          req.user = {
-            userId: user._id,
-            email: user.email,
-            role: user.role,
-            pharmacyId: user.pharmacyId
+
+        // Force all pharmacy-related roles to the same stable pharmacy ID in dev mode
+        const isPharmacyRole = ['PHARMACY_OWNER', 'staff', 'cashier', 'pharmacist', 'pharmacy_admin'].includes(decoded.role);
+        const forcedPharmacyId = isPharmacyRole ? new mongoose.Types.ObjectId(STABLE_MOCK_PHARMACY_ID) : (user?.pharmacyId || null);
+
+        req.user = {
+          _id: user?._id || new mongoose.Types.ObjectId(),
+          userId: user?._id || new mongoose.Types.ObjectId(),
+          email: decoded.email,
+          role: decoded.role,
+          pharmacyId: forcedPharmacyId,
+          isMock: true
+        };
+
+        if (decoded.role === 'PHARMACY_OWNER') {
+          req.owner = {
+            _id: req.user._id,
+            pharmacyId: req.user.pharmacyId,
+            email: req.user.email,
+            permissions: ['dashboard', 'inventory', 'orders', 'staff']
           };
-          return next();
         }
+
+        // If staff in mock mode, also try to fetch real details for permissions sync
+        if (['staff', 'cashier', 'pharmacist'].includes(decoded.role) && user) {
+          const staffDetails = await PharmacyStaff.findOne({ user: user._id });
+          if (staffDetails) {
+            req.user.permissions = staffDetails.permissions;
+            req.user.pharmacyId = staffDetails.pharmacy;
+            req.user.operationalPermissions = {
+              manageInventory: staffDetails.permissions?.inventory?.view || false,
+              prepareOrders: staffDetails.permissions?.orders?.process || false
+            };
+          }
+        }
+
+        console.log(`[Dev Auth] Mock Session: ${decoded.email} [${req.user.role}]`);
+        return next();
       } catch (e) {
         console.error('Mock token parsing failed:', e);
       }
@@ -46,10 +77,24 @@ const protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Check for Pharmacy Owner
-      if (decoded.role === 'PHARMACY_OWNER') {
+      // Check for Pharmacy Owner (handles both 'PHARMACY_OWNER' and legacy 'pharmacy_admin')
+      if (decoded.role === 'PHARMACY_OWNER' || decoded.role === 'pharmacy_admin') {
         const owner = await PharmacyOwner.findById(decoded.ownerId || decoded.id);
         if (!owner) {
+          // Try to find in User model if not in PharmacyOwner (if migrated)
+          const legacyOwner = await User.findById(decoded.userId || decoded.id);
+          if (legacyOwner && (legacyOwner.role === 'PHARMACY_OWNER' || legacyOwner.role === 'pharmacy_admin')) {
+            req.user = {
+              _id: legacyOwner._id,
+              id: legacyOwner._id,
+              email: legacyOwner.email,
+              role: 'PHARMACY_OWNER',
+              pharmacyId: legacyOwner.pharmacyId,
+              isOwner: true
+            };
+            req.owner = { _id: legacyOwner._id, pharmacyId: legacyOwner.pharmacyId, email: legacyOwner.email };
+            return next();
+          }
           return res.status(401).json({ success: false, message: 'Owner not found' });
         }
         if (!owner.isActive) {
@@ -88,14 +133,15 @@ const protect = async (req, res, next) => {
 
       // Attach user to request object
       req.user = {
+        _id: user._id,
         userId: user._id,
         email: user.email,
         role: user.role,
         pharmacyId: user.pharmacyId
       };
 
-      // If user is staff, attach detailed permissions
-      if (['staff', 'cashier', 'pharmacist'].includes(user.role)) {
+      // If user is staff (handles both 'staff' and 'pharmacy_staff'), attach detailed permissions
+      if (['staff', 'pharmacy_staff', 'cashier', 'pharmacist'].includes(user.role)) {
         const staffDetails = await PharmacyStaff.findOne({ user: user._id });
         if (staffDetails) {
           req.user.permissions = staffDetails.permissions;
@@ -140,9 +186,10 @@ const authorize = (...roles) => {
     }
 
     if (!roles.includes(req.user.role)) {
+      console.warn(`[Auth] Role Access Denied. User Role: ${req.user.role}, Required: ${roles.join(', ')}`);
       return res.status(403).json({
         success: false,
-        message: 'You do not have permission to perform this action'
+        message: `Permission denied. Required role: [${roles.join(', ')}], Your role: [${req.user.role}]`
       });
     }
 
