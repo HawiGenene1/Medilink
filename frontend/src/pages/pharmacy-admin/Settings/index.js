@@ -28,7 +28,7 @@ const PharmacyAdminSettings = () => {
             // Split name into firstName and lastName robustly
             const nameParts = values.name.trim().split(/\s+/);
             const firstName = nameParts[0] || '';
-            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ' ';
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Admin';
 
             await pharmacyAdminService.updateProfile({
                 firstName,

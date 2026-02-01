@@ -92,6 +92,14 @@ exports.updateUserProfile = async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating profile:', error);
+        console.error('Error details:', error.message);
+        if (error.name === 'ValidationError') {
+            console.error('Validation errors:', error.errors);
+            return res.status(400).json({
+                message: 'Validation error',
+                errors: Object.keys(error.errors).map(key => error.errors[key].message)
+            });
+        }
         res.status(500).json({ message: 'Server error updating profile' });
     }
 };
