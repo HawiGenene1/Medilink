@@ -81,8 +81,9 @@ const NearbyPharmaciesExplorer = () => {
                 attributionControl: false
             }).setView([9.0227, 38.7460], 13);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{y}/{x}{r}.png', {
                 maxZoom: 19,
+                attribution: '&copy; CartoDB'
             }).addTo(mapInstance.current);
         }
 

@@ -69,6 +69,7 @@
 .pharmacy-map-area {
     flex: 1;
     position: relative;
+    background: #ffffff;
 }
 
 .selected-pharmacy-floating-card {

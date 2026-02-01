@@ -175,8 +175,9 @@ const Pharmacies = () => {
                 attributionControl: false
             }).setView([9.0227, 38.7460], 13);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{y}/{x}{r}.png', {
                 maxZoom: 19,
+                attribution: '&copy; CartoDB'
             }).addTo(mapInstance.current);
         }
 
@@ -229,13 +230,6 @@ const Pharmacies = () => {
                 {/* Sidebar */}
                 <div className="pharmacy-sidebar">
                     <div className="sidebar-header">
-                        <div style={{ marginBottom: '16px' }}>
-                            <Breadcrumb items={[
-                                { title: <Link to="/">Home</Link> },
-                                { title: 'Nearby Explorer' }
-                            ]} />
-                        </div>
-
                         <Space align="center" style={{ marginBottom: '24px' }}>
                             <div style={{ padding: '8px', background: token.colorPrimary, borderRadius: '12px', color: 'white', display: 'flex' }}>
                                 <EnvironmentOutlined style={{ fontSize: '20px' }} />
