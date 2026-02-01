@@ -13,7 +13,6 @@ import {
 import { Button, Row, Col, Typography, Card, Space, Tag } from 'antd';
 import './Home.css';
 import './Home_Animations.css';
-import NearbyPharmaciesExplorer from '../../components/common/NearbyPharmaciesExplorer';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -160,20 +159,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Nearby Pharmacies Explorer Section */}
-      <section className="segment-section bg-gray" id="nearby-pharmacies">
-        <div className="container">
-          <div className="section-header text-center" style={{ marginBottom: '48px' }}>
-            <Tag color="#1890ff" style={{ marginBottom: '16px' }}>REAL-TIME EXPLORER</Tag>
-            <Title level={2}>Discover Nearby Pharmacies</Title>
-            <Paragraph className="section-desc">
-              Interact with our live map to find verified healthcare providers in your immediate vicinity.
-            </Paragraph>
-          </div>
 
-          <NearbyPharmaciesExplorer />
-        </div>
-      </section>
 
       {/* For Pharmacies Section */}
       <section className="segment-section bg-gray">
