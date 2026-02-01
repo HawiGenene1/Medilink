@@ -19,6 +19,8 @@ import DeliveryRegister from '../pages/auth/DeliveryRegister';
 import DeliveryOnboarding from '../pages/auth/DeliveryOnboarding';
 import PharmacyRegister from '../pages/auth/PharmacyRegister';
 import VerifyEmail from '../pages/auth/VerifyEmail';
+import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
 
 // Page Imports
 import Home from '../pages/Home';
@@ -87,6 +89,8 @@ const AppRouter = () => {
           <Route path="/auth/delivery/onboarding" element={<DeliveryOnboarding />} />
           <Route path="/auth/pharmacy/register" element={<PharmacyRegister />} />
           <Route path="/auth/verify" element={<VerifyEmail />} />
+          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+          <Route path="/auth/reset-password/:token" element={<ResetPassword />} />
         </Route>
 
         {/* Protected Routes - Customer */}
