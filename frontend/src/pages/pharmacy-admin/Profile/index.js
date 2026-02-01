@@ -28,35 +28,71 @@ const PharmacyAdminProfile = () => {
     };
 
     const handleImageUpload = async (event) => {
+        console.log('[Avatar Upload] File input triggered');
         const file = event.target.files[0];
-        if (!file) return;
+
+        if (!file) {
+            console.log('[Avatar Upload] No file selected');
+            return;
+        }
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            message.error('Please upload a valid image file (JPEG, PNG, or WebP)');
+            return;
+        }
+
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            message.error('Image size must be less than 5MB');
+            return;
+        }
+
+        console.log('[Avatar Upload] File validated:', file.name, file.type, file.size);
 
         const formData = new FormData();
         formData.append('image', file);
 
         setLoading(true);
         try {
+            console.log('[Avatar Upload] Uploading to /users/profile-image...');
             const response = await api.post('/users/profile-image', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
 
+            console.log('[Avatar Upload] Upload successful:', response.data);
             const updatedUser = { ...user, avatar: response.data.avatar };
             localStorage.setItem('user', JSON.stringify(updatedUser));
 
             message.success('Profile image updated successfully');
-            window.location.reload();
+
+            // Reload to refresh the avatar everywhere
+            setTimeout(() => window.location.reload(), 500);
         } catch (error) {
-            console.error('Error uploading image:', error);
-            message.error('Failed to upload image');
+            console.error('[Avatar Upload] Upload failed:', error);
+            console.error('[Avatar Upload] Error response:', error.response?.data);
+            message.error(error.response?.data?.message || 'Failed to upload image. Please try again.');
         } finally {
             setLoading(false);
+            // Reset file input to allow re-uploading the same file
+            if (event.target) {
+                event.target.value = '';
+            }
         }
     };
 
     const triggerFileInput = () => {
-        fileInputRef.current.click();
+        console.log('[Avatar Upload] Camera button clicked');
+        console.log('[Avatar Upload] File input ref:', fileInputRef.current);
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        } else {
+            console.error('[Avatar Upload] File input ref is null!');
+            message.error('Upload button not properly initialized. Please refresh the page.');
+        }
     };
 
     const handleProfileUpdate = async (values) => {

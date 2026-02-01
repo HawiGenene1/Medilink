@@ -51,6 +51,7 @@ import PharmacyControl from '../pages/pharmacy-admin/PharmacyControl';
 import PharmacyReports from '../pages/pharmacy-admin/Reports';
 import PharmacySettings from '../pages/pharmacy-admin/Settings';
 import PharmacyAdminProfile from '../pages/pharmacy-admin/Profile';
+import PharmacyAdminNotifications from '../pages/pharmacy-admin/Notifications';
 
 // Delivery Pages
 import DeliveryDashboard from '../pages/delivery/Dashboard';
@@ -143,6 +144,7 @@ const AppRouter = () => {
             <Route path="/pharmacy-admin/reports" element={<PharmacyReports />} />
             <Route path="/pharmacy-admin/settings" element={<PharmacySettings />} />
             <Route path="/pharmacy-admin/profile" element={<PharmacyAdminProfile />} />
+            <Route path="/pharmacy-admin/notifications" element={<PharmacyAdminNotifications />} />
           </Route>
         </Route>
 
