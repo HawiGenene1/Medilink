@@ -751,91 +751,102 @@ const generateReports = async (req, res) => {
  */
 const getAlerts = async (req, res) => {
     try {
+        // Fetch current user's settings
+        const user = await User.findById(req.user.id).select('settings');
+        const notificationsEnabled = user?.settings?.notificationsEnabled ?? true;
+        const complianceEnabled = user?.settings?.complianceEnabled ?? true;
+
         const alerts = [];
 
-        // Pending registrations
-        const pendingCount = await TempPharmacy.countDocuments({ status: 'pending' });
-        if (pendingCount > 0) {
-            alerts.push({
-                type: 'pending_registration',
-                severity: 'info',
-                message: `${pendingCount} pending pharmacy registration${pendingCount > 1 ? 's' : ''} awaiting review`,
-                count: pendingCount
-            });
-        }
-
-        // Expiring subscriptions
-        const expiringSubscriptions = await Subscription.find({
-            status: 'active',
-            endDate: {
-                $gte: new Date(),
-                $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        // ====== NOTIFICATION ALERTS (controlled by notificationsEnabled) ======
+        if (notificationsEnabled) {
+            // Pending registrations
+            const pendingCount = await TempPharmacy.countDocuments({ status: 'pending' });
+            if (pendingCount > 0) {
+                alerts.push({
+                    type: 'pending_registration',
+                    severity: 'info',
+                    message: `${pendingCount} pending pharmacy registration${pendingCount > 1 ? 's' : ''} awaiting review`,
+                    count: pendingCount
+                });
             }
-        }).populate('pharmacy', 'name');
 
-        if (expiringSubscriptions.length > 0) {
-            alerts.push({
-                type: 'expiring_subscription',
-                severity: 'warning',
-                message: `${expiringSubscriptions.length} subscription${expiringSubscriptions.length > 1 ? 's' : ''} expiring in the next 30 days`,
-                count: expiringSubscriptions.length,
-                details: expiringSubscriptions.map(sub => ({
-                    pharmacy: sub.pharmacy?.name,
-                    endDate: sub.endDate
-                }))
-            });
-        }
+            // Expiring subscriptions
+            const expiringSubscriptions = await Subscription.find({
+                status: 'active',
+                endDate: {
+                    $gte: new Date(),
+                    $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                }
+            }).populate('pharmacy', 'name');
 
-        // Expired subscriptions
-        const expiredSubscriptions = await Subscription.countDocuments({
-            status: 'active',
-            endDate: { $lt: new Date() }
-        });
-
-        if (expiredSubscriptions > 0) {
-            alerts.push({
-                type: 'expired_subscription',
-                severity: 'error',
-                message: `${expiredSubscriptions} expired subscription${expiredSubscriptions > 1 ? 's' : ''} need attention`,
-                count: expiredSubscriptions
-            });
-        }
-
-        // Near Expiration Licenses (Active Pharmacies)
-        const nearExpiryLicenses = await Pharmacy.find({
-            status: 'approved',
-            licenseExpiryDate: {
-                $gte: new Date(),
-                $lte: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+            if (expiringSubscriptions.length > 0) {
+                alerts.push({
+                    type: 'expiring_subscription',
+                    severity: 'warning',
+                    message: `${expiringSubscriptions.length} subscription${expiringSubscriptions.length > 1 ? 's' : ''} expiring in the next 30 days`,
+                    count: expiringSubscriptions.length,
+                    details: expiringSubscriptions.map(sub => ({
+                        pharmacy: sub.pharmacy?.name,
+                        endDate: sub.endDate
+                    }))
+                });
             }
-        }).select('name licenseExpiryDate');
 
-        if (nearExpiryLicenses.length > 0) {
-            alerts.push({
-                type: 'near_expiry_license',
-                severity: 'warning',
-                message: `${nearExpiryLicenses.length} pharmacy license${nearExpiryLicenses.length > 1 ? 's' : ''} expiring within 6 months`,
-                count: nearExpiryLicenses.length,
-                details: nearExpiryLicenses.map(p => ({
-                    pharmacy: p.name,
-                    expiryDate: p.licenseExpiryDate
-                }))
+            // Expired subscriptions
+            const expiredSubscriptions = await Subscription.countDocuments({
+                status: 'active',
+                endDate: { $lt: new Date() }
             });
+
+            if (expiredSubscriptions > 0) {
+                alerts.push({
+                    type: 'expired_subscription',
+                    severity: 'error',
+                    message: `${expiredSubscriptions} expired subscription${expiredSubscriptions > 1 ? 's' : ''} need attention`,
+                    count: expiredSubscriptions
+                });
+            }
         }
 
-        // Expired Licenses (Active Pharmacies)
-        const expiredLicenses = await Pharmacy.countDocuments({
-            status: 'approved',
-            licenseExpiryDate: { $lt: new Date() }
-        });
+        // ====== COMPLIANCE ALERTS (controlled by complianceEnabled) ======
+        if (complianceEnabled) {
+            // Near Expiration Licenses (Active Pharmacies) - 6-month threshold
+            const nearExpiryLicenses = await Pharmacy.find({
+                status: 'approved',
+                licenseExpiryDate: {
+                    $gte: new Date(),
+                    $lte: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+                }
+            }).select('name licenseExpiryDate');
 
-        if (expiredLicenses > 0) {
-            alerts.push({
-                type: 'expired_license',
-                severity: 'error',
-                message: `${expiredLicenses} pharmacy license${expiredLicenses > 1 ? 's' : ''} have expired`,
-                count: expiredLicenses
+            if (nearExpiryLicenses.length > 0) {
+                alerts.push({
+                    type: 'near_expiry_license',
+                    severity: 'warning',
+                    message: `${nearExpiryLicenses.length} pharmacy license${nearExpiryLicenses.length > 1 ? 's' : ''} expiring within 6 months`,
+                    count: nearExpiryLicenses.length,
+                    details: nearExpiryLicenses.map(p => ({
+                        pharmacy: p.name,
+                        expiryDate: p.licenseExpiryDate
+                    }))
+                });
+            }
+
+            // Expired Licenses (Active Pharmacies)
+            const expiredLicenses = await Pharmacy.countDocuments({
+                status: 'approved',
+                licenseExpiryDate: { $lt: new Date() }
             });
+
+            if (expiredLicenses > 0) {
+                alerts.push({
+                    type: 'expired_license',
+                    severity: 'error',
+                    message: `${expiredLicenses} pharmacy license${expiredLicenses > 1 ? 's' : ''} have expired`,
+                    count: expiredLicenses
+                });
+            }
         }
 
         res.json({

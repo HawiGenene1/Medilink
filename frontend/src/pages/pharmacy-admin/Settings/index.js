@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Typography, Divider, Switch, List, Avatar, Button, Space, Modal, Form, Input, message } from 'antd';
 import { UserOutlined, BellOutlined, LockOutlined, GlobalOutlined } from '@ant-design/icons';
 import pharmacyAdminService from '../../../services/pharmacyAdminService';
@@ -11,6 +11,16 @@ const PharmacyAdminSettings = () => {
     const [profileModal, setProfileModal] = useState(false);
     const [passwordModal, setPasswordModal] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Local state for toggles to make them immediately responsive
+    const [notificationsEnabled, setNotificationsEnabled] = useState(user?.settings?.notificationsEnabled ?? true);
+    const [complianceEnabled, setComplianceEnabled] = useState(user?.settings?.complianceEnabled ?? true);
+
+    // Update local state when user context changes
+    useEffect(() => {
+        setNotificationsEnabled(user?.settings?.notificationsEnabled ?? true);
+        setComplianceEnabled(user?.settings?.complianceEnabled ?? true);
+    }, [user]);
 
     const handleProfileUpdate = async (values) => {
         setLoading(true);
@@ -56,12 +66,32 @@ const PharmacyAdminSettings = () => {
     };
 
     const handleSettingChange = async (key, checked) => {
+        // Update local state immediately for responsive UI
+        if (key === 'notificationsEnabled') {
+            setNotificationsEnabled(checked);
+        } else if (key === 'complianceEnabled') {
+            setComplianceEnabled(checked);
+        }
+
         try {
-            await pharmacyAdminService.updateAdminSettings({
+            const response = await pharmacyAdminService.updateAdminSettings({
                 [key]: checked
             });
+
+            // Update localStorage for persistence
+            if (response.user) {
+                localStorage.setItem('user', JSON.stringify(response.user));
+            }
+
             message.success(`${key.replace(/([A-Z])/g, ' $1').toLowerCase()} updated`);
         } catch (error) {
+            // Revert local state on error
+            if (key === 'notificationsEnabled') {
+                setNotificationsEnabled(!checked);
+            } else if (key === 'complianceEnabled') {
+                setComplianceEnabled(!checked);
+            }
+
             console.error('Setting update failed:', error);
             message.error('Failed to update setting');
         }
@@ -80,9 +110,8 @@ const PharmacyAdminSettings = () => {
             icon: <BellOutlined />,
             action: (
                 <Switch
-                    checked={user?.settings?.notificationsEnabled ?? true}
+                    checked={notificationsEnabled}
                     onChange={(checked) => handleSettingChange('notificationsEnabled', checked)}
-                    loading={loading}
                 />
             )
         },
@@ -92,9 +121,8 @@ const PharmacyAdminSettings = () => {
             icon: <GlobalOutlined />,
             action: (
                 <Switch
-                    checked={user?.settings?.complianceEnabled ?? true}
+                    checked={complianceEnabled}
                     onChange={(checked) => handleSettingChange('complianceEnabled', checked)}
-                    loading={loading}
                 />
             )
         },
