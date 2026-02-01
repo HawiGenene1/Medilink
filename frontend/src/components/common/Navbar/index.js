@@ -80,7 +80,7 @@ const Navbar = () => {
         <div className="navbar-links desktop-only">
           <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Home</Link>
           <Link to="/medicines" className={location.pathname === '/medicines' ? 'active' : ''}>Medicines</Link>
-          <Link to="/pharmacies" className={location.pathname === '/pharmacies' ? 'active' : ''}>Pharmacies</Link>
+          <Link to="/pharmacies" className={location.pathname === '/pharmacies' ? 'active' : ''}>Nearby Pharmacies</Link>
           <Link to="/about">About Us</Link>
         </div>
 
@@ -123,7 +123,7 @@ const Navbar = () => {
           <div className="mobile-links">
             <Link to="/" onClick={() => setMobileMenuOpen(false)}>Home</Link>
             <Link to="/medicines" onClick={() => setMobileMenuOpen(false)}>Medicines</Link>
-            <Link to="/pharmacies" onClick={() => setMobileMenuOpen(false)}>Pharmacies</Link>
+            <Link to="/pharmacies" onClick={() => setMobileMenuOpen(false)}>Nearby Pharmacies</Link>
             <Link to="/about" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
 
             <div className="mobile-actions">

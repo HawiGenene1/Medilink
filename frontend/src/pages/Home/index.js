@@ -63,7 +63,7 @@ const Home = () => {
                 <div className="hero-stats">
                   <div>
                     <Title level={3} style={{ marginBottom: 0 }}>500+</Title>
-                    <Text type="secondary">Pharmacies</Text>
+                    <Text type="secondary">Nearby Pharmacies</Text>
                   </div>
                   <div className="divider-vertical"></div>
                   <div>
@@ -153,7 +153,7 @@ const Home = () => {
 
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <Button type="primary" size="large" onClick={() => navigate('/auth/register?role=customer')}>
-              Join as a Patient <ArrowRightOutlined />
+              Join as a Customer <ArrowRightOutlined />
             </Button>
           </div>
         </div>
