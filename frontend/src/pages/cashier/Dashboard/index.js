@@ -273,6 +273,7 @@ const CashierDashboard = () => {
     columns.push({
       title: 'Action',
       key: 'action',
+      width: 140,
       render: (_, record) => (
         <Space>
           <Tooltip title="View Order Details">
