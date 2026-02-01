@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -137,7 +137,7 @@ export const pharmacyOwnerAPI = {
 
 // Inventory API
 export const inventoryAPI = {
-  get: () => api.get('/inventory'),
+  get: (params) => api.get('/inventory', { params }),
   add: (data) => api.post('/inventory', data),
   update: (id, data) => api.put(`/inventory/${id}`, data),
   delete: (id) => api.delete(`/inventory/${id}`),
