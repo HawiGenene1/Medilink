@@ -10,7 +10,7 @@ export const useCart = () => {
     return context;
 };
 
-const hexifyId = (id) => {
+export const hexifyId = (id) => {
     if (!id) return null;
     const idStr = String(id);
     // Only accept valid 24-char hex strings (Real MongoDB IDs)
@@ -48,7 +48,12 @@ export const CartProvider = ({ children }) => {
     }, [cartItems]);
 
     const addToCart = (medicine, quantity = 1, pharmacy = 'Default Pharmacy') => {
-        const activeId = hexifyId(medicine.id);
+        const activeId = hexifyId(medicine.id || medicine._id);
+
+        if (!activeId) {
+            console.warn('Blocked adding item with invalid/mock ID to cart:', medicine.name);
+            return;
+        }
 
         setCartItems(prevItems => {
             const existingItemIndex = prevItems.findIndex(
@@ -64,9 +69,10 @@ export const CartProvider = ({ children }) => {
             return [...prevItems, {
                 ...medicine,
                 id: activeId,
+                _id: activeId,
                 quantity,
                 pharmacy,
-                priceValue: parseFloat(String(medicine.price).replace(/[^\d.]/g, '') || '0')
+                priceValue: parseFloat(String(medicine.priceValue || medicine.price || '0').replace(/[^\d.]/g, '') || '0')
             }];
         });
     };

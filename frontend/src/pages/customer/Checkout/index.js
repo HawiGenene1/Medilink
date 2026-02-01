@@ -176,24 +176,22 @@ const Checkout = () => {
         setErrorMessage('');
 
         try {
-            const hexifyId = (id) => {
-                if (!id) return id;
+            const isHexId = (id) => {
+                if (!id) return false;
                 const idStr = String(id);
-                if (idStr.length === 24 && /^[0-9a-fA-F]{24}$/.test(idStr)) return idStr;
-                return idStr.padStart(24, '0').slice(-24).toLowerCase();
+                return idStr.length === 24 && /^[0-9a-fA-F]{24}$/.test(idStr);
             };
 
             const isDev = process.env.NODE_ENV === 'development';
 
             // STRICT VALIDATION: Reject any item without a valid real MongoDB ID
             const validItemsForOrder = cartItems.filter(item => {
-                const id = hexifyId(item.id || item._id);
-                // Must be 24-char hex string
-                return id && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
+                const id = item.id || item._id;
+                return isHexId(id);
             });
 
             if (validItemsForOrder.length === 0) {
-                throw new Error("Invalid items in cart. Please clear usage of mock data.");
+                throw new Error("Your cart contains only invalid/mock data. Please clear your cart and start over with real medicines from the search page.");
             }
 
             if (validItemsForOrder.length !== cartItems.length) {
@@ -202,7 +200,7 @@ const Checkout = () => {
 
             // Ensure all items sent to backend HAVE valid-looking hex IDs
             const finalizedItems = validItemsForOrder.map(item => ({
-                medicineId: hexifyId(item.id || item._id),
+                medicineId: item.id || item._id,
                 quantity: item.quantity,
                 price: item.priceValue
             }));
@@ -552,7 +550,25 @@ const Checkout = () => {
                                 {errorMessage && (
                                     <Alert
                                         message="Error"
-                                        description={errorMessage}
+                                        description={
+                                            <div>
+                                                <p>{errorMessage}</p>
+                                                {errorMessage.includes('invalid/mock data') && (
+                                                    <Button
+                                                        type="primary"
+                                                        danger
+                                                        size="small"
+                                                        onClick={() => {
+                                                            clearCart();
+                                                            navigate('/customer/medicines');
+                                                        }}
+                                                        style={{ marginTop: '8px' }}
+                                                    >
+                                                        Clear Cart & Return to Search
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        }
                                         type="error"
                                         showIcon
                                         style={{ marginTop: '16px' }}
