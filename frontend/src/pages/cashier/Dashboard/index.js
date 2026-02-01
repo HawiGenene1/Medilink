@@ -189,11 +189,27 @@ const CashierDashboard = () => {
       setVerifyingId(orderId);
       const res = await cashierAPI.verifyPayment(orderId);
       if (res.data.success) {
-        message.success('Payment verified successfully');
+        // FIXED: Replaced fleeting message with persistent Modal as per user request
+        Modal.success({
+          title: 'Payment Verified & Receipt Generated',
+          content: 'The payment has been successfully verified. The receipt (invoice) is ready.',
+          okText: 'Close',
+          closable: true,
+          // secondary action to view invoice immediately
+          footer: (_, { OkBtn, CancelBtn }) => (
+            <>
+              <Button onClick={() => navigate(`/customer/orders/${orderId}/invoice`)}>View Full Invoice</Button>
+              <OkBtn />
+            </>
+          ),
+        });
         fetchData();
       }
     } catch (error) {
-      message.error(error.response?.data?.message || 'Verification failed');
+      Modal.error({
+        title: 'Verification Failed',
+        content: error.response?.data?.message || 'Verification failed',
+      });
     } finally {
       setVerifyingId(null);
     }
