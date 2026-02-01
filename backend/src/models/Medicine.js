@@ -98,6 +98,12 @@ const medicineSchema = new Schema({
     type: String,
     required: [true, 'Pack size is required']
   },
+  sku: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  barcode: String,
 
   // Pricing & Inventory
   price: priceSchema,
@@ -115,6 +121,8 @@ const medicineSchema = new Schema({
     default: 10,
     min: 0
   },
+  costPrice: Number,
+  unitPrice: Number,
   expiryDate: {
     type: Date
   },
@@ -123,18 +131,15 @@ const medicineSchema = new Schema({
     default: 1,
     min: 1
   },
-
-  // Medical Information
-  requiresPrescription: {
-    type: Boolean,
-    default: false
-  },
-  schedule: {
+  storageCondition: {
     type: String,
-    enum: ['I', 'II', 'III', 'IV', 'V', 'OTC', null],
-    default: null
+    enum: ['Room Temperature', 'Refrigerated', 'Frozen', 'Dry Place', 'Cool Place'],
+    default: 'Room Temperature'
   },
-
+  therapeuticClass: {
+    type: String,
+    trim: true
+  },
   // Media & Description
   description: {
     type: String,
@@ -146,6 +151,10 @@ const medicineSchema = new Schema({
     type: String, // URL to the image
     trim: true
   }],
+  imageUrl: {
+    type: String,
+    trim: true
+  },
 
   // Location & Availability
   location: {
@@ -183,7 +192,8 @@ const medicineSchema = new Schema({
 
 // Virtual for discounted price
 medicineSchema.virtual('discountedPrice').get(function () {
-  return this.price.basePrice * (1 - (this.price.discount / 100));
+  if (!this.price || this.price.basePrice === undefined) return 0;
+  return this.price.basePrice * (1 - ((this.price.discount || 0) / 100));
 });
 
 // Create text index for search

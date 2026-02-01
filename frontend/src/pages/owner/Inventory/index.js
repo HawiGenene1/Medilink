@@ -16,7 +16,9 @@ import {
     Popconfirm,
     Row,
     Col,
-    Divider
+    Divider,
+    Avatar,
+    Statistic
 } from 'antd';
 import {
     PlusOutlined,
@@ -25,9 +27,15 @@ import {
     MedicineBoxOutlined,
     SearchOutlined,
     CalendarOutlined,
-    StockOutlined
+    StockOutlined,
+    PictureOutlined,
+    WarningOutlined,
+    RiseOutlined,
+    SafetyCertificateOutlined,
+    InfoCircleOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { inventoryAPI, medicinesAPI } from '../../../services/api';
 import dayjs from 'dayjs';
 
@@ -36,16 +44,26 @@ const { Option } = Select;
 
 const InventoryPage = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [medicines, setMedicines] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingMedicine, setEditingMedicine] = useState(null);
     const [form] = Form.useForm();
-    const [addForm] = Form.useForm();
-    const [catalogResults, setCatalogResults] = useState([]);
-    const [searchLoading, setSearchLoading] = useState(false);
-    const [isManualEntry, setIsManualEntry] = useState(false);
+    const [searchText, setSearchText] = useState('');
+
+    // Derived stats
+    const stats = {
+        totalItems: medicines.length,
+        totalStock: medicines.reduce((acc, m) => acc + (m.quantity || 0), 0),
+        lowStock: medicines.filter(m => m.quantity <= m.reorderLevel).length,
+        expiringSoon: medicines.filter(m => {
+            if (!m.expiryDate) return false;
+            const threeMonths = dayjs().add(3, 'month');
+            return dayjs(m.expiryDate).isBefore(threeMonths) && dayjs(m.expiryDate).isAfter(dayjs());
+        }).length,
+        totalValuation: medicines.reduce((acc, m) => acc + ((m.quantity || 0) * (m.sellingPrice || 0)), 0)
+    };
 
     // Permissions check
     const canManageInventory = user?.role === 'PHARMACY_OWNER' || user?.operationalPermissions?.manageInventory;
@@ -53,13 +71,15 @@ const InventoryPage = () => {
     const fetchInventory = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await inventoryAPI.get();
+            const response = await inventoryAPI.get({ _t: Date.now() });
             if (response.data.success) {
-                setMedicines(response.data.data);
+                const data = response.data.data;
+                setMedicines(Array.isArray(data) ? data : []);
             }
         } catch (error) {
             console.error('Fetch Inventory Error:', error);
-            message.error('Failed to load inventory from server.');
+            const errorMsg = error.response?.data?.message || 'Failed to load inventory from server.';
+            message.error(errorMsg);
         } finally {
             setLoading(false);
         }
@@ -69,38 +89,7 @@ const InventoryPage = () => {
         fetchInventory();
     }, [fetchInventory]);
 
-    const handleSearchCatalog = async (value) => {
-        if (!value || value.length < 2) return;
-        try {
-            setSearchLoading(true);
-            const res = await medicinesAPI.search(value);
-            if (res.data.success) {
-                setCatalogResults(res.data.data);
-            }
-        } catch (error) {
-            message.error('Error searching catalog');
-        } finally {
-            setSearchLoading(false);
-        }
-    };
-
-    const handleAdd = async (values) => {
-        try {
-            const payload = { ...values };
-            if (values.expiryDate) payload.expiryDate = values.expiryDate.format('YYYY-MM-DD');
-
-            const res = await inventoryAPI.add(payload);
-            if (res.data.success) {
-                message.success('Medicine added to inventory');
-                setIsAddModalOpen(false);
-                addForm.resetFields();
-                setIsManualEntry(false);
-                fetchInventory();
-            }
-        } catch (error) {
-            message.error(error.response?.data?.message || 'Failed to add medicine');
-        }
-    };
+    // Removed handleAdd because it's now in AddInventory.js
 
     const handleUpdate = async (values) => {
         try {
@@ -135,9 +124,20 @@ const InventoryPage = () => {
             title: 'Medicine',
             key: 'medicineName',
             render: (_, record) => (
-                <Space direction="vertical" size={0}>
-                    <Text strong>{record.medicine?.name}</Text>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>{record.medicine?.manufacturer} {record.medicine?.strength && `(${record.medicine.strength})`}</Text>
+                <Space>
+                    <Avatar
+                        src={record.medicine?.imageUrl}
+                        icon={<MedicineBoxOutlined />}
+                        shape="square"
+                        size="large"
+                        style={{ backgroundColor: '#f5f5f5', color: '#1890ff' }}
+                    />
+                    <Space direction="vertical" size={0}>
+                        <Text strong>{record.medicine?.name || 'Missing Name'}</Text>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {record.medicine?.manufacturer || 'Unknown Manufacturer'} {record.medicine?.strength && `(${record.medicine.strength})`}
+                        </Text>
+                    </Space>
                 </Space>
             )
         },
@@ -202,137 +202,129 @@ const InventoryPage = () => {
         }
     ];
 
+    const filteredMedicines = medicines.filter(m => {
+        const query = searchText.toLowerCase();
+        const medicine = m.medicine || {};
+        return (
+            (medicine.name || '').toLowerCase().includes(query) ||
+            (medicine.manufacturer || '').toLowerCase().includes(query) ||
+            (medicine.brand || '').toLowerCase().includes(query)
+        );
+    });
+
     return (
-        <div style={{ padding: '24px' }}>
-            <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-                <Col>
-                    <Title level={2} style={{ marginBottom: 0 }}>
-                        <MedicineBoxOutlined /> Inventory Management
-                    </Title>
-                    <Text type="secondary">Monitor and manage your pharmacy's medical stock.</Text>
+        <div style={{ padding: '24px', background: '#f5f7fa', minHeight: '100vh' }}>
+            <div style={{ marginBottom: 24 }}>
+                <Row justify="space-between" align="middle">
+                    <Col>
+                        <Title level={2} style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ background: '#1890ff', padding: '8px', borderRadius: '12px', display: 'flex' }}>
+                                <MedicineBoxOutlined style={{ color: 'white' }} />
+                            </div>
+                            Inventory Command Center
+                        </Title>
+                        <Text type="secondary">Real-time overview and management of your pharmaceutical assets.</Text>
+                    </Col>
+                    <Col>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => navigate('/owner/inventory/add')}
+                            disabled={!canManageInventory}
+                            size="large"
+                            style={{ borderRadius: '8px', height: '48px', padding: '0 24px', fontWeight: 600, boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)' }}
+                        >
+                            Add New Stock
+                        </Button>
+                    </Col>
+                </Row>
+            </div>
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card bordered={false} bodyStyle={{ padding: '16px 20px' }} style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                        <Statistic
+                            title={<Text type="secondary">Total Products</Text>}
+                            value={stats.totalItems}
+                            prefix={<MedicineBoxOutlined style={{ color: '#1890ff' }} />}
+                        />
+                        <div style={{ marginTop: 8, fontSize: '12px', color: '#8c8c8c' }}>
+                            <RiseOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+                            <Text type="success">Live Catalog</Text>
+                        </div>
+                    </Card>
                 </Col>
-                <Col>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => setIsAddModalOpen(true)}
-                        disabled={!canManageInventory}
-                        size="large"
-                    >
-                        Add to Inventory
-                    </Button>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card bordered={false} bodyStyle={{ padding: '16px 20px' }} style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                        <Statistic
+                            title={<Text type="secondary">Low Stock Alerts</Text>}
+                            value={stats.lowStock}
+                            valueStyle={{ color: stats.lowStock > 0 ? '#ff4d4f' : 'inherit' }}
+                            prefix={<WarningOutlined style={{ color: stats.lowStock > 0 ? '#ff4d4f' : '#8c8c8c' }} />}
+                        />
+                        <div style={{ marginTop: 8, fontSize: '12px', color: '#8c8c8c' }}>
+                            {stats.lowStock > 0 ? <Text type="danger">Needs immediate restock</Text> : <Text type="success">Healthy stock levels</Text>}
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card bordered={false} bodyStyle={{ padding: '16px 20px' }} style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                        <Statistic
+                            title={<Text type="secondary">Near Expiry</Text>}
+                            value={stats.expiringSoon}
+                            valueStyle={{ color: stats.expiringSoon > 0 ? '#faad14' : 'inherit' }}
+                            prefix={<CalendarOutlined style={{ color: stats.expiringSoon > 0 ? '#faad14' : '#8c8c8c' }} />}
+                        />
+                        <div style={{ marginTop: 8, fontSize: '12px', color: '#8c8c8c' }}>
+                            Within next 90 days
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card bordered={false} bodyStyle={{ padding: '16px 20px' }} style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                        <Statistic
+                            title={<Text type="secondary">Inventory Value</Text>}
+                            value={stats.totalValuation}
+                            precision={0}
+                            prefix={<Text style={{ fontSize: '16px', marginRight: 4, color: '#52c41a' }}>ETB</Text>}
+                        />
+                        <div style={{ marginTop: 8, fontSize: '12px', color: '#8c8c8c' }}>
+                            <SafetyCertificateOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+                            Estimated asset value
+                        </div>
+                    </Card>
                 </Col>
             </Row>
 
-            <Card bordered={false}>
+            <Card
+                bordered={false}
+                style={{ borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}
+                title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text strong style={{ fontSize: '16px' }}>Stock Ledger</Text>
+                        <Input
+                            placeholder="Search inventory..."
+                            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                            onChange={e => setSearchText(e.target.value)}
+                            style={{ width: 300, borderRadius: '8px' }}
+                            allowClear
+                        />
+                    </div>
+                }
+            >
                 <Table
                     columns={columns}
-                    dataSource={medicines}
+                    dataSource={filteredMedicines}
                     rowKey="_id"
                     loading={loading}
-                    pagination={{ pageSize: 12 }}
+                    pagination={{
+                        pageSize: 10,
+                        showSizeChanger: true,
+                        showTotal: (total) => `Total ${total} items`
+                    }}
+                    className="custom-table"
                 />
             </Card>
-
-            {/* Modal for adding/lookup */}
-            <Modal
-                title="Add Medicine to Inventory"
-                open={isAddModalOpen}
-                onCancel={() => { setIsAddModalOpen(false); setIsManualEntry(false); }}
-                footer={null}
-                width={700}
-            >
-                <Form form={addForm} layout="vertical" onFinish={handleAdd}>
-                    {!isManualEntry ? (
-                        <>
-                            <Form.Item label="Find in Global Catalog" name="medicineId" rules={[{ required: true }]}>
-                                <Select
-                                    showSearch
-                                    placeholder="Type medicine name..."
-                                    filterOption={false}
-                                    onSearch={handleSearchCatalog}
-                                    loading={searchLoading}
-                                    suffixIcon={<SearchOutlined />}
-                                >
-                                    {catalogResults.map(m => (
-                                        <Option key={m._id} value={m._id}>{m.name} - {m.manufacturer} ({m.strength})</Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                            <Button type="link" onClick={() => setIsManualEntry(true)}>Can't find it? Click here to enter details manually</Button>
-                        </>
-                    ) : (
-                        <>
-                            <Divider>New Medicine Details</Divider>
-                            <Row gutter={16}>
-                                <Col span={12}>
-                                    <Form.Item label="Medicine Name" name="name" rules={[{ required: true }]}>
-                                        <Input placeholder="e.g. Paracetamol" />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item label="Manufacturer" name="manufacturer" rules={[{ required: true }]}>
-                                        <Input placeholder="e.g. MedLife" />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-                            <Row gutter={16}>
-                                <Col span={12}>
-                                    <Form.Item label="Category" name="category" rules={[{ required: true }]}>
-                                        <Select placeholder="Select category">
-                                            <Option value="Pain Relief">Pain Relief</Option>
-                                            <Option value="Antibiotics">Antibiotics</Option>
-                                            <Option value="Supplements">Supplements</Option>
-                                            <Option value="Cardiovascular">Cardiovascular</Option>
-                                            <Option value="Other">Other</Option>
-                                        </Select>
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item label="Strength/Dosage" name="strength">
-                                        <Input placeholder="e.g. 500mg" />
-                                    </Form.Item>
-                                </Col>
-                            </Row>
-                            <Button type="link" onClick={() => setIsManualEntry(false)}>Return to Search</Button>
-                        </>
-                    )}
-
-                    <Divider>Stock & Pricing</Divider>
-
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item label="Initial Quantity" name="quantity" rules={[{ required: true }]}>
-                                <InputNumber min={0} style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item label="Reorder Level" name="reorderLevel" initialValue={10}>
-                                <InputNumber min={0} style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-
-                    <Row gutter={16}>
-                        <Col span={12}>
-                            <Form.Item label="Selling Price (ETB)" name="sellingPrice" rules={[{ required: true }]}>
-                                <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                            <Form.Item label="Expiry Date" name="expiryDate" rules={[{ required: true }]}>
-                                <DatePicker style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-
-                    <Form.Item label="Batch Number" name="batchNumber">
-                        <Input />
-                    </Form.Item>
-
-                    <Button type="primary" htmlType="submit" block size="large">Add to Inventory</Button>
-                </Form>
-            </Modal>
 
             {/* Modal for editing */}
             <Modal

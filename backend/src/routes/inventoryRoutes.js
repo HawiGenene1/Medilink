@@ -4,7 +4,9 @@ const {
     getInventory,
     addInventoryItem,
     updateInventoryItem,
-    deleteInventoryItem
+    deleteInventoryItem,
+    getInventoryAlerts,
+    checkInventoryAlerts
 } = require('../controllers/inventoryController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 const { checkSubscription } = require('../middleware/subscriptionMiddleware');
@@ -19,6 +21,13 @@ router.use(authorize('staff', 'PHARMACY_OWNER', 'admin', 'pharmacist', 'cashier'
 router.route('/')
     .get(getInventory)
     .post(checkSubscription, addInventoryItem);
+
+// Alert Routes (must come before /:id to avoid conflicts)
+router.route('/alerts')
+    .get(getInventoryAlerts);
+
+router.route('/check-alerts')
+    .post(checkInventoryAlerts);
 
 router.route('/:id')
     .put(checkSubscription, updateInventoryItem)

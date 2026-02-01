@@ -36,8 +36,27 @@ const inventorySchema = new mongoose.Schema({
   },
   batchNumber: String,
   expiryDate: Date,
+  manufactureDate: Date,
+  expiryAlertThreshold: {
+    type: Number,
+    default: 30 // days
+  },
+  unitType: {
+    type: String,
+    enum: ['Strip', 'Box', 'Bottle', 'Piece', 'Vial', 'Ampoule'],
+    default: 'Piece'
+  },
+  tax: {
+    type: Number,
+    default: 0
+  },
+  supplier: {
+    name: String,
+    contact: String,
+    invoiceNumber: String,
+    dateReceived: Date
+  },
   manufacturer: String,
-  supplier: String,
   location: String,
   isActive: {
     type: Boolean,
@@ -78,6 +97,25 @@ inventorySchema.virtual('daysToExpiry').get(function () {
   const today = new Date();
   const expiry = new Date(this.expiryDate);
   return Math.round((expiry - today) / oneDay);
+});
+
+// Virtual for checking if medicine is expired
+inventorySchema.virtual('isExpired').get(function () {
+  if (!this.expiryDate) return false;
+  return new Date(this.expiryDate) < new Date();
+});
+
+// Virtual for checking if medicine is near expiry
+inventorySchema.virtual('isNearExpiry').get(function () {
+  if (!this.expiryDate) return false;
+  const daysToExpiry = this.daysToExpiry;
+  if (daysToExpiry === null) return false;
+  return daysToExpiry > 0 && daysToExpiry <= (this.expiryAlertThreshold || 30);
+});
+
+// Virtual for checking if stock is low
+inventorySchema.virtual('isLowStock').get(function () {
+  return this.quantity < this.reorderLevel;
 });
 
 // Removed broken pre-save hook as lastRestocked is handled in controller
