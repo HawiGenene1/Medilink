@@ -137,7 +137,7 @@ const PharmacyAdminSettings = () => {
     return (
         <div style={{ padding: '24px' }}>
             <div style={{ marginBottom: '24px' }}>
-                <Title level={2}>Platform Settings</Title>
+                <Title level={2}>Settings</Title>
                 <Text type="secondary">Manage your account and platform-wide configurations</Text>
             </div>
 

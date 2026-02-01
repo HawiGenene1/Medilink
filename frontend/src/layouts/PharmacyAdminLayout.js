@@ -40,7 +40,7 @@ const PharmacyAdminLayout = () => {
         {
             key: '/pharmacy-admin/settings',
             icon: <SettingOutlined />,
-            label: 'Platform Settings',
+            label: 'Settings',
         }
     ];
 
