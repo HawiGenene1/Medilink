@@ -81,9 +81,16 @@ const NearbyPharmaciesExplorer = () => {
                 attributionControl: false
             }).setView([9.0227, 38.7460], 13);
 
-            L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png', {
+            // High-Resolution Satellite Hybrid Layer (ESRI)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 maxZoom: 19,
-                attribution: '<a href="https://wikimediafoundation.org/wiki/Maps_Terms_of_Use">Wikimedia</a>'
+                attribution: 'ESRI World Imagery'
+            }).addTo(mapInstance.current);
+
+            // Add Road Overlay for Hybrid View
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                opacity: 0.8
             }).addTo(mapInstance.current);
 
             // Force recalculate size after a short delay
