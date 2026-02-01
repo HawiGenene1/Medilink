@@ -1,5 +1,6 @@
 import React from 'react';
 import { Row, Col, Typography, Space } from 'antd';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   //FacebookFilled,
   //TwitterCircleFilled,
@@ -30,9 +31,9 @@ const Footer = () => {
             </Text>
             <div className="contact-info">
               <Space direction="vertical" size="middle">
-                <Text><EnvironmentOutlined /> Bole Road, Addis Ababa, Ethiopia</Text>
+                <Text><EnvironmentOutlined /> Bole Road, Mega Building, Addis Ababa</Text>
                 <Text><PhoneOutlined /> +251 911 234 567</Text>
-                <Text><MailOutlined /> support@medilink.com</Text>
+                <Text><MailOutlined /> medilinksender@gmail.com</Text>
               </Space>
             </div>
           </Col>
@@ -41,11 +42,11 @@ const Footer = () => {
           <Col xs={24} sm={12} md={6}>
             <Title level={5} className="footer-heading">Services</Title>
             <Space direction="vertical" size="middle" className="footer-links">
-              <Link href="#">Order Medicine</Link>
-              <Link href="#">Upload Prescription</Link>
-              <Link href="#">Find nearby pharmacies</Link>
-              <Link href="#">Track orders</Link>
-              <Link href="#">Deliver orders</Link>
+              <RouterLink to="/customer/medicines">Order Medicine</RouterLink>
+              <RouterLink to="/customer/prescriptions">Upload Prescription</RouterLink>
+              <RouterLink to="/pharmacies">Find nearby pharmacies</RouterLink>
+              <RouterLink to="/customer/orders">Track orders</RouterLink>
+              <RouterLink to="/delivery/dashboard">Deliver orders</RouterLink>
             </Space>
           </Col>
 
@@ -53,11 +54,11 @@ const Footer = () => {
           <Col xs={24} sm={12} md={6}>
             <Title level={5} className="footer-heading">Company</Title>
             <Space direction="vertical" size="middle" className="footer-links">
-              <Link href="#">About Us</Link>
-              <Link href="#">Careers</Link>
-              <Link href="#">Privacy Policy</Link>
-              <Link href="#">Terms of Service</Link>
-              <Link href="#">Help Center</Link>
+              <RouterLink to="/about">About Us</RouterLink>
+              <RouterLink to="/careers">Careers</RouterLink>
+              <RouterLink to="/privacy">Privacy Policy</RouterLink>
+              <RouterLink to="/terms">Terms of Service</RouterLink>
+              <RouterLink to="/help">Help Center</RouterLink>
             </Space>
           </Col>
 

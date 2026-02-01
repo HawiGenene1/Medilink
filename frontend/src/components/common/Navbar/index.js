@@ -81,7 +81,7 @@ const Navbar = () => {
           <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Home</Link>
           <Link to="/medicines" className={location.pathname === '/medicines' ? 'active' : ''}>Medicines</Link>
           <Link to="/pharmacies" className={location.pathname === '/pharmacies' ? 'active' : ''}>Nearby Pharmacies</Link>
-          <Link to="/about">About Us</Link>
+          <Link to="/about" className={location.pathname === '/about' ? 'active' : ''}>About Us</Link>
         </div>
 
         {/* Actions */}

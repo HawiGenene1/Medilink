@@ -23,6 +23,7 @@ import Home from '../pages/Home';
 import MedicineList from '../pages/medicines/MedicineList';
 import MedicineDetail from '../pages/medicines/MedicineDetail';
 import Pharmacies from '../pages/customer/Pharmacies';
+import About from '../pages/About';
 
 // Customer Pages
 import CustomerDashboard from '../pages/customer/Dashboard';
@@ -87,6 +88,7 @@ const AppRouter = () => {
         <Route path="/medicines" element={<MedicineList />} />
         <Route path="/medicines/:id" element={<MedicineDetail />} />
         <Route path="/pharmacies" element={<Pharmacies />} />
+        <Route path="/about" element={<About />} />
       </Route>
 
       {/* Auth Routes */}
