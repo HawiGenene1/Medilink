@@ -175,7 +175,7 @@ const Profile = () => {
         <Col xs={24} md={8}>
           <Card style={{ textAlign: 'center', borderRadius: '16px' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-              <Avatar size={100} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} style={{ backgroundColor: '#4361ee' }} />
+              <Avatar size={100} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5001${user.avatar}` : null} style={{ backgroundColor: '#4361ee' }} />
               <Button
                 shape="circle"
                 icon={<UploadOutlined />}

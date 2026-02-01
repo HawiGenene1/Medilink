@@ -52,6 +52,7 @@ import OwnerInventory from '../pages/owner/Inventory';
 import OwnerNotifications from '../pages/owner/Notifications';
 import CashierDashboard from '../pages/cashier/Dashboard';
 import StaffDashboard from '../pages/owner/StaffDashboard';
+import AddInventory from '../pages/owner/Inventory/AddInventory';
 import DeliveryDashboard from '../pages/delivery/Dashboard';
 
 /**
@@ -123,6 +124,7 @@ const AppRouter = () => {
         <Route element={<OwnerLayout />}>
           <Route path="/owner/dashboard" element={<PharmacyDashboard />} />
           <Route path="/owner/inventory" element={<OwnerInventory />} />
+          <Route path="/owner/inventory/add" element={<AddInventory />} />
           <Route path="/owner/orders" element={<OwnerOrders />} />
           <Route path="/owner/profile" element={<OwnerProfile />} />
           <Route path="/owner/notifications" element={<OwnerNotifications />} />

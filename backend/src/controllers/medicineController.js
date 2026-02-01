@@ -138,7 +138,8 @@ const addMedicine = async (req, res) => {
       requiresPrescription: requiresPrescription === 'true' || requiresPrescription === true,
       addedBy: req.user?.userId || req.owner?._id,
       availableAt: [req.user?.pharmacyId || req.owner?.pharmacyId],
-      expiryDate: expiryDate ? new Date(expiryDate) : null
+      expiryDate: expiryDate ? new Date(expiryDate) : null,
+      imageUrl: imageUrl
     });
 
     await medicine.save();

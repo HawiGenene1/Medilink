@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Input, Avatar, Badge, Dropdown, Button, Drawer, Space, Typography } from 'antd';
+import { Layout, Menu, Input, Avatar, Badge, Dropdown, Button, Drawer, Space, Typography, Tag } from 'antd';
 import {
     MenuUnfoldOutlined,
     MenuFoldOutlined,
@@ -170,6 +170,11 @@ const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
                                     style={{ backgroundColor: '#1E88E5' }}
                                 />
                                 <span className="username hidden-mobile">{user?.firstName || 'User'}</span>
+                                {process.env.NODE_ENV === 'development' && user?.pharmacyId && (
+                                    <Tag color="purple" style={{ marginLeft: 8, fontSize: '10px' }}>
+                                        ID: {user.pharmacyId.toString().substring(0, 6)}...
+                                    </Tag>
+                                )}
                             </div>
                         </Dropdown>
                     </div>

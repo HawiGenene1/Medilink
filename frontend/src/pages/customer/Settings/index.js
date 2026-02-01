@@ -41,7 +41,7 @@ const Settings = () => {
         <div className="settings-section fade-in">
             <div className="avatar-upload-wrapper">
                 <CustomBadge count={<Button size="small" shape="circle" icon={<CameraOutlined />} className="cam-btn" />} offset={[-10, 110]}>
-                    <Avatar size={120} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} className="profile-avatar-large" />
+                    <Avatar size={120} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5001${user.avatar}` : null} className="profile-avatar-large" />
                 </CustomBadge>
                 <div className="avatar-info">
                     <Title level={4} style={{ margin: 0 }}>{user?.firstName} {user?.lastName}</Title>

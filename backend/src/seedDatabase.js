@@ -7,8 +7,11 @@ const User = require('./models/User');
 const Pharmacy = require('./models/Pharmacy');
 const Category = require('./models/Category');
 const Medicine = require('./models/Medicine');
+const Inventory = require('./models/Inventory');
 const Order = require('./models/Order');
 const Subscription = require('./models/Subscription');
+const PharmacyOwner = require('./models/PharmacyOwner');
+const PharmacyStaff = require('./models/PharmacyStaff');
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/medilink';
 
@@ -29,6 +32,9 @@ const seedData = async () => {
     await Medicine.deleteMany({});
     await Order.deleteMany({});
     await Subscription.deleteMany({});
+    await PharmacyOwner.deleteMany({});
+    await PharmacyStaff.deleteMany({});
+    await Inventory.deleteMany({});
     console.log('Existing data cleared');
 
     // 1. Create Users
@@ -55,9 +61,9 @@ const seedData = async () => {
       email: 'pharmacy@medilink.com',
       password: userPassword,
       phone: '+251922222222',
-      role: 'pharmacy_admin',
+      role: 'PHARMACY_OWNER',
       isActive: true,
-      pharmacyId: pharmacyId, // Link to the fixed ID
+      pharmacyId: pharmacyId,
       address: {
         street: '123 Main St',
         city: 'Addis Ababa',
@@ -104,9 +110,9 @@ const seedData = async () => {
       email: 'staff@medilink.com',
       password: userPassword,
       phone: '+251955555555',
-      role: 'pharmacy_staff',
+      role: 'staff',
       isActive: true,
-      pharmacyId: '65a7d5c9f1a2b3c4d5e6f701' // Mock ID from AuthContext
+      pharmacyId: pharmacyId
     });
 
     const cashier = await User.create({
@@ -117,7 +123,7 @@ const seedData = async () => {
       phone: '+251966666666',
       role: 'cashier',
       isActive: true,
-      pharmacyId: '65a7d5c9f1a2b3c4d5e6f701'
+      pharmacyId: pharmacyId
     });
 
     console.log('✅ Created users\n');
@@ -174,6 +180,32 @@ const seedData = async () => {
     ]);
     console.log('✅ Created subscriptions\n');
 
+    // 3.5 Create PharmacyOwner and PharmacyStaff specifics
+    console.log('👤 Creating role-specific records...');
+    await PharmacyOwner.create({
+      _id: pharmacyOwner._id, // Reuse user ID if possible or link correctly
+      fullName: 'John Pharmacy',
+      email: 'pharmacy@medilink.com',
+      password: 'Test123', // Will be hashed by pre-save
+      phone: '+251922222222',
+      pharmacyId: pharmacy1._id,
+      subscriptionPlan: 'PREMIUM',
+      subscriptionStatus: 'ACTIVE',
+      operationalPermissions: { manageInventory: true, prepareOrders: true }
+    });
+
+    await PharmacyStaff.create({
+      user: pharmacyStaff._id,
+      pharmacy: pharmacy1._id,
+      role: 'staff',
+      permissions: {
+        inventory: { view: true, add: true, edit: true, delete: false },
+        orders: { view: true, process: true, cancel: false },
+        customers: { view: true, add: true, edit: true }
+      }
+    });
+    console.log('✅ Created role-specific records\n');
+
     // 4. Create Medicines
     console.log('💊 Creating medicines...');
     const medicines = await Medicine.create([
@@ -216,9 +248,68 @@ const seedData = async () => {
         availableAt: [pharmacy1._id],
         addedBy: admin._id,
         isActive: true
+      },
+      {
+        name: 'Cetirizine',
+        brand: 'Zyrtec',
+        genericName: 'Cetirizine',
+        category: 'otc',
+        description: 'Antihistamine for allergy relief',
+        price: { basePrice: 40, discount: 0, currency: 'ETB' },
+        stockQuantity: 100,
+        unit: 'tablet',
+        dosage: '10mg',
+        manufacturer: 'Pfizer',
+        dosageForm: 'tablet',
+        strength: '10mg',
+        packSize: '10 tablets',
+        expiryDate: new Date('2026-10-31'),
+        requiresPrescription: false,
+        availableAt: [pharmacy1._id],
+        addedBy: admin._id,
+        isActive: true
       }
     ]);
     console.log('✅ Created medicines\n');
+
+    // 4.5 Create Inventory Records
+    console.log('📦 Creating inventory stock...');
+    await Inventory.create([
+      {
+        pharmacy: pharmacy1._id,
+        medicine: medicines[0]._id,
+        quantity: 100,
+        reorderLevel: 20,
+        costPrice: 40,
+        sellingPrice: 50,
+        batchNumber: 'B-2024-001',
+        expiryDate: new Date('2026-12-31'),
+        unitType: 'Piece'
+      },
+      {
+        pharmacy: pharmacy1._id,
+        medicine: medicines[1]._id,
+        quantity: 50,
+        reorderLevel: 10,
+        costPrice: 100,
+        sellingPrice: 120,
+        batchNumber: 'B-2024-002',
+        expiryDate: new Date('2026-06-30'),
+        unitType: 'Piece'
+      },
+      {
+        pharmacy: pharmacy1._id,
+        medicine: medicines[2]._id, // Cetirizine
+        quantity: 5,
+        reorderLevel: 15,
+        costPrice: 30,
+        sellingPrice: 45,
+        batchNumber: 'ALERT-001',
+        expiryDate: new Date('2025-12-31'),
+        unitType: 'Strip'
+      }
+    ]);
+    console.log('✅ Created inventory stock\n');
 
     // 5. Create Sample Orders
     console.log('📦 Creating orders...');
