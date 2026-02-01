@@ -185,6 +185,16 @@ const Orders = () => {
 
   const modalFooter = [
     <Button key="close" onClick={() => setDetailsVisible(false)}>Close</Button>,
+    selectedOrder?.paymentStatus === 'paid' && (
+      <Button
+        key="invoice"
+        type="primary"
+        icon={<FileTextOutlined />}
+        onClick={() => navigate(`/customer/orders/${selectedOrder._id}/invoice`)}
+      >
+        View Invoice
+      </Button>
+    ),
     selectedOrder?.paymentStatus === 'paid' &&
     selectedOrder?.paymentMethod === 'chapa' &&
     !selectedOrder?.paymentDetails?.chapaReference && (
@@ -209,12 +219,6 @@ const Orders = () => {
       >
         Official Chapa Receipt
       </Button>
-    ),
-    selectedOrder?.paymentStatus === 'paid' &&
-    selectedOrder?.paymentMethod === 'cash' && (
-      <Tag color="blue" style={{ marginLeft: 8, padding: '4px 8px' }}>
-        Verified Cash Payment
-      </Tag>
     ),
     selectedOrder?.status === 'delivered' && <Button key="reorder" type="primary">Reorder Items</Button>
   ];
