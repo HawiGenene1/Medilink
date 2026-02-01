@@ -26,7 +26,7 @@ exports.getPharmacyOrders = asyncHandler(async (req, res, next) => {
 
     const orders = await Order.find(query)
         .populate('customer', 'firstName lastName email phone')
-        .populate('items.medicine', 'name genericName brand strength packSize')
+        .populate('items.medicine', 'name genericName brand strength packSize price')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit));

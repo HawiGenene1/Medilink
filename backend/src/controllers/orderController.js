@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Medicine = require('../models/Medicine');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { validationResult } = require('express-validator');
 const logger = require('../utils/logger');
 
@@ -113,12 +114,12 @@ const createOrder = async (req, res) => {
       tax,
       finalAmount,
       deliveryAddress,
-      paymentMethod,
+      paymentMethod: paymentMethod === 'card' ? 'CARD' : 'CASH_ON_DELIVERY',
       deliveryInstructions,
       prescriptionImage: requiresPrescription ? prescriptionImage : undefined,
       notes,
       status: 'pending',
-      paymentStatus: paymentMethod === 'cash' ? 'pending' : 'pending',
+      paymentStatus: 'PENDING',
       statusHistory: [{
         status: 'pending',
         note: 'Order created',
@@ -139,10 +140,45 @@ const createOrder = async (req, res) => {
     // Log order creation
     logger.info(`Order ${order.orderNumber} created by user ${req.user.userId}`);
 
+    // Create notifications for pharmacy owner and staff
+    try {
+      await Notification.create([
+        {
+          title: 'New Order Received',
+          message: `Order ${order.orderNumber} has been placed. Total: ${order.finalAmount} ETB`,
+          pharmacyId: req.body.pharmacyId,
+          roleTarget: 'OWNER',
+          type: 'new_order',
+          metadata: {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            totalAmount: order.finalAmount
+          }
+        },
+        {
+          title: 'New Order Received',
+          message: `Order ${order.orderNumber} has been placed. Total: ${order.finalAmount} ETB`,
+          pharmacyId: req.body.pharmacyId,
+          roleTarget: 'STAFF',
+          type: 'new_order',
+          metadata: {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            totalAmount: order.finalAmount
+          }
+        }
+      ]);
+      logger.info(`Notifications created for order ${order.orderNumber}`);
+    } catch (notifError) {
+      // Log error but don't fail the order creation
+      logger.error('Failed to create notifications:', notifError);
+    }
+
     // Send order confirmation email (implementation not shown)
     // await sendOrderConfirmationEmail(order, req.user);
 
     return res.status(201).json({
+
       success: true,
       message: 'Order created successfully',
       data: {

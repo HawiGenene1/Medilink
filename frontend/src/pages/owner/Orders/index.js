@@ -75,8 +75,19 @@ const OrderManagement = () => {
             delivered: { color: 'success', text: 'DELIVERED' },
             cancelled: { color: 'error', text: 'CANCELLED' }
         };
-        const config = map[status] || { color: 'default', text: status.toUpperCase() };
+        const config = map[status] || { color: 'default', text: (status || 'UNKNOWN').toUpperCase() };
         return <Tag color={config.color}>{config.text}</Tag>;
+    };
+
+    const getPaymentTag = (status) => {
+        const map = {
+            PENDING: { color: 'warning', text: 'PENDING' },
+            PAID: { color: 'success', text: 'PAID' },
+            FAILED: { color: 'error', text: 'FAILED' },
+            REFUNDED: { color: 'default', text: 'REFUNDED' }
+        };
+        const config = map[status] || { color: 'default', text: status || 'UNKNOWN' };
+        return <Tag color={config.color} style={{ borderRadius: '4px' }}>{config.text}</Tag>;
     };
 
     const columns = [
@@ -103,6 +114,19 @@ const OrderManagement = () => {
             dataIndex: 'status',
             key: 'status',
             render: (status) => getStatusTag(status)
+        },
+        {
+            title: 'Payment',
+            dataIndex: 'paymentStatus',
+            key: 'payment',
+            render: (status, record) => (
+                <Space direction="vertical" size={0}>
+                    {getPaymentTag(status)}
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                        {record.paymentMethod?.replace(/_/g, ' ')}
+                    </Text>
+                </Space>
+            )
         },
         {
             title: 'Action',
@@ -179,6 +203,8 @@ const OrderManagement = () => {
                             <Descriptions.Item label="Contact">{selectedOrder.customer?.phone || 'N/A'}</Descriptions.Item>
                             <Descriptions.Item label="Total">ETB {selectedOrder.finalAmount}</Descriptions.Item>
                             <Descriptions.Item label="Status">{getStatusTag(selectedOrder.status)}</Descriptions.Item>
+                            <Descriptions.Item label="Payment Method">{selectedOrder.paymentMethod?.replace(/_/g, ' ')}</Descriptions.Item>
+                            <Descriptions.Item label="Payment Status">{getPaymentTag(selectedOrder.paymentStatus)}</Descriptions.Item>
                         </Descriptions>
                         <Title level={5} style={{ marginTop: 20 }}>Order Items</Title>
                         <Table

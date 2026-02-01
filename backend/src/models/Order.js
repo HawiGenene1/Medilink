@@ -189,13 +189,13 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'failed', 'refunded'],
-    default: 'pending'
+    enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+    default: 'PENDING'
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'card', 'mobile_money', 'bank_transfer'],
-    default: 'cash'
+    enum: ['CASH_ON_DELIVERY', 'CARD'],
+    default: 'CASH_ON_DELIVERY'
   },
   paymentDetails: {
     transactionId: String,
