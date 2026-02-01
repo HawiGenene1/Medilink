@@ -72,10 +72,6 @@
     background: #ffffff;
 }
 
-.leaflet-container {
-    background-color: #ffffff !important;
-}
-
 .selected-pharmacy-floating-card {
     position: absolute;
     bottom: 32px;

@@ -175,9 +175,9 @@ const Pharmacies = () => {
                 attributionControl: false
             }).setView([9.0227, 38.7460], 13);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png', {
+            L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}{r}.png', {
                 maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution: '<a href="https://wikimediafoundation.org/wiki/Maps_Terms_of_Use">Wikimedia</a>'
             }).addTo(mapInstance.current);
 
             // Force recalculate size after a short delay
