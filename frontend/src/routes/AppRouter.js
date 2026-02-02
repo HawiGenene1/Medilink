@@ -48,6 +48,7 @@ import UserDetails from '../pages/admin/Users/UserDetails';
 import PendingRegistrations from '../pages/admin/Users/PendingRegistrations';
 import PharmacyList from '../pages/admin/Pharmacies/PharmacyList';
 import PharmacyDetail from '../pages/admin/Pharmacies/PharmacyDetail';
+import Subscriptions from '../pages/admin/Subscriptions/Subscriptions';
 import SystemMonitoring from '../pages/admin/Monitoring/SystemMonitoring';
 import AuditLogs from '../pages/admin/Audit/AuditLogs';
 import SecurityDashboard from '../pages/admin/Security/SecurityDashboard';
@@ -57,6 +58,7 @@ import Analytics from '../pages/admin/Analytics/Analytics';
 import Settings from '../pages/admin/Settings/Settings';
 import DeliveryApplicationList from '../pages/admin/DeliveryApplications/DeliveryApplicationList';
 import DeliveryApplicationDetail from '../pages/admin/DeliveryApplications/DeliveryApplicationDetail';
+import AdminNotifications from '../pages/admin/Notifications';
 
 const AppRouter = () => {
   return (
@@ -129,6 +131,7 @@ const AppRouter = () => {
           {/* Pharmacy Management */}
           <Route path="/admin/pharmacies" element={<PharmacyList />} />
           <Route path="/admin/pharmacies/:id" element={<PharmacyDetail />} />
+          <Route path="/admin/subscriptions" element={<Subscriptions />} />
 
           {/* Monitoring & Security */}
           <Route path="/admin/monitoring" element={<SystemMonitoring />} />
@@ -144,6 +147,9 @@ const AppRouter = () => {
 
           {/* Settings */}
           <Route path="/admin/settings" element={<Settings />} />
+
+          {/* New Requested Routes */}
+          <Route path="/admin/notifications" element={<AdminNotifications />} />
         </Route>
       </Route>
       {/* Redirects & Fallbacks */}

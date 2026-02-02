@@ -29,6 +29,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', protectAdmin, adminRoutes);
 app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
 app.use('/api/delivery', require('./routes/deliveryRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/customer', require('./routes/customerRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 
 // Test route

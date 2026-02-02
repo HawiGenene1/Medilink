@@ -1,12 +1,11 @@
 import React from 'react';
-import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Empty } from 'antd';
+import { Row, Col, Card, Typography, Button, List, Space, Empty } from 'antd';
 import {
     HeartFilled,
     ShoppingCartOutlined,
     MedicineBoxOutlined,
     ArrowLeftOutlined,
-    DeleteOutlined,
-    ShopOutlined
+    DeleteOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useFavorites } from '../../../contexts/FavoritesContext';
@@ -81,6 +80,7 @@ const Favorites = () => {
                                         }
                                         actions={[
                                             <Button
+                                                key="cart"
                                                 type="text"
                                                 icon={<ShoppingCartOutlined />}
                                                 onClick={() => handleAddToCart(medicine)}
@@ -88,6 +88,7 @@ const Favorites = () => {
                                                 Add to Cart
                                             </Button>,
                                             <Button
+                                                key="remove"
                                                 type="text"
                                                 danger
                                                 icon={<DeleteOutlined />}

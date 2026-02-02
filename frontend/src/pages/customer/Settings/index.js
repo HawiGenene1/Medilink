@@ -1,22 +1,20 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Tabs, Form, Input, Button, Switch, Avatar, Upload, Space, Divider, Alert, List, Modal, Steps } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Typography, Tabs, Form, Input, Button, Switch, Space, Divider, Alert, List, Modal, Steps, Spin } from 'antd';
 import {
-    UserOutlined,
     LockOutlined,
     BellOutlined,
     SafetyCertificateOutlined,
     EditOutlined,
-    CameraOutlined,
     EnvironmentOutlined,
     EyeInvisibleOutlined,
     EyeTwoTone,
     MailOutlined,
     ExclamationCircleOutlined,
     WarningOutlined,
-    FrownOutlined
+    SaveOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
-import api from '../../../services/api';
+import userService from '../../../services/api/user';
 import { App } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import './Settings.css';
@@ -24,11 +22,12 @@ import './Settings.css';
 const { Title, Text, Paragraph } = Typography;
 
 const Settings = () => {
-    const { user, logout } = useAuth();
+    const { logout, user, setUser } = useAuth();
     const { message } = App.useApp();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('security'); // Changed default active tab
+
+    const [activeTab, setActiveTab] = useState('security');
+    const [updating, setUpdating] = useState(false);
 
     // Delete Account State
     const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -36,10 +35,27 @@ const Settings = () => {
     const [confirmText, setConfirmText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
 
+    const handleUpdateSettings = async (changedValues) => {
+        try {
+            setUpdating(true);
+            const response = await userService.updateSettings(changedValues);
+            if (response.user) {
+                setUser(response.user);
+                localStorage.setItem('user', JSON.stringify(response.user));
+                message.success('Settings updated');
+            }
+        } catch (error) {
+            console.error('Update settings failed:', error);
+            message.error('Failed to update settings');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const handleDeleteFinal = async () => {
         setIsDeleting(true);
         try {
-            await api.delete('/users/profile');
+            await userService.deleteAccount();
             message.success('Account deleted successfully. We hope to see you again.');
             logout();
             navigate('/');
@@ -77,33 +93,50 @@ const Settings = () => {
             <Title level={4} style={{ color: '#E53935' }}>Two-Factor Authentication</Title>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text>Secure your account with SMS verification for all clinical orders.</Text>
-                <Switch defaultChecked />
+                <Switch defaultChecked disabled />
             </div>
+            <Text type="secondary" style={{ fontSize: '12px' }}>SMS integration pending setup.</Text>
         </div>
     );
 
     const NotificationSettings = () => (
         <div className="settings-section fade-in">
             <Title level={4}>Email Notifications</Title>
-            <div className="pref-row">
+            <div className="pref-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <Text>Order Status Updates</Text>
-                <Switch defaultChecked />
+                <Switch
+                    checked={user?.notificationPreferences?.orderUpdates}
+                    onChange={(checked) => handleUpdateSettings({ notificationPreferences: { orderUpdates: checked } })}
+                    loading={updating}
+                />
             </div>
-            <div className="pref-row">
+            <div className="pref-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <Text>Newsletter & Health Tips</Text>
-                <Switch />
+                <Switch
+                    checked={user?.notificationPreferences?.newsletter}
+                    onChange={(checked) => handleUpdateSettings({ notificationPreferences: { newsletter: checked } })}
+                    loading={updating}
+                />
             </div>
 
             <Divider />
 
             <Title level={4}>Push Notifications</Title>
-            <div className="pref-row">
+            <div className="pref-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <Text>Direct messaging from pharmacist</Text>
-                <Switch defaultChecked />
+                <Switch
+                    checked={user?.notificationPreferences?.directMessages}
+                    onChange={(checked) => handleUpdateSettings({ notificationPreferences: { directMessages: checked } })}
+                    loading={updating}
+                />
             </div>
-            <div className="pref-row">
+            <div className="pref-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <Text>Interactive tracking alerts</Text>
-                <Switch defaultChecked />
+                <Switch
+                    checked={user?.notificationPreferences?.trackingAlerts}
+                    onChange={(checked) => handleUpdateSettings({ notificationPreferences: { trackingAlerts: checked } })}
+                    loading={updating}
+                />
             </div>
         </div>
     );
@@ -112,41 +145,55 @@ const Settings = () => {
         <div className="settings-section fade-in">
             <Title level={4}>Privacy Preferences</Title>
             <Paragraph type="secondary">Manage how your medical data and activity is shared.</Paragraph>
-            <div className="pref-row">
+            <div className="pref-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <Text>Share interaction data with pharmacists</Text>
-                <Switch defaultChecked />
+                <Switch
+                    checked={user?.privacySettings?.shareInteractionData}
+                    onChange={(checked) => handleUpdateSettings({ privacySettings: { shareInteractionData: checked } })}
+                    loading={updating}
+                />
             </div>
-            <div className="pref-row">
+            <div className="pref-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <Text>Digital Prescriptions: Auto-share with pharmacies</Text>
-                <Switch defaultChecked />
+                <Switch
+                    checked={user?.privacySettings?.autoSharePrescriptions}
+                    onChange={(checked) => handleUpdateSettings({ privacySettings: { autoSharePrescriptions: checked } })}
+                    loading={updating}
+                />
             </div>
             <Divider />
             <Title level={4} style={{ color: '#ff4d4f' }}>Data Management</Title>
-            <Button danger>Download My Data (JSON)</Button>
+            <Button icon={<SaveOutlined />}>Download My Data (JSON)</Button>
         </div>
     );
 
     const PreferencesSettings = () => (
         <div className="settings-section fade-in">
             <Title level={4}>App Preferences</Title>
-            <div className="pref-row">
+            <div className="pref-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <Text>Theme</Text>
                 <Switch
                     checkedChildren="Dark"
                     unCheckedChildren="Light"
-                    defaultChecked={false}
+                    checked={user?.appPreferences?.theme === 'dark'}
+                    onChange={(checked) => handleUpdateSettings({ appPreferences: { theme: checked ? 'dark' : 'light' } })}
+                    loading={updating}
                 />
             </div>
             <Divider />
             <Title level={4}>Clinical Preferences</Title>
             <Paragraph type="secondary">Set your default healthcare providers.</Paragraph>
-            <Card className="option-card-mini" style={{ marginBottom: '16px' }}>
-                <Space>
-                    <EnvironmentOutlined style={{ color: '#1E88E5' }} />
-                    <Text strong>Kenema Pharmacy No. 4 (Bole)</Text>
-                    <Button type="link" size="small">Change Default</Button>
-                </Space>
-            </Card>
+            {user?.appPreferences?.defaultPharmacy ? (
+                <Card className="option-card-mini" style={{ marginBottom: '16px' }}>
+                    <Space>
+                        <EnvironmentOutlined style={{ color: '#1E88E5' }} />
+                        <Text strong>Default Pharmacy Set</Text>
+                        <Button type="link" size="small">Change</Button>
+                    </Space>
+                </Card>
+            ) : (
+                <Text type="secondary">No default pharmacy selected. <Button type="link" size="small">Browse Pharmacies</Button></Text>
+            )}
         </div>
     );
 
@@ -171,7 +218,7 @@ const Settings = () => {
             />
             <Divider />
             <Text type="secondary" style={{ fontSize: '12px' }}>
-                Version 1.1.0 (Build 20260120)
+                Version 1.2.0 (Build 20260202)
             </Text>
         </div>
     );
@@ -184,14 +231,18 @@ const Settings = () => {
         { key: 'support', label: <span><MailOutlined /> Support</span>, children: <SupportSettings /> },
     ];
 
+    if (!user) {
+        return <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>;
+    }
+
     return (
-        <div className="settings-page fade-in">
+        <div className="settings-page fade-in" style={{ padding: '24px' }}>
             <div className="page-header" style={{ marginBottom: '32px' }}>
                 <Title level={2}>Account Settings</Title>
                 <Text type="secondary">Manage your identity, clinical preferences, and security.</Text>
             </div>
 
-            <Card bordered={false} className="settings-main-card">
+            <Card bordered={false} className="premium-card">
                 <Tabs
                     activeKey={activeTab}
                     onChange={setActiveTab}
@@ -328,19 +379,8 @@ const Settings = () => {
                     )}
                 </div>
             </Modal>
-
         </div>
     );
 };
-
-// Use CustomBadge to handle the Camera Icon properly without shadowing AntD's Badge
-const CustomBadge = ({ count, children, offset }) => (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-        {children}
-        <div style={{ position: 'absolute', right: offset[0], bottom: offset[1], zIndex: 10 }}>
-            {count}
-        </div>
-    </div>
-);
 
 export default Settings;

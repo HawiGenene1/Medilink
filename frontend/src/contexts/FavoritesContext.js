@@ -20,7 +20,7 @@ export const FavoritesProvider = ({ children }) => {
     const { message } = App.useApp();
 
     // Fetch favorites from backend on mount or specific event
-    const fetchFavorites = async () => {
+    const fetchFavorites = React.useCallback(async () => {
         if (!user) {
             setFavorites([]);
             setLoading(false);
@@ -41,11 +41,11 @@ export const FavoritesProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         fetchFavorites();
-    }, [user]);
+    }, [fetchFavorites]);
 
     const addToFavorites = async (medicine) => {
         if (!user) {

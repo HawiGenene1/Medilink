@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Row, Col, Card, Button, Table, Tag, Space, Typography, Upload, message, Alert } from 'antd';
+import { Row, Col, Card, Button, Table, Tag, Space, Typography, Upload, Alert } from 'antd';
 import {
     CloudDownloadOutlined,
     CloudUploadOutlined,

@@ -84,7 +84,7 @@ const Inventory = () => {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (text) => <a>{text}</a>,
+      render: (text) => <Button type="link" style={{ padding: 0 }}>{text}</Button>,
       sorter: (a, b) => a.name.localeCompare(b.name),
       filteredValue: searchText ? [searchText] : null,
       onFilter: (value, record) => record.name.toLowerCase().includes(value.toLowerCase()) || record.brand.toLowerCase().includes(value.toLowerCase()),

@@ -7,13 +7,16 @@ import {
     SafetyCertificateOutlined,
     FileTextOutlined,
     ShopOutlined,
+    DollarOutlined,
     MonitorOutlined,
     MessageOutlined,
     DatabaseOutlined,
     LockOutlined,
     BarChartOutlined,
     SettingOutlined,
-    CarOutlined
+    CarOutlined,
+    BellOutlined,
+    LogoutOutlined
 } from '@ant-design/icons';
 
 const AdminLayout = () => {
@@ -26,53 +29,49 @@ const AdminLayout = () => {
         {
             key: '/admin/users',
             icon: <TeamOutlined />,
-            label: 'Users',
-        },
-        {
-            key: '/admin/registrations/pending',
-            icon: <FileTextOutlined />,
-            label: 'Pending Registrations',
+            label: 'User Management',
         },
         {
             key: '/admin/pharmacies',
             icon: <ShopOutlined />,
-            label: 'Pharmacies',
+            label: 'Pharmacy Management',
         },
         {
-            key: '/admin/monitoring',
-            icon: <MonitorOutlined />,
-            label: 'Monitoring',
+            key: '/admin/subscriptions',
+            icon: <DollarOutlined />,
+            label: 'Subscriptions',
         },
         {
-            key: '/admin/audit',
-            icon: <SafetyCertificateOutlined />,
-            label: 'Audit & Compliance',
-        },
-        {
-            key: '/admin/communication',
-            icon: <MessageOutlined />,
-            label: 'Communication',
-        },
-        {
-            key: '/admin/data',
-            icon: <DatabaseOutlined />,
-            label: 'Data Management',
-        },
-        {
-            key: '/admin/security',
-            icon: <LockOutlined />,
-            label: 'Security',
+            key: '/admin/registrations/pending',
+            icon: <FileTextOutlined />,
+            label: 'Approvals',
         },
         {
             key: '/admin/analytics',
             icon: <BarChartOutlined />,
-            label: 'Business Intelligence',
+            label: 'Analytics & Reports',
+        },
+        {
+            key: '/admin/audit',
+            icon: <SafetyCertificateOutlined />,
+            label: 'System Logs',
         },
         {
             key: '/admin/settings',
             icon: <SettingOutlined />,
-            label: 'System Settings',
+            label: 'Settings',
         },
+        {
+            key: '/admin/notifications',
+            icon: <BellOutlined />,
+            label: 'Notifications',
+        },
+        {
+            key: 'logout',
+            icon: <LogoutOutlined />,
+            label: 'Logout',
+            danger: true
+        }
     ];
 
     return (

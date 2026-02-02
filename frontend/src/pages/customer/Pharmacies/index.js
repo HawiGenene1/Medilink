@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, List, Avatar, Button, Tag, Space, Input, Rate } from 'antd';
+import { Row, Col, Card, Typography, List, Avatar, Button, Tag, Space, Input } from 'antd';
 import {
-    EnvironmentOutlined,
     SearchOutlined,
     ShopOutlined,
     PhoneOutlined,
     CompassOutlined,
-    FilterOutlined,
     MedicineBoxOutlined,
     AimOutlined
 } from '@ant-design/icons';
@@ -35,6 +33,43 @@ const NavigationOutlined = (props) => (
         </svg>
     </span>
 );
+
+
+const pharmacies = [
+    {
+        id: 'ph-1',
+        name: 'Kenema Pharmacy No. 4',
+        pos: [9.0227, 38.7460],
+        rating: 4.8,
+        reviews: 124,
+        status: 'Open',
+        distance: '0.5 km',
+        address: 'Bole Road, Addis Ababa',
+        phone: '+251 11 123 4567'
+    },
+    {
+        id: 'ph-2',
+        name: 'Abyssinia Central Pharma',
+        pos: [9.0270, 38.7510],
+        rating: 4.5,
+        reviews: 89,
+        status: 'Open',
+        distance: '1.2 km',
+        address: 'Kazanchis, Addis Ababa',
+        phone: '+251 11 987 6543'
+    },
+    {
+        id: 'ph-3',
+        name: 'Red Cross Dispensary',
+        pos: [9.0180, 38.7400],
+        rating: 4.9,
+        reviews: 312,
+        status: 'Closed',
+        distance: '2.5 km',
+        address: 'Piazza, Addis Ababa',
+        phone: '+251 11 555 0199'
+    }
+];
 
 const Pharmacies = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -90,42 +125,6 @@ const Pharmacies = () => {
         };
         fetchMedicines();
     }, []);
-
-    const pharmacies = [
-        {
-            id: 'ph-1',
-            name: 'Kenema Pharmacy No. 4',
-            pos: [9.0227, 38.7460],
-            rating: 4.8,
-            reviews: 124,
-            status: 'Open',
-            distance: '0.5 km',
-            address: 'Bole Road, Addis Ababa',
-            phone: '+251 11 123 4567'
-        },
-        {
-            id: 'ph-2',
-            name: 'Abyssinia Central Pharma',
-            pos: [9.0270, 38.7510],
-            rating: 4.5,
-            reviews: 89,
-            status: 'Open',
-            distance: '1.2 km',
-            address: 'Kazanchis, Addis Ababa',
-            phone: '+251 11 987 6543'
-        },
-        {
-            id: 'ph-3',
-            name: 'Red Cross Dispensary',
-            pos: [9.0180, 38.7400],
-            rating: 4.9,
-            reviews: 312,
-            status: 'Closed',
-            distance: '2.5 km',
-            address: 'Piazza, Addis Ababa',
-            phone: '+251 11 555 0199'
-        }
-    ];
 
     // Filter Pharmacies
     const filteredPharmacies = pharmacies.filter(ph => {

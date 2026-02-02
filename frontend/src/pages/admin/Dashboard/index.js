@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Tag, Button, Typography, Alert, List, Avatar, Skeleton, message, Space } from 'antd';
+import { Row, Col, Card, Statistic, Button, Typography, Alert, List, Avatar, Skeleton, message, Space, Tag } from 'antd';
 import {
   UserOutlined,
   ShopOutlined,
@@ -7,18 +7,26 @@ import {
   DollarOutlined,
   SafetyOutlined,
   WarningOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+
+  FileSearchOutlined,
+  LineChartOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import {
-  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
+  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts';
 import adminService from '../../../services/api/admin';
+import { useNavigate } from 'react-router-dom';
+import './Dashboard.css';
 
 const { Title, Text } = Typography;
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -53,31 +61,42 @@ const AdminDashboard = () => {
     );
   }
 
-  // Use real data or fallbacks
   const stats = data?.stats || {
     totalUsers: 0,
     activePharmacies: 0,
     totalOrders: 0,
     totalRevenue: 0,
-    healthScore: 100
+    healthScore: 100,
+    activeSubscriptions: 0,
+    expiringSubscriptions: 0
   };
 
   const userGrowthData = data?.userGrowth || [];
   const orderStatusData = data?.orderStatus || [];
-  const securityAlerts = data?.alerts || [];
+  const systemLogs = data?.alerts || [];
   const revenueData = data?.weeklyRevenue || [];
+
+  // Mock Critical Alerts (since backend only returns logs currently)
+  const criticalAlerts = [
+    { type: 'critical', message: 'Payment service timeout', time: '10:45 AM' },
+    { type: 'warning', message: 'High CPU usage detected (85%)', time: '11:20 AM' },
+    { type: 'critical', message: 'Backup failed (DB_PRIMARY)', time: '03:15 AM' }
+  ];
+
+
 
   return (
     <div className="admin-dashboard fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      {/* Header Section */}
+      <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <Title level={2} style={{ marginBottom: 0 }}>System Overview</Title>
-          <Text type="secondary">Real-time platform insights and health check</Text>
+          <Title level={2} className="dashboard-title" style={{ marginBottom: 0 }}>System Overview</Title>
+          <Text type="secondary">Real-time platform insights and system monitoring</Text>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <Button icon={<ReloadOutlined />} onClick={fetchDashboardData} loading={loading}>Refresh</Button>
-          <Tag color="success" style={{ padding: '6px 12px', fontSize: '14px', borderRadius: '6px' }}>
-            <SafetyOutlined /> Health Score: {stats.healthScore || 100}%
+          <Tag color={stats.healthScore > 90 ? 'success' : 'warning'} style={{ padding: '6px 12px', fontSize: '14px', borderRadius: '8px', fontWeight: 600 }}>
+            <SafetyOutlined /> Platform Health: {stats.healthScore}%
           </Tag>
         </div>
       </div>
@@ -92,155 +111,202 @@ const AdminDashboard = () => {
         />
       )}
 
-      {/* Stats Widgets */}
+      {/* A. System Overview Cards */}
+      <Title level={4} style={{ marginBottom: '16px', color: '#64748b' }}>System Metrics</Title>
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-        <Col xs={24} sm={12} lg={6} xl={5}>
-          <Card bordered={false} hoverable className="premium-card">
+        {/* Total Users */}
+        <Col xs={24} sm={12} lg={4}>
+          <Card bordered={false} hoverable className="premium-card oversight-card">
             <Statistic
               title="Total Users"
               value={stats.totalUsers}
               prefix={<UserOutlined style={{ color: '#4361ee' }} />}
-              valueStyle={{ color: '#1e293b' }}
+              valueStyle={{ color: '#1e293b', fontWeight: 700 }}
             />
-            <div style={{ marginTop: '8px', fontSize: '12px' }}>
-              <Text type="success"><ArrowUpOutlined /> 12% </Text>
-              <Text type="secondary">vs last month</Text>
-            </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6} xl={5}>
-          <Card bordered={false} hoverable className="premium-card">
+
+        {/* Active Pharmacies */}
+        <Col xs={24} sm={12} lg={4}>
+          <Card bordered={false} hoverable className="premium-card oversight-card">
             <Statistic
               title="Active Pharmacies"
               value={stats.activePharmacies}
               prefix={<ShopOutlined style={{ color: '#06d6a0' }} />}
-              valueStyle={{ color: '#1e293b' }}
+              valueStyle={{ color: '#1e293b', fontWeight: 700 }}
             />
-            <div style={{ marginTop: '8px', fontSize: '12px' }}>
-              <Text type="success"><ArrowUpOutlined /> 5% </Text>
-              <Text type="secondary">new registrations</Text>
-            </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6} xl={5}>
-          <Card bordered={false} hoverable className="premium-card">
+
+        {/* Total Orders (Read Only) */}
+        <Col xs={24} sm={12} lg={4}>
+          <Card bordered={false} hoverable className="premium-card oversight-card">
             <Statistic
               title="Total Orders"
               value={stats.totalOrders}
               prefix={<ShoppingOutlined style={{ color: '#722ed1' }} />}
-              valueStyle={{ color: '#1e293b' }}
+              valueStyle={{ color: '#1e293b', fontWeight: 700 }}
             />
-            <div style={{ marginTop: '8px', fontSize: '12px' }}>
-              <Text type="warning">Active: 12</Text>
-            </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6} xl={5}>
-          <Card bordered={false} hoverable className="premium-card">
+
+        {/* Total Revenue (Read Only) */}
+        <Col xs={24} sm={12} lg={5}>
+          <Card bordered={false} hoverable className="premium-card oversight-card">
             <Statistic
               title="Total Revenue"
               value={stats.totalRevenue}
               precision={2}
               prefix={<DollarOutlined style={{ color: '#ef476f' }} />}
               suffix="ETB"
-              valueStyle={{ color: '#1e293b' }}
+              valueStyle={{ color: '#1e293b', fontWeight: 700 }}
             />
-            <div style={{ marginTop: '8px', fontSize: '12px' }}>
-              <Text type="success"><ArrowUpOutlined /> 8.4% </Text>
-              <Text type="secondary">revenue growth</Text>
-            </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={24} xl={4}>
-          <Card bordered={false} className="alert-summary-card" style={{ background: '#fff1f0' }}>
-            <Statistic
-              title="Critical Alerts"
-              value={3}
-              prefix={<WarningOutlined style={{ color: '#f5222d' }} />}
-              valueStyle={{ color: '#cf1322' }}
-            />
-            <Button type="link" size="small" danger style={{ padding: 0 }}>Review Logs</Button>
-          </Card>
-        </Col>
-      </Row>
 
-      {/* Charts Section */}
-      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
-        <Col xs={24} lg={16}>
-          <Card title="User Acquisition Trend" bordered={false} className="premium-card">
-            <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer>
-                <AreaChart data={userGrowthData}>
-                  <defs>
-                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4361ee" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#4361ee" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="users" stroke="#4361ee" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+        {/* Expiring Subscriptions */}
+        <Col xs={24} sm={12} lg={4}>
+          <Card bordered={false} hoverable className="premium-card oversight-card" style={{ borderLeft: '4px solid #ff9f43' }}>
+            <Statistic
+              title="Expiring Subs"
+              value={stats.expiringSubscriptions}
+              prefix={<ClockCircleOutlined style={{ color: '#ff9f43' }} />}
+              valueStyle={{ color: '#1e293b', fontWeight: 700 }}
+            />
           </Card>
         </Col>
-        <Col xs={24} lg={8}>
-          <Card title="Order Status Breakdown" bordered={false} className="premium-card">
-            <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer>
-                <BarChart data={orderStatusData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" width={100} axisLine={false} tickLine={false} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#4361ee" barSize={20} radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+
+        {/* Platform Health Card (redundant with header tag but requested) */}
+        <Col xs={24} sm={12} lg={3}>
+          <Card bordered={false} hoverable className="premium-card oversight-card">
+            <Statistic
+              title="Health"
+              value={stats.healthScore}
+              suffix="%"
+              prefix={<SafetyOutlined style={{ color: '#389e0d' }} />}
+              valueStyle={{ color: '#389e0d', fontWeight: 700 }}
+            />
           </Card>
         </Col>
       </Row>
 
       <Row gutter={[24, 24]}>
-        {/* Revenue Trend */}
-        <Col xs={24} lg={12}>
-          <Card title="Weekly Revenue Performance (ETB)" bordered={false} className="premium-card">
-            <div style={{ width: '100%', height: 250 }}>
-              <ResponsiveContainer>
-                <LineChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#06d6a0" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+        {/* B. Critical Alerts Panel */}
+        <Col xs={24} lg={8}>
+          <Card
+            title={<Space><WarningOutlined style={{ color: '#f5222d' }} /> Critical System Alerts</Space>}
+            bordered={false}
+            className="premium-card alert-panel-card"
+            style={{ height: '100%', border: '1px solid #ffccc7', background: '#fff2f0' }}
+          >
+            <List
+              dataSource={criticalAlerts}
+              renderItem={item => (
+                <List.Item style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,0,0,0.1)' }}>
+                  <List.Item.Meta
+                    avatar={<ExclamationCircleOutlined style={{ color: '#f5222d', fontSize: '20px' }} />}
+                    title={<Text strong style={{ color: '#cf1322' }}>{item.message}</Text>}
+                    description={<Text type="secondary" style={{ fontSize: '12px' }}>{item.time}</Text>}
+                  />
+                </List.Item>
+              )}
+            />
+            <Button type="primary" danger ghost block style={{ marginTop: '16px' }} onClick={() => navigate('/admin/notifications')}>View All Alerts</Button>
           </Card>
         </Col>
 
-        {/* Security & System Alerts Panel */}
-        <Col xs={24} lg={12}>
-          <Card title="Forensic Security Logs" extra={<Button type="link">Expand Security Center</Button>} bordered={false} className="premium-card">
+        {/* C. Analytics & Charts */}
+        <Col xs={24} lg={16}>
+          <Row gutter={[24, 24]}>
+            {/* User Growth */}
+            <Col span={24}>
+              <Card
+                title={<Space><LineChartOutlined /> User Growth Trend</Space>}
+                bordered={false}
+                className="premium-card"
+                extra={<Tag color="blue">Monitoring</Tag>}
+              >
+                <div style={{ width: '100%', height: 250 }}>
+                  <ResponsiveContainer>
+                    <AreaChart data={userGrowthData}>
+                      <defs>
+                        <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4361ee" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#4361ee" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <ChartTooltip />
+                      <Area type="monotone" dataKey="users" stroke="#4361ee" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </Col>
+
+            {/* Order Status Distribution */}
+            <Col span={12}>
+              <Card title="Order Status (Distribution)" bordered={false} className="premium-card">
+                <div style={{ width: '100%', height: 200 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={orderStatusData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" width={100} axisLine={false} tickLine={false} />
+                      <ChartTooltip />
+                      <Bar dataKey="value" fill="#4361ee" barSize={20} radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </Col>
+
+            {/* Weekly Revenue */}
+            <Col span={12}>
+              <Card title="Weekly Revenue (Read-only)" bordered={false} className="premium-card">
+                <div style={{ width: '100%', height: 200 }}>
+                  <ResponsiveContainer>
+                    <LineChart data={revenueData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <ChartTooltip />
+                      <Line type="monotone" dataKey="revenue" stroke="#06d6a0" strokeWidth={3} dot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        </Col>
+      </Row>
+
+      {/* D. System Activity Trail / Logs */}
+      <Row gutter={[24, 24]} style={{ marginTop: '24px' }}>
+        <Col span={24}>
+          <Card
+            title={<Space><FileSearchOutlined /> System Activity Trail</Space>}
+            extra={<Button type="link" onClick={() => navigate('/admin/audit')}>View Full Logs</Button>}
+            bordered={false}
+            className="premium-card"
+          >
             <List
               itemLayout="horizontal"
-              dataSource={securityAlerts}
+              dataSource={systemLogs}
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
                     avatar={
-                      <Avatar icon={item.type === 'critical' ? <SafetyOutlined /> : <WarningOutlined />}
-                        style={{ backgroundColor: item.type === 'critical' ? '#ff4d4f' : '#faad14' }} />
+                      <Avatar icon={item.type === 'critical' ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
+                        style={{ backgroundColor: item.type === 'critical' ? '#ff4d4f' : '#52c41a' }} />
                     }
-                    title={<span style={{ color: item.type === 'critical' ? '#cf1322' : 'inherit', fontWeight: 500 }}>{item.message}</span>}
+                    title={<span style={{ fontWeight: 600 }}>{item.message}</span>}
                     description={
                       <Space>
-                        <Text type="secondary">{item.time}</Text>
-                        <Tag size="small" color={item.type === 'critical' ? 'red' : 'orange'}>{item.type.toUpperCase()}</Tag>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>{item.time}</Text>
+                        <Tag size="small">{item.type.toUpperCase()}</Tag>
                       </Space>
                     }
                   />
@@ -250,28 +316,6 @@ const AdminDashboard = () => {
           </Card>
         </Col>
       </Row>
-
-      <style jsx>{`
-        .premium-card {
-          border-radius: 12px;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-          transition: transform 0.2s ease-in-out;
-        }
-        .premium-card:hover {
-          transform: translateY(-2px);
-        }
-        .alert-summary-card {
-          border-radius: 12px;
-          border-left: 4px solid #f5222d !important;
-        }
-        .fade-in {
-          animation: fadeIn 0.5s ease-in;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };

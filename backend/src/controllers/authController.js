@@ -8,6 +8,7 @@ const { generatePassword } = require('../utils/passwordGenerator');
 const { sendWelcomeEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
+const AuditLog = require('../models/AuditLog');
 
 // Function to generate a unique username
 const generateUsername = async (firstName, lastName) => {
@@ -196,6 +197,19 @@ const login = async (req, res) => {
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
+      // Log failed login attempt (user not found)
+      await AuditLog.create({
+        user: null, // No user ID if not found
+        userEmail: email,
+        userRole: 'unknown',
+        action: 'LOGIN',
+        status: 'FAILURE',
+        entityType: 'USER',
+        description: `Failed login attempt: User not found for email ${email}`,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      }).catch(err => console.error('Failed to create audit log:', err));
+
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
@@ -216,11 +230,39 @@ const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      // Log failed login attempt (wrong password)
+      await AuditLog.create({
+        user: user._id,
+        userEmail: user.email,
+        userRole: user.role,
+        action: 'LOGIN',
+        status: 'FAILURE',
+        entityType: 'USER',
+        entityId: user._id,
+        description: `Failed login attempt: Incorrect password for ${user.email}`,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      }).catch(err => console.error('Failed to create audit log:', err));
+
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
       });
     }
+
+    // Log successful login
+    await AuditLog.create({
+      user: user._id,
+      userEmail: user.email,
+      userRole: user.role,
+      action: 'LOGIN',
+      status: 'SUCCESS',
+      entityType: 'USER',
+      entityId: user._id,
+      description: `User ${user.email} logged in successfully`,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    }).catch(err => console.error('Failed to create audit log:', err));
 
     const token = generateToken({ userId: user._id, role: user.role });
 

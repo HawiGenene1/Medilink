@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Input, Button, List, Tag, Select, Space, Typography, Avatar, Tooltip, Empty } from 'antd';
+import { Row, Col, Card, Input, Button, List, Tag, Select, Space, Typography, Avatar, Tooltip } from 'antd';
 import {
     SearchOutlined,
     EnvironmentOutlined,
     UnorderedListOutlined,
-    FilterOutlined,
-    ShopOutlined,
     MedicineBoxOutlined,
     ShoppingCartOutlined
 } from '@ant-design/icons';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Input, Avatar, Badge, Dropdown, Button, Drawer, Space, Typography } from 'antd';
+import { Layout, Menu, Input, Avatar, Badge, Dropdown, Button, Drawer, Space } from 'antd';
 import {
     MenuUnfoldOutlined,
     MenuFoldOutlined,
@@ -14,7 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import './CommonDashboardLayout.css';
 
 const { Header, Sider, Content } = Layout;
-const { Text } = Typography;
+
 
 const CommonDashboardLayout = ({ children, menuItems, role, onSearch }) => {
     const [collapsed, setCollapsed] = useState(false);

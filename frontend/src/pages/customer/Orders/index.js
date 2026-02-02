@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Timeline, Modal, Divider } from 'antd';
+import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Tabs, Progress, Modal, Divider } from 'antd';
 import {
-  ClockCircleOutlined,
-  EnvironmentOutlined,
   ShopOutlined,
   ShoppingCartOutlined,
   FileTextOutlined,
-  ArrowRightOutlined,
-  MedicineBoxOutlined
+  MedicineBoxOutlined,
+  EnvironmentOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import './Orders.css';

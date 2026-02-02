@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, List, Tag, Avatar, Space, Checkbox, Divider, Alert } from 'antd';
+import React from 'react';
+import { Row, Col, Card, Typography, Button, Tag, Space, Divider, Alert } from 'antd';
 import {
-  ShoppingCartOutlined,
   DeleteOutlined,
   ShopOutlined,
   MedicineBoxOutlined,
@@ -18,7 +17,7 @@ const { Title, Text } = Typography;
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { cartItems, removeFromCart, updateQuantity, getCartGroups, subtotal } = useCart();
+  const { removeFromCart, updateQuantity, getCartGroups, subtotal } = useCart();
 
   const cartGroups = getCartGroups();
 

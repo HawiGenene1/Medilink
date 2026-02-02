@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false // Don't return password by default in queries
   },
-phone: {
+  phone: {
     type: String,
     required: [true, 'Phone number is required'],
     trim: true
@@ -116,7 +116,21 @@ phone: {
   roleUpdateReason: String,
   permissions: [{
     type: String
-  }]
+  }],
+  notificationPreferences: {
+    orderUpdates: { type: Boolean, default: true },
+    newsletter: { type: Boolean, default: false },
+    directMessages: { type: Boolean, default: true },
+    trackingAlerts: { type: Boolean, default: true }
+  },
+  privacySettings: {
+    shareInteractionData: { type: Boolean, default: true },
+    autoSharePrescriptions: { type: Boolean, default: true }
+  },
+  appPreferences: {
+    theme: { type: String, enum: ['light', 'dark'], default: 'light' },
+    defaultPharmacy: { type: mongoose.Schema.Types.ObjectId, ref: 'Pharmacy' }
+  }
 }, {
   timestamps: true
 });

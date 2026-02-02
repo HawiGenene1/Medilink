@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Button, Drawer, Dropdown, Menu, Space, Avatar } from 'antd';
+import { Button, Drawer, Dropdown, Space, Avatar } from 'antd';
 import { MenuOutlined, UserOutlined, MedicineBoxOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import './Navbar.css';

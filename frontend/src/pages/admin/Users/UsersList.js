@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table, Card, Button, Input, Select, Tag,
-    Space, Tooltip, Dropdown, Modal, message, Typography, Avatar
+    Space, Tooltip, Dropdown, Modal, message, Typography, Avatar, Form
 } from 'antd';
 import {
     SearchOutlined,
@@ -30,6 +30,10 @@ const UsersList = () => {
         pageSize: 10,
         total: 0
     });
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [form] = Form.useForm();
+    const [creating, setCreating] = useState(false);
+
     const [filters, setFilters] = useState({
         role: undefined,
         status: undefined,
@@ -90,6 +94,52 @@ const UsersList = () => {
         // Debounce search in real apps, for now simple:
         if (value.length > 2 || value.length === 0) {
             fetchUsers(1, pagination.pageSize, newFilters);
+        }
+    };
+
+    const handleCreateUser = async (values) => {
+        try {
+            setCreating(true);
+            const response = await adminService.createAdminUser(values);
+            if (response.success) {
+                message.success('User created successfully');
+                setIsModalVisible(false);
+                form.resetFields();
+                fetchUsers(1, pagination.pageSize); // Refresh list
+            } else {
+                message.error(response.message || 'Failed to create user');
+            }
+        } catch (error) {
+            console.error('Create user error:', error);
+            message.error('An error occurred while creating user');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const handleExport = async () => {
+        try {
+            const exportFilters = {};
+            if (filters.role) exportFilters.role = filters.role;
+            if (filters.status) {
+                // Map status to boolean
+                if (filters.status === 'active') exportFilters.isActive = true;
+                if (filters.status === 'inactive') exportFilters.isActive = false;
+            }
+
+            const response = await adminService.exportData('users', 'csv', exportFilters);
+
+            // Create blob and download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+        } catch (error) {
+            console.error('Export error:', error);
+            message.error('Failed to export data');
         }
     };
 
@@ -183,9 +233,84 @@ const UsersList = () => {
                 </div>
                 <Space>
                     <Button icon={<ReloadOutlined />} onClick={() => fetchUsers(pagination.current)}>Refresh</Button>
-                    <Button type="primary" icon={<UserAddOutlined />} className="premium-btn">Create User</Button>
+                    <Button type="primary" icon={<UserAddOutlined />} className="premium-btn" onClick={() => setIsModalVisible(true)}>Create User</Button>
                 </Space>
             </div>
+
+            <Modal
+                title="Create New User"
+                open={isModalVisible}
+                onCancel={() => setIsModalVisible(false)}
+                footer={null}
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleCreateUser}
+                >
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                        <Form.Item
+                            name="firstName"
+                            label="First Name"
+                            rules={[{ required: true, message: 'Please enter first name' }]}
+                            style={{ flex: 1 }}
+                        >
+                            <Input placeholder="John" />
+                        </Form.Item>
+                        <Form.Item
+                            name="lastName"
+                            label="Last Name"
+                            rules={[{ required: true, message: 'Please enter last name' }]}
+                            style={{ flex: 1 }}
+                        >
+                            <Input placeholder="Doe" />
+                        </Form.Item>
+                    </div>
+
+                    <Form.Item
+                        name="email"
+                        label="Email"
+                        rules={[
+                            { required: true, message: 'Please enter email' },
+                            { type: 'email', message: 'Please enter a valid email' }
+                        ]}
+                    >
+                        <Input placeholder="john@example.com" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="password"
+                        label="Password"
+                        rules={[
+                            { required: true, message: 'Please enter password' },
+                            { min: 6, message: 'Password must be at least 6 characters' }
+                        ]}
+                    >
+                        <Input.Password placeholder="******" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="role"
+                        label="Role"
+                        rules={[{ required: true, message: 'Please select a role' }]}
+                    >
+                        <Select placeholder="Select a role">
+                            <Option value="admin">System Admin</Option>
+                            <Option value="pharmacy_admin">Pharmacy Admin</Option>
+                            <Option value="cashier">Cashier</Option>
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item>
+                        <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+                            <Button onClick={() => setIsModalVisible(false)}>Cancel</Button>
+                            <Button type="primary" htmlType="submit" loading={creating}>
+                                Create User
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </Form>
+            </Modal>
 
             <Card bordered={false} className="premium-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
@@ -227,7 +352,7 @@ const UsersList = () => {
                                 <Button danger>Disable</Button>
                             </Space>
                         )}
-                        <Button icon={<ExportOutlined />}>Export</Button>
+                        <Button icon={<ExportOutlined />} onClick={handleExport}>Export</Button>
                     </Space>
                 </div>
 

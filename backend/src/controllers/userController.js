@@ -90,6 +90,51 @@ exports.updateUserProfile = async (req, res) => {
     }
 };
 
+// @desc    Update user settings (preferences)
+// @route   PATCH /api/users/settings
+// @access  Private
+exports.updateUserSettings = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (req.body.notificationPreferences) {
+            user.notificationPreferences = {
+                ...user.notificationPreferences.toObject(),
+                ...req.body.notificationPreferences
+            };
+        }
+
+        if (req.body.privacySettings) {
+            user.privacySettings = {
+                ...user.privacySettings.toObject(),
+                ...req.body.privacySettings
+            };
+        }
+
+        if (req.body.appPreferences) {
+            user.appPreferences = {
+                ...user.appPreferences.toObject(),
+                ...req.body.appPreferences
+            };
+        }
+
+        const updatedUser = await user.save();
+        updatedUser.password = undefined;
+
+        res.json({
+            message: 'Settings updated successfully',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('Error updating status:', error);
+        res.status(500).json({ message: 'Server error updating settings' });
+    }
+};
+
 // @desc    Delete user account
 // @route   DELETE /api/users/profile
 // @access  Private
@@ -102,7 +147,6 @@ exports.deleteUserProfile = async (req, res) => {
         }
 
         // Potential addition: delete associated favorites, orders, etc.
-        // For now, focus on User account deletion
         await User.findByIdAndDelete(req.user.id);
 
         res.json({ message: 'Account deleted successfully' });

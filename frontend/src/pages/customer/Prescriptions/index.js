@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, Upload, List, Tag, Table, Space, Alert, Modal } from 'antd';
+import { Row, Col, Card, Typography, Button, Upload, Tag, Table, Space, Alert, Modal } from 'antd';
 import {
   InboxOutlined,
   FileProtectOutlined,

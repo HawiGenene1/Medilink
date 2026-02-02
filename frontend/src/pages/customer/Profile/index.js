@@ -1,22 +1,22 @@
 import React, { useState, useRef } from 'react';
-import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App, Divider } from 'antd';
+import { Row, Col, Card, Typography, Form, Input, Button, Tabs, Avatar, Switch, List, Tag, Space, App, Divider, Spin } from 'antd';
 import {
   UserOutlined,
   MailOutlined,
   PhoneOutlined,
   EnvironmentOutlined,
-  UploadOutlined,
   SafetyCertificateOutlined,
   EditOutlined,
-  CameraOutlined
+  CameraOutlined,
+  SaveOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
-import api from '../../../services/api';
+import userService from '../../../services/api/user';
 
 const { Title, Text } = Typography;
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { message } = App.useApp();
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,22 +31,12 @@ const Profile = () => {
 
     setLoading(true);
     try {
-      // Upload to backend
-      const response = await api.post('/users/profile-image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      // Update local user context if needed
-      // Ideally AuthContext should provide a way to update user data
-      // For now, we rely on the reload or manual local storage update
-      const updatedUser = { ...user, avatar: response.data.avatar };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-
-      message.success('Profile image updated successfully');
-      // Simple reload to refresh context
-      window.location.reload();
+      const response = await userService.uploadAvatar(formData);
+      if (response.user) {
+        setUser(response.user);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        message.success('Profile image updated successfully');
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       message.error('Failed to upload image');
@@ -59,20 +49,16 @@ const Profile = () => {
     fileInputRef.current.click();
   };
 
-  // Mock Addresses
-  const addresses = [
-    { id: 1, type: 'Home', address: 'Bole, Addis Ababa, House 123', default: true },
-    { id: 2, type: 'Work', address: 'Kazanchis, Office 404', default: false },
-  ];
-
   const handleProfileUpdate = async (values) => {
     setLoading(true);
     try {
-      await api.put('/users/profile', values);
-      message.success('Profile updated successfully');
-      setEditing(false);
-      // Optional: Update local storage/context if needed, though reload is usually safer for global state
-      setTimeout(() => window.location.reload(), 1000);
+      const response = await userService.updateProfile(values);
+      if (response.user) {
+        setUser(response.user);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        message.success('Profile updated successfully');
+        setEditing(false);
+      }
     } catch (error) {
       console.error('Update failed:', error);
       message.error('Failed to update profile');
@@ -123,8 +109,8 @@ const Profile = () => {
         </Col>
       </Row>
       {editing && (
-        <Button type="primary" htmlType="submit" loading={loading} style={{ marginTop: '16px' }}>
-          Save Identity Changes
+        <Button type="primary" htmlType="submit" loading={loading} icon={<SaveOutlined />} style={{ marginTop: '16px' }}>
+          Save Changes
         </Button>
       )}
     </Form>
@@ -155,7 +141,9 @@ const Profile = () => {
           title={<Text type="secondary">Verification Status</Text>}
           description={
             <Space>
-              <Tag color="success">Email Verified</Tag>
+              <Tag color={user?.isEmailVerified ? "success" : "warning"}>
+                {user?.isEmailVerified ? "Email Verified" : "Pending Verification"}
+              </Tag>
               <Tag color="success">Phone Verified</Tag>
             </Space>
           }
@@ -163,6 +151,10 @@ const Profile = () => {
       </List.Item>
     </List>
   );
+
+  const addresses = [
+    { id: 1, type: 'Home', address: user?.address ? `${user.address.street}, ${user.address.city}` : 'No address set', default: true },
+  ];
 
   const tabItems = [
     {
@@ -220,14 +212,14 @@ const Profile = () => {
       label: 'Security',
       children: (
         <List>
-          <List.Item actions={[<Button key="chg">Change</Button>]}>
+          <List.Item actions={[<Button key="chg" onClick={() => message.info('Redirecting to sensitive settings...')}>Change</Button>]}>
             <List.Item.Meta
               avatar={<SafetyCertificateOutlined style={{ fontSize: '24px' }} />}
               title="Password"
-              description="Last changed 3 months ago"
+              description="Last changed recently"
             />
           </List.Item>
-          <List.Item actions={[<Switch key="2fa" />]}>
+          <List.Item actions={[<Switch key="2fa" disabled />]}>
             <List.Item.Meta
               title="Two-Factor Authentication"
               description="Enable 2FA for enhanced security"
@@ -238,12 +230,16 @@ const Profile = () => {
     }
   ];
 
+  if (!user) {
+    return <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>;
+  }
+
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px' }}>
       <Row gutter={[24, 24]}>
         {/* Sidebar Info */}
         <Col xs={24} md={8}>
-          <Card style={{ textAlign: 'center', borderRadius: '16px' }}>
+          <Card style={{ textAlign: 'center', borderRadius: '16px' }} className="premium-card">
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
               <Avatar size={100} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5000${user.avatar}` : null} style={{ backgroundColor: '#4361ee', border: '4px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
               <Button
@@ -260,7 +256,6 @@ const Profile = () => {
                 style={{ display: 'none' }}
                 accept="image/*"
                 onChange={handleImageUpload}
-                capture="user"
               />
             </div>
             <Title level={4} style={{ margin: 0 }}>{user?.firstName} {user?.lastName}</Title>
@@ -272,20 +267,21 @@ const Profile = () => {
               <Col span={12}>
                 <Card size="small" bordered={false} style={{ background: '#f8f9fa' }}>
                   <Text type="secondary" style={{ fontSize: '12px' }}>Orders</Text><br />
-                  <Text strong>12</Text>
+                  <Text strong>--</Text>
                 </Card>
               </Col>
               <Col span={12}>
                 <Card size="small" bordered={false} style={{ background: '#f8f9fa' }}>
                   <Text type="secondary" style={{ fontSize: '12px' }}>Rx Files</Text><br />
-                  <Text strong>4</Text>
+                  <Text strong>--</Text>
                 </Card>
               </Col>
             </Row>
 
             <div style={{ marginTop: '24px', textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
-                <SafetyCertificateOutlined style={{ color: '#52c41a' }} /> <Text>Email Verified</Text>
+                <SafetyCertificateOutlined style={{ color: user?.isEmailVerified ? '#52c41a' : '#faad14' }} />
+                <Text>{user?.isEmailVerified ? "Email Verified" : "Email Unverified"}</Text>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
                 <SafetyCertificateOutlined style={{ color: '#52c41a' }} /> <Text>Phone Verified</Text>
@@ -296,7 +292,7 @@ const Profile = () => {
 
         {/* Main Content */}
         <Col xs={24} md={16}>
-          <Card style={{ borderRadius: '16px', minHeight: '500px' }}>
+          <Card style={{ borderRadius: '16px', minHeight: '500px' }} className="premium-card">
             <Tabs defaultActiveKey="1" items={tabItems} />
           </Card>
         </Col>

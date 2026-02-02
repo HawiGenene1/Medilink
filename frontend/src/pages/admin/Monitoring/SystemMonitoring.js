@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Row, Col, Card, Progress, Statistic, Badge, List, Typography, Timeline } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Progress, Statistic, Badge, List, Typography, Timeline, Spin, message, Space, Tag, Button } from 'antd';
 import {
     CloudServerOutlined,
     DatabaseOutlined,
@@ -8,27 +7,50 @@ import {
     FieldTimeOutlined,
     CheckCircleOutlined,
     CloseCircleOutlined,
-    WarningOutlined
+    WarningOutlined,
+    ReloadOutlined
 } from '@ant-design/icons';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import adminService from '../../../services/api/admin';
 
 const { Title, Text } = Typography;
 
 const SystemMonitoring = () => {
+    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState(null);
+
+    const fetchMonitoringData = async () => {
+        try {
+            setLoading(true);
+            const response = await adminService.getDashboardStats();
+            if (response.success) {
+                setData(response.data);
+            }
+        } catch (error) {
+            console.error('Monitoring fetch error:', error);
+            message.error('Failed to load system metrics');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchMonitoringData();
+    }, []);
 
     const metrics = [
-        { title: 'API Uptime', value: '99.98%', status: 'success' },
+        { title: 'System Health', value: `${data?.stats?.healthScore || 100}%`, status: (data?.stats?.healthScore || 100) > 90 ? 'success' : 'warning' },
         { title: 'Avg Response Time', value: '145ms', status: 'success' },
-        { title: 'Active Sessions', value: '1,240', status: 'processing' },
-        { title: 'Error Rate', value: '0.02%', status: 'success' },
+        { title: 'Active Pharmacies', value: data?.stats?.activePharmacies || 0, status: 'processing' },
+        { title: 'Critical Alerts', value: data?.alerts?.filter(a => a.type === 'critical').length || 0, status: (data?.alerts?.filter(a => a.type === 'critical').length || 0) > 0 ? 'error' : 'success' },
     ];
 
     const services = [
-        { name: 'Primary Database (MongoDB)', status: 'Operational', icon: <DatabaseOutlined /> },
-        { name: 'Backend API Gateway', status: 'Operational', icon: <ApiOutlined /> },
-        { name: 'Notification Service', status: 'Operational', icon: <CloudServerOutlined /> },
-        { name: 'Payment Processing', status: 'Degraded Performance', icon: <WarningOutlined />, type: 'warning' },
-        { name: 'CDN / Static Assets', status: 'Operational', icon: <CloudServerOutlined /> },
+        { name: 'Primary Database (MongoDB)', status: 'Operational', icon: <DatabaseOutlined />, type: 'success' },
+        { name: 'Backend API Gateway', status: 'Operational', icon: <ApiOutlined />, type: 'success' },
+        { name: 'Notification Service', status: 'Operational', icon: <CloudServerOutlined />, type: 'success' },
+        { name: 'Payment Processing', status: 'Operational', icon: <CheckCircleOutlined />, type: 'success' },
+        { name: 'CDN / Static Assets', status: 'Operational', icon: <CloudServerOutlined />, type: 'success' },
     ];
 
     const trafficData = Array.from({ length: 20 }).map((_, i) => ({
@@ -36,15 +58,29 @@ const SystemMonitoring = () => {
         requests: Math.floor(Math.random() * 5000) + 2000,
     }));
 
+    if (loading && !data) {
+        return (
+            <div style={{ textAlign: 'center', padding: '100px' }}>
+                <Spin size="large" tip="Analyzing System Performance..." />
+            </div>
+        );
+    }
+
     return (
-        <div className="system-monitoring-page">
-            <Title level={2}>System Status & Health</Title>
+        <div className="system-monitoring-page fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <Title level={2} style={{ marginBottom: 0 }}>System Status & Health</Title>
+                <Space>
+                    <Tag color="blue">v2.1.0-stable</Tag>
+                    <Button icon={<ReloadOutlined />} onClick={fetchMonitoringData} loading={loading}>Refresh</Button>
+                </Space>
+            </div>
 
             {/* Key Metrics */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 {metrics.map((item, index) => (
                     <Col key={index} xs={24} sm={12} lg={6}>
-                        <Card bordered={false}>
+                        <Card bordered={false} className="premium-card">
                             <Statistic
                                 title={item.title}
                                 value={item.value}
@@ -59,40 +95,40 @@ const SystemMonitoring = () => {
             <Row gutter={[24, 24]}>
                 {/* Live Traffic Chart */}
                 <Col xs={24} lg={16}>
-                    <Card title="Live Traffic (Requests per Minute)" bordered={false} style={{ marginBottom: 24 }}>
+                    <Card title="Live Traffic (Requests per Minute)" bordered={false} className="premium-card" style={{ marginBottom: 24 }}>
                         <div style={{ width: '100%', height: 300 }}>
                             <ResponsiveContainer>
                                 <AreaChart data={trafficData}>
                                     <defs>
                                         <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#1890ff" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="#1890ff" stopOpacity={0} />
+                                            <stop offset="5%" stopColor="#4361ee" stopOpacity={0.8} />
+                                            <stop offset="95%" stopColor="#4361ee" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                                    <YAxis axisLine={false} tickLine={false} />
                                     <Tooltip />
-                                    <Area type="monotone" dataKey="requests" stroke="#1890ff" fillOpacity={1} fill="url(#colorRequests)" />
+                                    <Area type="monotone" dataKey="requests" stroke="#4361ee" fillOpacity={1} fill="url(#colorRequests)" strokeWidth={3} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </Card>
 
-                    <Card title="Server Resources" bordered={false}>
+                    <Card title="Server Resources" bordered={false} className="premium-card">
                         <Row gutter={[24, 24]}>
                             <Col span={12}>
                                 <Text strong>CPU Usage (Core 1-8)</Text>
-                                <Progress percent={45} status="active" strokeColor="#1890ff" />
-                                <Progress percent={32} status="active" strokeColor="#1890ff" />
-                                <Progress percent={68} status="active" strokeColor="#faad14" />
-                                <Progress percent={41} status="active" strokeColor="#1890ff" />
+                                <Progress percent={24} status="active" strokeColor="#4361ee" />
+                                <Progress percent={18} status="active" strokeColor="#4361ee" />
+                                <Progress percent={32} status="active" strokeColor="#4361ee" />
+                                <Progress percent={21} status="active" strokeColor="#4361ee" />
                             </Col>
                             <Col span={12}>
                                 <Text strong>Memory Usage (Ram)</Text>
                                 <div style={{ marginTop: 16, textAlign: 'center' }}>
-                                    <Progress type="dashboard" percent={72} strokeColor="#1890ff" />
-                                    <div style={{ marginTop: 8 }}>12GB / 16GB Used</div>
+                                    <Progress type="dashboard" percent={42} strokeColor="#4361ee" />
+                                    <div style={{ marginTop: 8 }}>6.7GB / 16GB Used</div>
                                 </div>
                             </Col>
                         </Row>
@@ -101,14 +137,14 @@ const SystemMonitoring = () => {
 
                 {/* Service Health */}
                 <Col xs={24} lg={8}>
-                    <Card title="Service Health" bordered={false} style={{ marginBottom: 24 }}>
+                    <Card title="Service Health" bordered={false} className="premium-card" style={{ marginBottom: 24 }}>
                         <List
                             itemLayout="horizontal"
                             dataSource={services}
                             renderItem={item => (
                                 <List.Item>
                                     <List.Item.Meta
-                                        avatar={<div style={{ fontSize: 24, color: '#1890ff' }}>{item.icon}</div>}
+                                        avatar={<div style={{ fontSize: 24, color: '#4361ee' }}>{item.icon}</div>}
                                         title={item.name}
                                         description={
                                             <Badge status={item.type === 'warning' ? 'warning' : 'success'} text={item.status} />
@@ -119,13 +155,17 @@ const SystemMonitoring = () => {
                         />
                     </Card>
 
-                    <Card title="Recent Incidents" bordered={false}>
+                    <Card title="Recent System Activity" bordered={false} className="premium-card">
                         <Timeline
-                            items={[
-                                { color: 'green', children: 'System maintenance completed (2h ago)' },
-                                { color: 'red', children: 'Database latency spike detected (Yesterday)' },
-                                { color: 'blue', children: 'New deployment v2.1.0 (2 days ago)' },
-                            ]}
+                            items={data?.alerts?.map(alert => ({
+                                color: alert.type === 'critical' ? 'red' : (alert.type === 'warning' ? 'orange' : 'green'),
+                                children: (
+                                    <Space direction="vertical" size={0}>
+                                        <Text strong>{alert.message}</Text>
+                                        <Text type="secondary" style={{ fontSize: '12px' }}>{alert.time}</Text>
+                                    </Space>
+                                )
+                            }))}
                         />
                     </Card>
                 </Col>

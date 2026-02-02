@@ -14,7 +14,7 @@ import {
     ArrowRightOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HeartOutlined, HeartFilled, FlashOnOutlined } from '@ant-design/icons';
+import { HeartOutlined, HeartFilled } from '@ant-design/icons';
 import { useCart } from '../../../contexts/CartContext';
 import { useFavorites } from '../../../contexts/FavoritesContext';
 import './MedicineDetail.css';

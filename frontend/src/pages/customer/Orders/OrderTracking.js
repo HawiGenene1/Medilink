@@ -6,7 +6,6 @@ import {
     MessageOutlined,
     ClockCircleOutlined,
     CheckCircleFilled,
-    NavigationOutlined,
     UserOutlined,
     LoadingOutlined
 } from '@ant-design/icons';
@@ -41,7 +40,7 @@ const OrderTracking = () => {
     // Live Tracking State
     const [driverPos, setDriverPos] = useState([9.0227, 38.7460]); // Fallback pos
 
-    const fetchTracking = async () => {
+    const fetchTracking = React.useCallback(async () => {
         try {
             const response = await ordersAPI.getTracking(id);
             if (response.data?.success) {
@@ -66,7 +65,7 @@ const OrderTracking = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     // Initialize Map
     useEffect(() => {
@@ -88,14 +87,14 @@ const OrderTracking = () => {
                 mapInstance.current = null;
             }
         };
-    }, []);
+    }, [driverPos]);
 
     useEffect(() => {
         fetchTracking(); // Initial fetch
         const interval = setInterval(fetchTracking, 15000); // Poll every 15s
 
         return () => clearInterval(interval);
-    }, [id]);
+    }, [fetchTracking]);
 
     const getStatusIcon = (status, isCurrent) => {
         if (status === 'in_transit') return <LoadingOutlined style={{ color: '#1E88E5', fontSize: '16px' }} />;
