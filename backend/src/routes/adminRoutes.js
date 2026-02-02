@@ -52,7 +52,7 @@ router.get('/users/:id', getUserById);
 router.patch('/users/:id/role', logAdminAction('UPDATE_USER_ROLE', 'User'), updateUserRole);
 router.patch('/users/:id/disable', logAdminAction('DISABLE_USER', 'User'), disableUser);
 router.patch('/users/:id/enable', logAdminAction('ENABLE_USER', 'User'), enableUser);
-router.patch('/users/:id/reset-password', logAdminAction('RESET_PASSWORD', 'User'), forcePasswordReset);
+// router.patch('/users/:id/reset-password', logAdminAction('RESET_PASSWORD', 'User'), forcePasswordReset);
 router.patch('/users/:id/revoke-sessions', logAdminAction('REVOKE_SESSIONS', 'User'), revokeSessions);
 
 // Pharmacy Management

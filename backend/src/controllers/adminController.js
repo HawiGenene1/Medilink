@@ -630,61 +630,6 @@ const getUserById = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
-// @desc    Force password reset for a user
-// @route   PATCH /api/admin/users/:id/reset-password
-// @access  Private/Admin
-const forcePasswordReset = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    // This could set a flag in the user model that requires a password change on next login
-    // For now, let's just generate a temporary password and send it via email
-    const tempPassword = Math.random().toString(36).slice(-10);
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(tempPassword, salt);
-    // user.mustChangePassword = true; // If we had this field
-    await user.save();
-
-    await sendEmail({
-      to: user.email,
-      subject: 'Account Password Reset',
-      text: `Dear ${user.firstName},\n\nYour administrator has reset your password.\n\nTemporary Password: ${tempPassword}\n\nPlease log in and change your password immediately.\n\nBest regards,\nThe MediLink Team`
-    });
-
-    res.json({ success: true, message: 'Password reset successful and email sent' });
-  } catch (error) {
-    console.error('Error resetting password:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
-
-// @desc    Revoke all sessions for a user
-// @route   PATCH /api/admin/users/:id/revoke-sessions
-// @access  Private/Admin
-const revokeSessions = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    // In a JWT-based system, revoking sessions often involves blacklisting tokens or 
-    // changing a "tokenVersion" on the user model that is checked on every request.
-    // If we have a tokenVersion field, we increment it.
-    // For now, we'll return a success message assuming the platform will implement 
-    // the security check later.
-
-    res.json({ success: true, message: 'All active sessions have been revoked' });
-  } catch (error) {
-    console.error('Error revoking sessions:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-};
 
 // @desc    Disable user account
 // @route   PATCH /api/admin/users/:id/disable
@@ -1701,6 +1646,83 @@ const clearAllAdminNotifications = async (req, res) => {
     res.json({ success: true, message: 'All notifications cleared' });
   } catch (error) {
     console.error('Error clearing notifications:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Force password reset for a user
+// @route   PATCH /api/admin/users/:id/reset-password
+// @access  Private/Admin
+const forcePasswordReset = async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid password (min 6 characters)'
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      {
+        password: hashedPassword,
+        passwordChangedAt: Date.now()
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Send email notification to user
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Changed by Administrator - MediLink',
+        text: `Dear ${user.firstName},\n\nYour password has been reset by an administrator.\n\nYour new password is: ${password}\n\nPlease login and change it immediately if this was not requested.\n\nBest regards,\nThe MediLink Team`
+      });
+    } catch (emailError) {
+      console.error('Error sending password reset email:', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Revoke all user sessions
+// @route   PATCH /api/admin/users/:id/revoke-sessions
+// @access  Private/Admin
+const revokeSessions = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'REVOKE_SESSIONS',
+      entityType: 'User',
+      entityId: user._id,
+      status: 'SUCCESS',
+      description: `Revoked sessions for ${user.email}`
+    });
+
+    res.json({ success: true, message: 'User sessions revoked' });
+  } catch (error) {
+    console.error('Error revoking sessions:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Progress, Statistic, Badge, List, Typography, Timeline, Spin, message, Space, Tag, Button } from 'antd';
+import { Row, Col, Card, Progress, Statistic, Badge, List, Typography, Timeline, Spin, message, Space, Tag } from 'antd';
 import {
     CloudServerOutlined,
     DatabaseOutlined,
     ApiOutlined,
     FieldTimeOutlined,
-    CheckCircleOutlined,
-    CloseCircleOutlined,
-    WarningOutlined,
-    ReloadOutlined
+    CheckCircleOutlined
 } from '@ant-design/icons';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import adminService from '../../../services/api/admin';
@@ -72,7 +69,6 @@ const SystemMonitoring = () => {
                 <Title level={2} style={{ marginBottom: 0 }}>System Status & Health</Title>
                 <Space>
                     <Tag color="blue">v2.1.0-stable</Tag>
-                    <Button icon={<ReloadOutlined />} onClick={fetchMonitoringData} loading={loading}>Refresh</Button>
                 </Space>
             </div>
 

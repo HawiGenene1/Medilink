@@ -8,13 +8,8 @@ import {
     FileTextOutlined,
     ShopOutlined,
     DollarOutlined,
-    MonitorOutlined,
-    MessageOutlined,
-    DatabaseOutlined,
-    LockOutlined,
     BarChartOutlined,
     SettingOutlined,
-    CarOutlined,
     BellOutlined,
     LogoutOutlined
 } from '@ant-design/icons';

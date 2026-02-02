@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Card, Form, Input, Switch, Button, Select, Space,
-    Typography, Divider, Row, Col, message, Spin, Tabs, InputNumber
+    Typography, Row, Col, message, Spin, Tabs, InputNumber
 } from 'antd';
 import {
     SettingOutlined,
@@ -10,7 +10,6 @@ import {
     MailOutlined,
     SaveOutlined,
     BellOutlined,
-    LogoutOutlined,
     DollarOutlined,
     HistoryOutlined
 } from '@ant-design/icons';
@@ -25,25 +24,25 @@ const Settings = () => {
     const [saving, setSaving] = useState(false);
     const [settings, setSettings] = useState(null);
 
-    const fetchSettings = async () => {
-        try {
-            setLoading(true);
-            const response = await adminService.getSystemSettings();
-            if (response.success) {
-                setSettings(response.data);
-                form.setFieldsValue(response.data);
-            }
-        } catch (error) {
-            console.error('Error fetching settings:', error);
-            message.error('Failed to load system settings');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                setLoading(true);
+                const response = await adminService.getSystemSettings();
+                if (response.success) {
+                    setSettings(response.data);
+                    form.setFieldsValue(response.data);
+                }
+            } catch (error) {
+                console.error('Error fetching settings:', error);
+                message.error('Failed to load system settings');
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchSettings();
-    }, []);
+    }, [form]);
 
     const onFinish = async (values) => {
         try {
