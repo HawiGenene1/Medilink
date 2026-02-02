@@ -1,0 +1,24 @@
+[dotenv@17.2.3] injecting env (0) from ..\.env -- tip: ??????  enable debug logging with { debug: true }
+Connected to MongoDB...
+Found Existing Pharmacy: Test Verification Pharmacy
+Creating new subscription...
+Payload: {
+  "pharmacy": "697a76dd491e9b00070d5727",
+  "plan": "standard",
+  "mode": "annually",
+  "startDate": "2026-01-28T21:03:13.027Z",
+  "endDate": "2027-01-28T21:03:13.027Z",
+  "price": 500,
+  "status": "active",
+  "isActive": true,
+  "payment": {
+    "status": "completed"
+  },
+  "features": [
+    "Inventory",
+    "Orders",
+    "Staff Mgmt",
+    "Basic Reports"
+  ],
+  "maxStaff": 3
+}

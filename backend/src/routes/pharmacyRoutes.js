@@ -1,68 +1,50 @@
 const express = require('express');
-<<<<<<< HEAD
-const multer = require('multer');
-const path = require('path');
-const { registerPharmacy, checkPharmacyStatus } = require('../controllers/pharmacyController');
-=======
 const { body } = require('express-validator');
-const { registerPharmacy, checkPharmacyStatus, getPharmacySubscription, requestSubscriptionRenewal, getPharmacyById, getPharmacies } = require('../controllers/pharmacyController');
-const { protect } = require('../middleware/authMiddleware');
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
+const { registerPharmacy, checkPharmacyStatus, getPharmacySubscription, requestSubscriptionRenewal, getPharmacyById } = require('../controllers/pharmacyController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const router = express.Router();
-
-// Configure Multer for document uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, `pharmacy-doc-${Date.now()}${path.extname(file.originalname)}`);
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
-});
 
 // @route   POST /api/pharmacy/register
 // @desc    Register a new pharmacy (temporary until approved)
 // @access  Public
-router.post('/register', upload.fields([
-  { name: 'licenseDocument', maxCount: 1 },
-  { name: 'tinDocument', maxCount: 1 }
-]), registerPharmacy);
+router.post('/register', [
+  body('pharmacyName', 'Pharmacy name is required').not().isEmpty().trim(),
+  body('licenseNumber', 'License number is required').not().isEmpty().trim(),
+  body('establishedDate', 'Valid established date is required').isISO8601(),
+  body('ownerName', 'Owner name is required').not().isEmpty().trim(),
+  body('email', 'Please include a valid email').isEmail().normalizeEmail(),
+  body('phone', 'Please include a valid phone number').not().isEmpty().trim(),
+  body('address.street', 'Street address is required').not().isEmpty().trim(),
+  body('address.city', 'City is required').not().isEmpty().trim(),
+  body('address.state', 'State is required').not().isEmpty().trim(),
+  body('address.postalCode', 'Postal code is required').not().isEmpty().trim(),
+  body('tinNumber', 'TIN number is required').not().isEmpty().trim(),
+  body('licenseDocument', 'License document is required').not().isEmpty(),
+  body('tinDocument', 'TIN document is required').not().isEmpty()
+], registerPharmacy);
 
 // @route   GET /api/pharmacy/status/:id
 // @desc    Check registration status of a pharmacy
 // @access  Public
 router.get('/status/:id', checkPharmacyStatus);
 
-<<<<<<< HEAD
-=======
 // @route   GET /api/pharmacy/:id
 // @desc    Get public pharmacy details by ID
 // @access  Public
 router.get('/:id', getPharmacyById);
-
-// @route   GET /api/pharmacy
-// @desc    Get list of verifies pharmacies
-// @access  Public
-router.get('/', getPharmacies);
 
 // ============ SUBSCRIPTION ROUTES (Protected) ============
 
 // @route   GET /api/pharmacy/subscription
 // @desc    Get pharmacy subscription details
 // @access  Private (Pharmacy Admin)
-router.get('/subscription', protect, getPharmacySubscription);
+router.get('/subscription', protect, authorize('pharmacy_admin'), getPharmacySubscription);
 
 // @route   POST /api/pharmacy/subscription/request-renewal
 // @desc    Request subscription renewal
 // @access  Private (Pharmacy Admin)
-router.post('/subscription/request-renewal', protect, [
+router.post('/subscription/request-renewal', protect, authorize('pharmacy_admin'), [
   body('mode').optional().isIn(['monthly', 'annually'])
 ], requestSubscriptionRenewal);
 
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 module.exports = router;

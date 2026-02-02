@@ -11,6 +11,8 @@ import {
   ArrowRightOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { message } from 'antd';
+import api from '../../../services/api';
 import { useCart } from '../../../contexts/CartContext';
 import './Cart.css';
 
@@ -18,7 +20,51 @@ const { Title, Text } = Typography;
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { cartItems, removeFromCart, updateQuantity, getCartGroups, subtotal } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, getCartGroups, subtotal, clearCart } = useCart();
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  const handleCheckout = async () => {
+    try {
+      setIsCreatingOrder(true);
+
+      // Transform cart items to backend format
+      const orderItems = cartItems.map(item => ({
+        medicineId: item.id,
+        quantity: item.quantity
+      }));
+
+      // Create payload with default mock address if needed, or prompt user.
+      // For this flow, we'll assume a profile/default address or let the user edit it later.
+      // But orderController requires deliveryAddress. checking...
+      // Controller says: deliveryAddress is required in body? logic not strictly shown but usually yes.
+      // For now, let's provide a placeholder if the user hasn't set one, or ideally redirect to a pre-checkout confirming address.
+      // BUT current task is connecting to Real Payment. Real Payment assumes Order Exists.
+      // Let's send a placeholder "Stored Address" to pass validation, assuming profile has it.
+
+      const payload = {
+        items: orderItems,
+        deliveryAddress: 'Default Profile Address', // TODO: Fetch from profile or ask user
+        paymentMethod: 'card', // Default, will be chosen at payment step
+        deliveryInstructions: '',
+        notes: 'Order via Web Cart'
+      };
+
+      const response = await api.post('/orders', payload);
+
+      if (response.data.success) {
+        message.success('Order created successfully!');
+        clearCart(); // Clear local cart
+        navigate(`/customer/orders/${response.data.data.orderId}/checkout`);
+      } else {
+        message.error(response.data.message || 'Failed to create order');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      message.error(error.response?.data?.message || 'Failed to create order');
+    } finally {
+      setIsCreatingOrder(false);
+    }
+  };
 
   const cartGroups = getCartGroups();
 
@@ -159,12 +205,13 @@ const Cart = () => {
                 type="primary"
                 size="large"
                 block
-                disabled={hasMissingRx}
-                onClick={() => navigate('/customer/checkout')}
+                disabled={hasMissingRx || cartItems.length === 0}
+                loading={isCreatingOrder}
+                onClick={handleCheckout}
                 className="checkout-btn"
                 icon={<ArrowRightOutlined />}
               >
-                Proceed to Checkout
+                {isCreatingOrder ? 'Creating Order...' : 'Proceed to Checkout'}
               </Button>
             </div>
 

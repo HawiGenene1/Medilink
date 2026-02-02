@@ -1,16 +1,25 @@
 const mongoose = require('mongoose');
 
 const pharmacySchema = new mongoose.Schema({
+  // Basic Information
   name: {
     type: String,
     required: [true, 'Pharmacy name is required'],
     trim: true
+  },
+  ownerName: {
+    type: String,
+    required: [true, 'Owner name is required']
   },
   licenseNumber: {
     type: String,
     required: [true, 'License number is required'],
     unique: true,
     trim: true
+  },
+  licenseExpiryDate: {
+    type: Date,
+    required: false
   },
   email: {
     type: String,
@@ -24,22 +33,24 @@ const pharmacySchema = new mongoose.Schema({
     required: [true, 'Phone number is required'],
     trim: true
   },
+
+  // Address Information
   address: {
     street: {
       type: String,
-      required: true
+      required: [true, 'Street address is required']
     },
     city: {
       type: String,
-      required: true
+      required: [true, 'City is required']
     },
     state: {
       type: String,
-      required: true
+      required: [true, 'State is required']
     },
     zipCode: {
       type: String,
-      required: true
+      required: [true, 'ZIP code is required']
     },
     country: {
       type: String,
@@ -47,6 +58,8 @@ const pharmacySchema = new mongoose.Schema({
       default: 'Ethiopia'
     }
   },
+
+  // Location for geospatial queries
   location: {
     type: {
       type: String,
@@ -58,10 +71,24 @@ const pharmacySchema = new mongoose.Schema({
       index: '2dsphere'
     }
   },
+
+  // References
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  subscription: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription',
+    required: false
+  },
+
+  // Status
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'on_hold'],
+    default: 'pending'
   },
   description: {
     type: String,
@@ -96,11 +123,6 @@ const pharmacySchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
-  },
-  approvalStatus: {
-    type: String,
-    enum: ['PENDING', 'APPROVED', 'REJECTED'],
-    default: 'APPROVED' // Pharmacies in this model are already active/approved
   },
   totalOrders: {
     type: Number,

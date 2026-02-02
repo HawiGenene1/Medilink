@@ -1,0 +1,21 @@
+Connecting to MongoDB...
+Connected to MongoDB
+
+USER DATABASE RECORD:
+ID: 6974b25cf040e397b1a6ae95
+Name: John Doe
+Email: pharmacyadmin@medilink.com
+Role: pharmacy_admin
+Status: active
+Email Verified: true
+Is Active: true
+PharmacyId: null
+
+Testing password "Admin@123456"...
+Password match result: MATCH
+
+SUCCESS: Password is correct!
+
+SUCCESS: User should be able to log in!
+
+Database connection closed

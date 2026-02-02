@@ -12,6 +12,10 @@ const tempPharmacySchema = new mongoose.Schema({
     required: [true, 'License number is required'],
     unique: true
   },
+  licenseExpiryDate: {
+    type: Date,
+    required: false // Optional for now to avoid breaking existing records
+  },
   establishedDate: {
     type: Date,
     required: [true, 'Established date is required']
@@ -76,21 +80,14 @@ const tempPharmacySchema = new mongoose.Schema({
     default: ''
   },
 
-  // Development only: Auto-approval status
-  approvalStatus: {
-    type: String,
-    enum: ['PENDING', 'APPROVED', 'REJECTED'],
-    default: 'PENDING'
-  },
-
   // Documents
   licenseDocument: {
     type: String, // URL to the document
-    required: false
+    required: [true, 'License document is required']
   },
   tinDocument: {
     type: String, // URL to the document
-    required: false
+    required: [true, 'TIN document is required']
   },
 
   // Timestamps
@@ -111,5 +108,10 @@ const tempPharmacySchema = new mongoose.Schema({
 // Indexes
 tempPharmacySchema.index({ status: 1 });
 
+// Pre-save hook to update updatedAt
+tempPharmacySchema.pre('save', function (next) {
+  this.updatedAt = new Date();
+  next();
+});
 
 module.exports = mongoose.model("TempPharmacy", tempPharmacySchema);

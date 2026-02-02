@@ -1,11 +1,12 @@
-import apiClient from './config';
-// TODO: Implement Orders API calls
-// Functions: create order, get orders, update status, cancel order
+import api from '../api';
 
 export const ordersAPI = {
-  createOrder: (orderData) => apiClient.post('/orders', orderData),
-  getMyOrders: () => apiClient.get('/orders'),
-  getOrderDetails: (id) => apiClient.get(`/orders/${id}`),
-  getTracking: (id) => apiClient.get(`/orders/${id}/tracking`),
-  cancelOrder: (id) => apiClient.patch(`/orders/${id}/cancel`),
+  getMyOrders: () => api.get('/orders'),
+  getOrderDetails: (id) => api.get(`/orders/${id}`),
+  getTracking: (id) => api.get(`/orders/${id}/tracking`),
+  cancelOrder: (id) => api.patch(`/orders/${id}/cancel`),
+
+  // New Methods
+  createOrder: (orderData) => api.post('/orders', orderData),
+  initializeChapaPayment: (paymentData) => api.post('/payments/chapa/initialize', paymentData),
 };

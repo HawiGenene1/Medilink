@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -28,19 +28,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // In development mode with mock tokens, don't auto-logout
-      const token = localStorage.getItem('token');
-      const isMockToken = token && token.startsWith('header.');
-
-      if (process.env.NODE_ENV === 'development' && isMockToken) {
-        // Don't redirect, just reject the error - mock mode doesn't use real API
-        console.warn('Development mode: API call returned 401 with mock token');
-        return Promise.reject(error);
-      }
-
-      // Handle unauthorized access in production
+      // Handle unauthorized access
       localStorage.removeItem('token');
-      window.location.href = '/auth/login';
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
@@ -56,9 +46,9 @@ export const authAPI = {
 // Medicines API
 export const medicinesAPI = {
   search: (query, filters = {}, page = 1, limit = 10) =>
-    api.get('/medicines', {
+    api.get('/medicines/search', {
       params: {
-        search: query,
+        q: query,
         page,
         limit,
         ...filters
@@ -66,12 +56,6 @@ export const medicinesAPI = {
     }),
   getById: (id) => api.get(`/medicines/${id}`),
   getCategories: () => api.get('/medicines/categories'),
-  // Pharmacy management
-  getAll: (params) => api.get('/medicines', { params }),
-  add: (data) => api.post('/medicines', data),
-  update: (id, data) => api.put(`/medicines/${id}`, data),
-  delete: (id) => api.delete(`/medicines/${id}`),
-  updateStock: (id, adjustment) => api.patch(`/medicines/${id}/stock`, { adjustment }),
 };
 
 // Orders API
@@ -82,11 +66,6 @@ export const ordersAPI = {
   getById: (id) => api.get(`/orders/${id}`),
   cancel: (id) => api.patch(`/orders/${id}/cancel`),
   getStatus: (id) => api.get(`/orders/${id}/status`),
-  // Pharmacy Staff endpoints
-  getPharmacyOrders: (pharmacyId, params) =>
-    api.get(`/orders/pharmacy/${pharmacyId}`, { params }),
-  updateStatus: (orderId, status) =>
-    api.put(`/orders/${orderId}/status`, { status }),
 };
 
 // Prescriptions API
@@ -113,41 +92,6 @@ export const cartAPI = {
     api.patch(`/cart/items/${itemId}`, { quantity }),
   removeItem: (itemId) => api.delete(`/cart/items/${itemId}`),
   clearCart: () => api.delete('/cart'),
-};
-
-// Pharmacy Owner API
-export const pharmacyOwnerAPI = {
-  register: (ownerData) => api.post('/pharmacy-owner/register', ownerData),
-  login: (email, password) => api.post('/pharmacy-owner/login', { email, password }),
-  getDashboard: () => api.get('/pharmacy-owner/dashboard'),
-  getProfile: () => api.get('/pharmacy-owner/profile'),
-  updateProfile: (data) => api.put('/pharmacy-owner/profile', data),
-  updatePassword: (data) => api.put('/pharmacy-owner/profile/password', data),
-  getSubscription: () => api.get('/pharmacy-owner/subscription'),
-  getReports: () => api.get('/pharmacy-owner/reports'),
-  getAnalytics: () => api.get('/pharmacy-owner/analytics'),
-  getPharmacy: () => api.get('/pharmacy-owner/pharmacy'),
-  updatePharmacy: (data) => api.put('/pharmacy-owner/pharmacy', data),
-  // Staff Management
-  getStaff: () => api.get('/pharmacy-owner/staff'),
-  createStaff: (data) => api.post('/pharmacy-owner/staff', data),
-  updateStaff: (id, data) => api.put(`/pharmacy-owner/staff/${id}`, data),
-  deleteStaff: (id) => api.delete(`/pharmacy-owner/staff/${id}`),
-};
-
-// Inventory API
-export const inventoryAPI = {
-  get: (params) => api.get('/inventory', { params }),
-  add: (data) => api.post('/inventory', data),
-  update: (id, data) => api.put(`/inventory/${id}`, data),
-  delete: (id) => api.delete(`/inventory/${id}`),
-};
-
-// Order Processing API (Staff)
-export const orderProcessingAPI = {
-  getOrders: (params) => api.get('/order-processing', { params }),
-  updateStatus: (id, statusData) => api.put(`/order-processing/${id}/status`, statusData),
-  verifyPrescription: (id, verificationData) => api.put(`/order-processing/${id}/verify-prescription`, verificationData),
 };
 
 export default api;

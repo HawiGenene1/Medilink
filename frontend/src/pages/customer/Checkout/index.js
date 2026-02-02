@@ -1,8 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-    Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider,
-    Avatar, Result, Tag, Alert, Input, notification, Modal, List, Upload, Tabs, theme
-} from 'antd';
+import React, { useState, useRef, useEffect } from 'react';
+import { Row, Col, Card, Typography, Button, Steps, Space, Radio, Divider, Avatar, Badge, Result, Tag, Alert, Input } from 'antd';
 import {
     EnvironmentOutlined,
     SafetyCertificateOutlined,
@@ -12,26 +9,15 @@ import {
     MedicineBoxOutlined,
     ArrowLeftOutlined,
     CompassOutlined,
-    MessageOutlined,
-    ShoppingCartOutlined,
-    LoadingOutlined,
-    EditOutlined,
-    UploadOutlined,
-    FileProtectOutlined,
-    InboxOutlined
+    MessageOutlined
 } from '@ant-design/icons';
-import { getPrescriptions, uploadPrescription } from '../../../services/api/prescriptions';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../contexts/CartContext';
 import { ordersAPI } from '../../../services/api/orders';
-import api from '../../../services/api';
+import { message, Spin } from 'antd';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Checkout.css';
-
-const { Dragger } = Upload;
-const AntdInput = Input;
-const AntdTabs = Tabs;
 
 // Fix Leaflet icons
 delete L.Icon.Default.prototype._getIconUrl;
@@ -47,14 +33,21 @@ const Checkout = () => {
     const navigate = useNavigate();
     const { cartItems, subtotal, clearCart } = useCart();
     const [currentStep, setCurrentStep] = useState(0);
-    const [paymentMethod, setPaymentMethod] = useState('telebirr');
-    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    // Mock Data
+    const addresses = [
+        { id: 'addr-1', label: 'Home', fullAddress: 'Bole, House 456, Addis Ababa', isDefault: true },
+        { id: 'addr-2', label: 'Office', fullAddress: 'Kazanchis, Nani Building 4th Floor, Addis Ababa', isDefault: false },
+    ];
+
+    const [selectedAddress, setSelectedAddress] = useState('addr-1');
+    const [paymentMethod, setPaymentMethod] = useState('chapa');
 
     // Location State
     const [mapCenter, setMapCenter] = useState([9.0227, 38.7460]); // Addis Ababa default
     const [locationLabel, setLocationLabel] = useState('Locating...');
     const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
-    const [isLocating, setIsLocating] = useState(false);
     const [deliveryNotes, setDeliveryNotes] = useState('');
     const [selectedAddressCoords, setSelectedAddressCoords] = useState(null);
 
@@ -62,20 +55,6 @@ const Checkout = () => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const geocodeTimeout = useRef(null);
-    const accuracyCircleRef = useRef(null);
-    const isProgrammaticMove = useRef(false);
-    const [isEditingLabel, setIsEditingLabel] = useState(false);
-    const [placedOrderId, setPlacedOrderId] = useState(null);
-    const { token } = theme.useToken();
-
-    // Prescription Modal State (for changing at checkout)
-    const [isRxModalVisible, setIsRxModalVisible] = useState(false);
-    const [targetRxItem, setTargetRxItem] = useState(null);
-    const [userPrescriptions, setUserPrescriptions] = useState([]);
-    const [loadingRx, setLoadingRx] = useState(false);
-    const [fileList, setFileList] = useState([]);
-    const [uploadingRx, setUploadingRx] = useState(false);
-    const [rxNotes, setRxNotes] = useState('');
 
     const steps = [
         { title: 'Location', icon: <EnvironmentOutlined /> },
@@ -89,32 +68,11 @@ const Checkout = () => {
         try {
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
             const data = await response.json();
-
-            if (data && data.address) {
-                const a = data.address;
-                // Prioritize specific local descriptors
-                const specific = a.amenity || a.building || a.shop || a.office || a.tourism || a.leisure;
-                const road = a.road || a.street || a.pedestrian;
-                const local = a.neighbourhood || a.suburb || a.subdistrict;
-                const area = a.district || a.city || a.town;
-
-                const parts = [specific, a.house_number, road, local, area].filter(Boolean);
-
-                // If the structured parts are too short, use the display_name which often has landmarks
-                let address = parts.length >= 2 ? parts.join(', ') : data.display_name;
-
-                // Clean up any double-comma or trailing comma issues
-                address = address.split(', ').filter((item, index, self) => self.indexOf(item) === index).join(', ');
-
-                setLocationLabel(address);
-            } else if (data && data.display_name) {
-                setLocationLabel(data.display_name);
-            } else {
-                setLocationLabel(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-            }
+            const address = data.display_name.split(',').slice(0, 2).join(',');
+            setLocationLabel(address || 'Unknown Location');
         } catch (error) {
             console.error('Geocoding failed:', error);
-            setLocationLabel(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+            setLocationLabel(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
         }
     };
 
@@ -124,37 +82,18 @@ const Checkout = () => {
             mapInstance.current = L.map(mapRef.current, {
                 zoomControl: false,
                 attributionControl: false
-            }).setView(mapCenter, 17); // Closer initial zoom
+            }).setView(mapCenter, 16);
 
-            // High-Resolution Satellite Hybrid Layer (ESRI)
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                maxZoom: 19,
-                attribution: 'ESRI World Imagery'
-            }).addTo(mapInstance.current);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance.current);
 
-            // Add Road Overlay for Hybrid View
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
-                maxZoom: 19,
-                opacity: 0.8
-            }).addTo(mapInstance.current);
-
-            // Initial geocode
-            if (mapCenter[0] === 9.0227 && mapCenter[1] === 38.7460) {
-                handleUseCurrentLocation(true);
-            } else {
-                reverseGeocode(mapCenter[0], mapCenter[1]);
-            }
+            // Add Soft Blue Theme class to container
+            mapRef.current.classList.add('soft-blue-map');
 
             // Handle Map Movement
             mapInstance.current.on('move', () => {
-                if (isProgrammaticMove.current) {
-                    isProgrammaticMove.current = false;
-                    return;
-                }
-
                 const center = mapInstance.current.getCenter();
                 setMapCenter([center.lat, center.lng]);
-                setIsLocationConfirmed(false); // Reset confirmation on manual move
+                setIsLocationConfirmed(false); // Reset confirmation on move
 
                 // Debounced Geocoding
                 if (geocodeTimeout.current) clearTimeout(geocodeTimeout.current);
@@ -163,13 +102,8 @@ const Checkout = () => {
                 }, 800);
             });
 
-            // Try to get current location on mount to avoid "mock" feel
-            if (mapCenter[0] === 9.0227 && mapCenter[1] === 38.7460) {
-                handleUseCurrentLocation(true); // silent initialization
-            } else {
-                // Initial geocode
-                reverseGeocode(mapCenter[0], mapCenter[1]);
-            }
+            // Initial geocode
+            reverseGeocode(mapCenter[0], mapCenter[1]);
         }
 
         return () => {
@@ -212,50 +146,6 @@ const Checkout = () => {
         }
     }, [cartItems, currentStep]);
 
-    const fetchUserPrescriptions = async () => {
-        setLoadingRx(true);
-        try {
-            const response = await getPrescriptions({ status: 'approved' });
-            if (response.success) {
-                setUserPrescriptions(response.data.prescriptions);
-            }
-        } catch (error) {
-            console.error('Error fetching prescriptions:', error);
-        } finally {
-            setLoadingRx(false);
-        }
-    };
-
-    const handleUploadRx = async () => {
-        if (fileList.length === 0) return;
-        setUploadingRx(true);
-        const formData = new FormData();
-        formData.append('prescription', fileList[0]);
-        formData.append('notes', rxNotes);
-
-        try {
-            const response = await uploadPrescription(formData);
-            if (response.success) {
-                notification.success({ message: 'Rx Uploaded', description: 'Your prescription is pending review.' });
-                // Update cart item with new prescription
-                // This is a bit complex since cart is in context
-                // For now, let's just use it for this session/item
-                setTargetRxItem(prev => ({
-                    ...prev,
-                    prescriptionId: response.data.prescriptionId,
-                    prescriptionImage: response.data.imageUrl
-                }));
-                setIsRxModalVisible(false);
-                setFileList([]);
-                setRxNotes('');
-            }
-        } catch (error) {
-            notification.error({ message: 'Upload Failed', description: 'Please try again.' });
-        } finally {
-            setUploadingRx(false);
-        }
-    };
-
     const handleNext = () => {
         if (currentStep === 0 && !isLocationConfirmed) {
             return; // Safety rule
@@ -268,188 +158,145 @@ const Checkout = () => {
         setIsLocationConfirmed(true);
     };
 
-    const handleUseCurrentLocation = (isInitial = false) => {
+    const handleUseCurrentLocation = () => {
         if ("geolocation" in navigator) {
-            if (!isInitial) setIsLocating(true);
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude, accuracy } = position.coords;
-                    setMapCenter([latitude, longitude]);
-                    setSelectedAddressCoords([latitude, longitude]); // Immediately "save" the real coordinates
-                    setIsLocationConfirmed(true); // Auto-confirm GPS location
-
-                    if (mapInstance.current) {
-                        isProgrammaticMove.current = true;
-                        mapInstance.current.flyTo([latitude, longitude], 18);
-
-                        // Add Accuracy Circle
-                        if (accuracyCircleRef.current) {
-                            mapInstance.current.removeLayer(accuracyCircleRef.current);
-                        }
-
-                        accuracyCircleRef.current = L.circle([latitude, longitude], {
-                            radius: accuracy,
-                            color: accuracy > 100 ? '#FFA000' : '#1E88E5',
-                            fillColor: accuracy > 100 ? '#FFA000' : '#1E88E5',
-                            fillOpacity: 0.1,
-                            weight: 1
-                        }).addTo(mapInstance.current);
-                    }
-
-                    // Immediately trigger geocode for current location
-                    reverseGeocode(latitude, longitude);
-                    setIsLocationConfirmed(true); // Auto-confirm GPS location
-
-                    if (!isInitial) {
-                        setIsLocating(false);
-                        if (accuracy > 150) {
-                            notification.warning({
-                                message: 'Low Precision Detected',
-                                description: 'Your browser is reporting a wide location margin. If you are in Incognito mode, please try a regular window for better GPS accuracy.',
-                                placement: 'bottomRight',
-                                duration: 8
-                            });
-                        } else {
-                            notification.success({
-                                message: 'Precision Location Set',
-                                description: `GPS coordinates verified within ${Math.round(accuracy)} meters.`,
-                                placement: 'bottomRight',
-                                duration: 4
-                            });
-                        }
-                    }
-                },
-                (error) => {
-                    console.error('Geolocation error:', error);
-                    if (!isInitial) {
-                        setIsLocating(false);
-                        notification.error({
-                            message: 'Location Error',
-                            description: 'Could not access your location. Please ensure site permissions are enabled.'
-                        });
-                    }
-                },
-                {
-                    enableHighAccuracy: true, // GPS Precision enabled
-                    timeout: 15000,           // Increased timeout
-                    maximumAge: 0             // Force fresh location, no cache
-                }
-            );
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                mapInstance.current.flyTo([latitude, longitude], 17);
+            });
         }
     };
     const handlePrev = () => setCurrentStep(prev => prev - 1);
 
+    const [showChapa, setShowChapa] = useState(false);
+
+    // Load Chapa Inline Script
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = "https://js.chapa.co/v1/inline.js";
+        script.crossOrigin = "anonymous"; // Enable error details for cross-origin scripts
+        script.async = true;
+        document.body.appendChild(script);
+        return () => {
+            if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
+        };
+    }, []);
+
     const handlePlaceOrder = async () => {
-        if (!selectedAddressCoords) {
-            notification.warning({ message: 'Missing Location', description: 'Please confirm your delivery location first.' });
-            setCurrentStep(0);
-            return;
-        }
-
-        setIsPlacingOrder(true);
         try {
-            if (!cartItems || cartItems.length === 0) {
-                notification.error({
-                    message: 'Cart Empty',
-                    description: 'Please add items to your cart before placing an order.'
-                });
-                setIsPlacingOrder(false);
-                return;
-            }
+            setLoading(true);
+            const address = addresses.find(a => a.id === selectedAddress);
 
-            // Find the main prescription image to attach to the order
-            const mainPrescription = cartItems.find(item => item.prescriptionImage)?.prescriptionImage;
-            const rxRequired = cartItems.some(item => item.prescriptionRequired);
-
-            if (rxRequired && !mainPrescription) {
-                notification.error({
-                    message: 'Prescription Required',
-                    description: 'Please attach a prescription for required items in Step 1.'
-                });
-                setCurrentStep(1);
-                setIsPlacingOrder(false);
-                return;
-            }
-
-            const orderData = {
-                pharmacyId: cartItems[0]?.pharmacyId || cartItems[0]?.pharmacy?._id || cartItems[0]?.pharmacy,
+            // 1. Create Order
+            const orderPayload = {
                 items: cartItems.map(item => ({
-                    medicine: item._id || item.id,
+                    medicineId: item.id || item._id, // Handle both id formats
                     quantity: item.quantity,
-                    price: item.priceValue,
-                    subtotal: item.priceValue * item.quantity
+                    price: item.priceValue
                 })),
-                totalAmount: subtotal,
-                serviceFee: 50,
-                finalAmount: subtotal + 50,
-                prescriptionRequired: rxRequired,
-                prescriptionImage: mainPrescription,
-                address: {
-                    label: locationLabel,
-                    notes: deliveryNotes,
-                    coordinates: {
-                        latitude: selectedAddressCoords[0],
-                        longitude: selectedAddressCoords[1]
-                    },
-                    geojson: {
-                        type: 'Point',
-                        coordinates: [selectedAddressCoords[1], selectedAddressCoords[0]] // [long, lat]
-                    }
-                },
-                paymentMethod: paymentMethod
+                shippingAddress: address.fullAddress,
+                paymentMethod: 'chapa', // Force Chapa as generic provider
+                deliveryFee: 50
             };
 
+            const orderRes = await ordersAPI.createOrder(orderPayload);
+            const order = orderRes.data.data || orderRes.data; // Adjust based on API response structure
+            const orderId = order._id || order.id || order.orderId;
 
-            const response = await ordersAPI.createOrder(orderData);
+            if (!orderId) throw new Error('Failed to create order');
 
-            if (response.data.success) {
-                const newOrder = response.data.data;
-                setPlacedOrderId(newOrder._id);
+            // 2. Initialize Chapa Payment (To create DB record & get keys)
+            const paymentPayload = {
+                orderId: orderId,
+                amount: subtotal + 50,
+                paymentMethod: paymentMethod, // Selected specific provider (telebirr, etc)
+                returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
+                phoneNumber: '0911234567' // TODO: Get from user profile
+            };
 
-                // Set success state before clearing cart to avoid "Cart Empty" jump
-                setCurrentStep(4);
+            const paymentRes = await ordersAPI.initializeChapaPayment(paymentPayload);
+
+            if (paymentRes.data.success) {
+                // 3. Initialize Chapa Inline
                 clearCart();
+                setShowChapa(true); // Hide our button, show Chapa container
+                setLoading(false);
 
-                // We stay on step 4 to show the result. User can click "Track" from there.
+                // Debug logging
+                console.log('Chapa Initialization Response:', paymentRes.data);
+
+                if (window.ChapaCheckout) {
+                    try {
+                        if (!paymentRes.data.publicKey) {
+                            throw new Error('Chapa Public Key is missing from backend response');
+                        }
+
+                        const chapa = new window.ChapaCheckout({
+                            publicKey: paymentRes.data.publicKey,
+                            amount: (subtotal + 50).toString(),
+                            currency: 'ETB',
+                            tx_ref: paymentRes.data.txRef, // Link to backend payment
+                            email: "israel@negade.et", // TODO: Get from user profile
+                            first_name: "Israel",
+                            last_name: "Goytom",
+                            title: "Medilink Payment",
+                            description: `Payment for Order ${order.orderNumber}`,
+                            callbackUrl: "https://example.com/callbackurl", // Optional
+                            returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
+                            customizations: {
+                                buttonText: 'Pay Now',
+                                styles: `
+                                    .chapa-pay-button { 
+                                        background-color: #1890ff; 
+                                        color: white;
+                                        width: 100%;
+                                        padding: 10px;
+                                        border-radius: 4px;
+                                        font-weight: bold;
+                                        cursor: pointer;
+                                    }
+                                    .chapa-pay-button:hover {
+                                        background-color: #40a9ff;
+                                    }
+                                `
+                            }
+                        });
+
+                        console.log('Initializing Chapa form...');
+                        chapa.initialize('chapa-inline-form');
+                    } catch (chapaError) {
+                        console.error('Chapa Constructor Error:', chapaError);
+                        message.error(`Payment System Error: ${chapaError.message}`);
+                        setShowChapa(false); // Re-enable Pay button
+                    }
+                } else {
+                    message.error("Payment gateway script not loaded. Please refresh.");
+                    setShowChapa(false);
+                }
+
             } else {
-                notification.error({
-                    message: 'Order Failed',
-                    description: response.data.message || 'Something went wrong while placing your order.'
-                });
+                throw new Error('Payment initialization failed');
             }
+
         } catch (error) {
-            console.error('Order failed', error);
-            const errorMessage = error.response?.data?.message || error.message || 'Failed to connect to the server. Please try again later.';
-            notification.error({
-                message: 'Order Error',
-                description: errorMessage
-            });
-        } finally {
-            setIsPlacingOrder(false);
+            console.error('Checkout Error:', error);
+            const errorMsg = error.response?.data?.message || error.message || 'Failed to place order. Please try again.';
+            if (error.response?.data?.errors) {
+                message.error(error.response.data.errors.map(e => e.msg).join(', '));
+            } else {
+                message.error(errorMsg);
+            }
+            setLoading(false);
         }
     };
 
-    if (currentStep < 4 && (!cartItems || cartItems.length === 0)) {
-        return (
-            <div className="checkout-container">
-                <Card className="checkout-main-card" style={{ textAlign: 'center', padding: '100px 40px' }}>
-                    <Result
-                        icon={<ShoppingCartOutlined style={{ color: '#E2E8F0', fontSize: '72px' }} />}
-                        title="Your cart is empty"
-                        subTitle="You need to add medicines to your cart before you can place an order."
-                        extra={[
-                            <Button type="primary" size="large" key="shop" onClick={() => navigate('/customer/medicines')}>
-                                Browse Medicines
-                            </Button>
-                        ]}
-                    />
-                </Card>
-            </div>
-        );
-    }
-
     return (
         <div className="checkout-container">
+            {/* Chapa Inline Container */}
+            <div id="chapa-inline-form" style={{ marginTop: 20 }}></div>
+
             <Button
                 type="text"
                 icon={<ArrowLeftOutlined />}
@@ -488,25 +335,12 @@ const Checkout = () => {
                                     </div>
 
                                     <Button
-                                        icon={isLocating ? <LoadingOutlined /> : <CompassOutlined />}
+                                        icon={<CompassOutlined />}
                                         className="use-current-loc-btn"
-                                        style={{
-                                            position: 'absolute',
-                                            bottom: '16px',
-                                            right: '16px',
-                                            zIndex: 1000,
-                                            height: '45px',
-                                            borderRadius: '22px',
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                            border: 'none',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}
-                                        onClick={() => handleUseCurrentLocation(false)}
-                                        loading={isLocating}
+                                        style={{ position: 'absolute', bottom: '16px', right: '16px', zIndex: 1000 }}
+                                        onClick={handleUseCurrentLocation}
                                     >
-                                        {isLocating ? 'Acquiring GPS...' : 'Use Precise GPS'}
+                                        Use My Current Location
                                     </Button>
                                 </div>
 
@@ -519,33 +353,9 @@ const Checkout = () => {
                                             </div>
                                         </Col>
                                         <Col flex="auto">
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <Text type="secondary" style={{ fontSize: '12px' }}>Deliver to:</Text>
-                                                {isLocationConfirmed && (
-                                                    <Tag color="processing" style={{ borderRadius: '10px', fontSize: '10px', height: '18px', display: 'flex', alignItems: 'center' }}>
-                                                        VERIFIED PRECISION
-                                                    </Tag>
-                                                )}
-                                                <Button
-                                                    type="text"
-                                                    size="small"
-                                                    icon={<EditOutlined style={{ fontSize: '12px' }} />}
-                                                    onClick={() => setIsEditingLabel(!isEditingLabel)}
-                                                />
-                                            </div>
-                                            <div style={{ wordBreak: 'break-all', marginTop: '4px' }}>
-                                                {isEditingLabel ? (
-                                                    <Input
-                                                        value={locationLabel}
-                                                        onChange={(e) => setLocationLabel(e.target.value)}
-                                                        onBlur={() => setIsEditingLabel(false)}
-                                                        onPressEnter={() => setIsEditingLabel(false)}
-                                                        autoFocus
-                                                        size="small"
-                                                    />
-                                                ) : (
-                                                    <Text strong style={{ fontSize: '15px', color: '#1a202c' }}>{locationLabel}</Text>
-                                                )}
+                                            <Text type="secondary" style={{ fontSize: '12px' }}>Deliver to:</Text>
+                                            <div style={{ wordBreak: 'break-all' }}>
+                                                <Text strong style={{ fontSize: '16px' }}>{locationLabel}</Text>
                                             </div>
                                         </Col>
                                     </Row>
@@ -584,36 +394,18 @@ const Checkout = () => {
                                 <div style={{ marginTop: '24px' }}>
                                     {cartItems.filter(item => item.prescriptionRequired).length > 0 ? (
                                         cartItems.filter(item => item.prescriptionRequired).map((item, idx) => (
-                                            <Card key={idx} className="prescription-review-item" style={{ marginBottom: '16px', border: item.prescriptionImage ? '1px solid #52c41a' : '1px solid #ff4d4f' }}>
+                                            <Card key={idx} className="prescription-review-item" style={{ marginBottom: '16px' }}>
                                                 <Row align="middle" gutter={16}>
                                                     <Col flex="60px">
-                                                        <Avatar shape="square" size={48} src={item.prescriptionImage} icon={<MedicineBoxOutlined />} />
+                                                        <Avatar shape="square" size={48} icon={<MedicineBoxOutlined />} />
                                                     </Col>
                                                     <Col flex="auto">
                                                         <Text strong>{item.name}</Text>
                                                         <br />
-                                                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                            {item.prescriptionImage ? 'Verified Prescription Linked' : 'No Prescription Attached'}
-                                                        </Text>
+                                                        <Text type="secondary" style={{ fontSize: '12px' }}>Verified Prescription: Included</Text>
                                                     </Col>
                                                     <Col>
-                                                        {item.prescriptionImage ? (
-                                                            <Tag color="success" icon={<CheckCircleFilled />}>Attached</Tag>
-                                                        ) : (
-                                                            <Button
-                                                                type="primary"
-                                                                danger
-                                                                size="small"
-                                                                icon={<UploadOutlined />}
-                                                                onClick={() => {
-                                                                    setTargetRxItem(item);
-                                                                    setIsRxModalVisible(true);
-                                                                    fetchUserPrescriptions();
-                                                                }}
-                                                            >
-                                                                Attach Rx
-                                                            </Button>
-                                                        )}
+                                                        <Tag color="success" icon={<CheckCircleFilled />}>Attached</Tag>
                                                     </Col>
                                                 </Row>
                                             </Card>
@@ -628,16 +420,15 @@ const Checkout = () => {
                                         />
                                     )}
 
-                                    {cartItems.filter(item => item.prescriptionRequired).length > 0 &&
-                                        cartItems.filter(item => item.prescriptionRequired).every(item => item.prescriptionImage) && (
-                                            <Alert
-                                                message="All prescriptions are ready"
-                                                description="You have provided valid prescriptions for required items."
-                                                type="success"
-                                                showIcon
-                                                style={{ marginTop: '24px', borderRadius: '12px' }}
-                                            />
-                                        )}
+                                    {cartItems.filter(item => item.prescriptionRequired).length > 0 && (
+                                        <Alert
+                                            message="All prescriptions are ready"
+                                            description="You have provided valid prescriptions for required items."
+                                            type="success"
+                                            showIcon
+                                            style={{ marginTop: '24px', borderRadius: '12px' }}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -652,9 +443,16 @@ const Checkout = () => {
                                 >
                                     <Space direction="vertical" style={{ width: '100%' }} size="middle">
                                         {[
-                                            { id: 'telebirr', name: 'Telebirr', desc: 'Secure mobile payment by Ethio Telecom' },
-                                            { id: 'cbe', name: 'CBE Birr', desc: 'Quick payment via Commercial Bank of Ethiopia' },
-                                            { id: 'cash', name: 'Cash on Delivery', desc: 'Pay when your medicine arrives' },
+                                            {
+                                                id: 'chapa',
+                                                name: 'Secure Online Payment (Chapa)',
+                                                desc: 'Pay via Telebirr, CBE Birr, Amole, Awash, or Card'
+                                            },
+                                            {
+                                                id: 'cash',
+                                                name: 'Cash on Delivery',
+                                                desc: 'Pay when your medicine arrives'
+                                            },
                                         ].map(pm => (
                                             <Card
                                                 key={pm.id}
@@ -671,7 +469,12 @@ const Checkout = () => {
                                                         <Text type="secondary" style={{ fontSize: '12px' }}>{pm.desc}</Text>
                                                     </Col>
                                                     <Col>
-                                                        <div className="payment-icon-placeholder" />
+                                                        <div className="payment-icon-placeholder" style={{
+                                                            backgroundImage: pm.id === 'chapa' ? 'url(https://chapa.co/assets/img/chapa-logo.png)' : 'none',
+                                                            backgroundSize: 'contain',
+                                                            backgroundRepeat: 'no-repeat',
+                                                            backgroundPosition: 'center'
+                                                        }} />
                                                     </Col>
                                                 </Row>
                                             </Card>
@@ -732,16 +535,8 @@ const Checkout = () => {
                                     Continue
                                 </Button>
                             ) : (
-                                <Button
-                                    type="primary"
-                                    size="large"
-                                    onClick={handlePlaceOrder}
-                                    block
-                                    className="place-order-btn"
-                                    loading={isPlacingOrder}
-                                    disabled={isPlacingOrder}
-                                >
-                                    Place Order
+                                <Button type="primary" size="large" onClick={handlePlaceOrder} block className="place-order-btn" loading={loading} disabled={showChapa}>
+                                    Pay & Place Order
                                 </Button>
                             )}
                         </div>
@@ -772,7 +567,7 @@ const Checkout = () => {
                         title="Order Placed Successfully!"
                         subTitle="Your order is being processed by the pharmacy."
                         extra={[
-                            <Button type="primary" key="track" onClick={() => navigate(`/customer/orders/track/${placedOrderId}`)}>
+                            <Button type="primary" key="track" onClick={() => navigate('/customer/orders/track/ORD-LATEST')}>
                                 Track Order Live
                             </Button>,
                             <Button key="orders" onClick={() => navigate('/customer/orders')}>
@@ -782,94 +577,6 @@ const Checkout = () => {
                     />
                 </div>
             )}
-
-            <Modal
-                title="Attach Prescription"
-                open={isRxModalVisible}
-                onCancel={() => setIsRxModalVisible(false)}
-                footer={null}
-                width={700}
-            >
-                <Alert
-                    message={`Prescription for ${targetRxItem?.name}`}
-                    type="info"
-                    showIcon
-                    style={{ marginBottom: '16px' }}
-                />
-                <AntdTabs defaultActiveKey="1">
-                    <AntdTabs.TabPane tab="Select Existing" key="1">
-                        <List
-                            loading={loadingRx}
-                            dataSource={userPrescriptions}
-                            renderItem={rx => (
-                                <List.Item
-                                    actions={[
-                                        <Button
-                                            type={targetRxItem?.prescriptionId === rx._id ? "primary" : "default"}
-                                            onClick={() => {
-                                                // Update local cart item if needed (though context is preferred)
-                                                // For this flow, we just need to ensure the orderData gets it
-                                                const updatedItems = cartItems.map(item =>
-                                                    item.id === targetRxItem.id ? { ...item, prescriptionId: rx._id, prescriptionImage: rx.imageUrl } : item
-                                                );
-                                                // We rely on the fact that handlePlaceOrder recalculates from cartItems
-                                                // If cartItems is from local state, we'd update it. Since it's from context, 
-                                                // we should ideally update context. But updateCart is not exposed here.
-                                                // Let's assume the user can just re-select it.
-                                                targetRxItem.prescriptionId = rx._id;
-                                                targetRxItem.prescriptionImage = rx.imageUrl;
-                                                setIsRxModalVisible(false);
-                                            }}
-                                        >
-                                            {targetRxItem?.prescriptionId === rx._id ? 'Selected' : 'Select'}
-                                        </Button>
-                                    ]}
-                                >
-                                    <List.Item.Meta
-                                        avatar={<Avatar icon={<FileProtectOutlined />} style={{ background: '#E3F2FD', color: '#1E88E5' }} />}
-                                        title={rx.originalName}
-                                        description={`Uploaded on ${new Date(rx.uploadedAt).toLocaleDateString()}`}
-                                    />
-                                </List.Item>
-                            )}
-                            locale={{ emptyText: <div style={{ padding: '20px', textAlign: 'center' }}><Text type="secondary">No approved prescriptions found.</Text></div> }}
-                        />
-                    </AntdTabs.TabPane>
-                    <AntdTabs.TabPane tab="Upload New" key="2">
-                        <div style={{ padding: '10px 0' }}>
-                            <Dragger
-                                multiple={false}
-                                fileList={fileList}
-                                beforeUpload={file => {
-                                    setFileList([file]);
-                                    return false;
-                                }}
-                                onRemove={() => setFileList([])}
-                            >
-                                <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                                <p className="ant-upload-text">Click or drag prescription image to this area</p>
-                            </Dragger>
-                            <Input.TextArea
-                                rows={3}
-                                placeholder="Additional notes for the pharmacist..."
-                                style={{ marginTop: '16px' }}
-                                value={rxNotes}
-                                onChange={e => setRxNotes(e.target.value)}
-                            />
-                            <Button
-                                type="primary"
-                                block
-                                style={{ marginTop: '20px' }}
-                                onClick={handleUploadRx}
-                                loading={uploadingRx}
-                                disabled={fileList.length === 0}
-                            >
-                                Upload RX
-                            </Button>
-                        </div>
-                    </AntdTabs.TabPane>
-                </AntdTabs>
-            </Modal>
         </div>
     );
 };

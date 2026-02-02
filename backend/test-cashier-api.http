@@ -1,0 +1,21 @@
+### Test Cashier API Endpoints
+
+### 1. Get Dashboard Stats
+GET http://localhost:5000/api/cashier/dashboard
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 2. Get Approved Orders
+GET http://localhost:5000/api/cashier/approved-orders
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 3. Get Transactions
+GET http://localhost:5000/api/cashier/transactions
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 4. Get Transactions with Filters
+GET http://localhost:5000/api/cashier/transactions?status=completed&paymentMethod=cash
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 5. Get Financial Report
+GET http://localhost:5000/api/cashier/financial-report?startDate=2026-01-01&endDate=2026-01-31
+Authorization: Bearer YOUR_TOKEN_HERE
