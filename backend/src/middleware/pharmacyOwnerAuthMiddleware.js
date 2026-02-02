@@ -4,6 +4,8 @@ const PharmacyOwner = require('../models/PharmacyOwner');
 const { JWT_SECRET } = require('../config/jwt');
 const asyncHandler = require('./async');
 const ErrorResponse = require('../utils/errorResponse');
+const Pharmacy = require('../models/Pharmacy');
+const User = require('../models/User');
 
 // Stable mock IDs for development
 const STABLE_MOCK_PHARMACY_ID = '65a7d5c9f1a2b3c4d5e6f701';
@@ -27,8 +29,7 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
         // Development bypass for mock tokens
         const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 
-        // CRITICAL FIX: Only treat as mock token if it starts with 'header.' prefix
-        // Real JWTs start with 'eyJ...'
+        // Standard JWT or Mock Token check
         if (isDev && token.startsWith('header.')) {
             try {
                 const parts = token.split('.');
@@ -37,19 +38,56 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
                     const decoded = JSON.parse(payloadJson);
 
                     if (decoded.role === 'PHARMACY_OWNER') {
-                        let owner = await PharmacyOwner.findOne({ email: decoded.email });
+                        // 1. Ensure Mock Pharmacy exists first (referenced by owner)
+                        let pharmacy = await Pharmacy.findById(STABLE_MOCK_PHARMACY_ID);
+                        if (!pharmacy) {
+                            console.log('[Dev] Creating stable mock pharmacy');
+                            pharmacy = new Pharmacy({
+                                _id: new mongoose.Types.ObjectId(STABLE_MOCK_PHARMACY_ID),
+                                name: 'Demo Pharmacy',
+                                licenseNumber: 'DEV-12345',
+                                email: 'pharmacy@demo.com',
+                                phone: '0911000000',
+                                address: {
+                                    street: 'Demo Street',
+                                    city: 'Addis Ababa',
+                                    state: 'Addis Ababa',
+                                    zipCode: '1000',
+                                    country: 'Ethiopia'
+                                },
+                                owner: new mongoose.Types.ObjectId(STABLE_MOCK_OWNER_ID)
+                            });
+                            await pharmacy.save();
+                        }
+
+                        // 2. Find or Create Mock Owner
+                        let owner = await PharmacyOwner.findOne({
+                            $or: [
+                                { email: decoded.email },
+                                { _id: STABLE_MOCK_OWNER_ID }
+                            ]
+                        });
 
                         if (!owner) {
-                            console.log(`[Dev] Using stable mock owner for: ${decoded.email}`);
+                            console.log(`[Dev] Creating stable mock owner for: ${decoded.email}`);
                             owner = new PharmacyOwner({
                                 _id: new mongoose.Types.ObjectId(STABLE_MOCK_OWNER_ID),
                                 fullName: 'Demo Owner',
                                 email: decoded.email,
                                 role: 'PHARMACY_OWNER',
+                                phone: '0900000000',
+                                password: 'password123',
                                 permissions: ['dashboard', 'inventory', 'orders', 'staff'],
                                 isActive: true,
-                                pharmacyId: new mongoose.Types.ObjectId(STABLE_MOCK_PHARMACY_ID)
+                                pharmacyId: pharmacy._id
                             });
+                            await owner.save();
+                        } else {
+                            // Ensure email matches the token if found by ID
+                            if (owner.email !== decoded.email) {
+                                owner.email = decoded.email;
+                                await owner.save();
+                            }
                         }
 
                         req.owner = owner;

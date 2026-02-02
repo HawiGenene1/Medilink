@@ -197,6 +197,10 @@ const orderSchema = new mongoose.Schema({
     enum: ['CASH_ON_DELIVERY', 'CARD'],
     default: 'CASH_ON_DELIVERY'
   },
+  payment: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Payment'
+  },
   paymentDetails: {
     transactionId: String,
     paidAt: Date

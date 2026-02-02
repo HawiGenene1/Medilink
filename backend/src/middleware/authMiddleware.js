@@ -32,7 +32,7 @@ const protect = async (req, res, next) => {
         const user = await User.findOne({ email: decoded.email });
 
         // Force all pharmacy-related roles to the same stable pharmacy ID in dev mode
-        const isPharmacyRole = ['PHARMACY_OWNER', 'staff', 'cashier', 'pharmacist', 'pharmacy_admin'].includes(decoded.role);
+        const isPharmacyRole = ['pharmacy_owner', 'staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_admin'].includes(decoded.role);
         const forcedPharmacyId = isPharmacyRole ? new mongoose.Types.ObjectId(STABLE_MOCK_PHARMACY_ID) : (user?.pharmacyId || null);
 
         req.user = {
@@ -44,7 +44,7 @@ const protect = async (req, res, next) => {
           isMock: true
         };
 
-        if (decoded.role === 'PHARMACY_OWNER') {
+        if (decoded.role === 'pharmacy_owner') {
           req.owner = {
             _id: req.user._id,
             pharmacyId: req.user.pharmacyId,
@@ -54,7 +54,7 @@ const protect = async (req, res, next) => {
         }
 
         // If staff in mock mode, also try to fetch real details for permissions sync
-        if (['staff', 'cashier', 'pharmacist'].includes(decoded.role) && user) {
+        if (['staff', 'cashier', 'pharmacist', 'technician', 'assistant'].includes(decoded.role) && user) {
           const staffDetails = await PharmacyStaff.findOne({ user: user._id });
           if (staffDetails) {
             req.user.permissions = staffDetails.permissions;
@@ -78,17 +78,17 @@ const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // Check for Pharmacy Owner (handles both 'PHARMACY_OWNER' and legacy 'pharmacy_admin')
-      if (decoded.role === 'PHARMACY_OWNER' || decoded.role === 'pharmacy_admin') {
+      if (decoded.role === 'pharmacy_owner' || decoded.role === 'pharmacy_admin') {
         const owner = await PharmacyOwner.findById(decoded.ownerId || decoded.id);
         if (!owner) {
           // Try to find in User model if not in PharmacyOwner (if migrated)
           const legacyOwner = await User.findById(decoded.userId || decoded.id);
-          if (legacyOwner && (legacyOwner.role === 'PHARMACY_OWNER' || legacyOwner.role === 'pharmacy_admin')) {
+          if (legacyOwner && (legacyOwner.role === 'pharmacy_owner' || legacyOwner.role === 'pharmacy_admin')) {
             req.user = {
               _id: legacyOwner._id,
               id: legacyOwner._id,
               email: legacyOwner.email,
-              role: 'PHARMACY_OWNER',
+              role: 'pharmacy_owner',
               pharmacyId: legacyOwner.pharmacyId,
               isOwner: true
             };
@@ -106,7 +106,7 @@ const protect = async (req, res, next) => {
           id: owner._id,
           userId: owner._id,
           email: owner.email,
-          role: 'PHARMACY_OWNER',
+          role: 'pharmacy_owner',
           pharmacyId: owner.pharmacyId,
           isOwner: true
         };
@@ -141,7 +141,7 @@ const protect = async (req, res, next) => {
       };
 
       // If user is staff (handles both 'staff' and 'pharmacy_staff'), attach detailed permissions
-      if (['staff', 'pharmacy_staff', 'cashier', 'pharmacist'].includes(user.role)) {
+      if (['staff', 'pharmacy_staff', 'cashier', 'pharmacist', 'technician', 'assistant'].includes(user.role)) {
         const staffDetails = await PharmacyStaff.findOne({ user: user._id });
         if (staffDetails) {
           req.user.permissions = staffDetails.permissions;
@@ -185,7 +185,7 @@ const authorize = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(req.user.role.toLowerCase())) {
       console.warn(`[Auth] Role Access Denied. User Role: ${req.user.role}, Required: ${roles.join(', ')}`);
       return res.status(403).json({
         success: false,

@@ -92,8 +92,8 @@ exports.addInventoryItem = asyncHandler(async (req, res, next) => {
             imageUrl, sku, barcode, description, requiresPrescription,
             genericName, therapeuticClass, storageCondition,
             addedBy: req.user?._id || req.owner?._id,
-            price: { basePrice: sellingPrice || 0 },
-            stockQuantity: 0,
+            price: { basePrice: sellingPrice || 0, currency: 'ETB' },
+            stockQuantity: quantity || 0, // Initial stock
             availableAt: [normalizedPharmacyId]
         });
     }
@@ -269,7 +269,7 @@ exports.deleteInventoryItem = asyncHandler(async (req, res, next) => {
     const medicine = await Medicine.findById(inventoryItem.medicine);
     if (medicine) {
         medicine.availableAt = medicine.availableAt.filter(
-            pId => pId.toString() !== pharmacyId.toString()
+            pId => pId.toString() !== pharmacyIdStr.toString()
         );
         await medicine.save();
     }

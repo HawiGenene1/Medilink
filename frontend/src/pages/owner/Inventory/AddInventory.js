@@ -48,8 +48,11 @@ const AddInventory = () => {
     const [selectedMedicine, setSelectedMedicine] = useState(null);
     const [isManualEntry, setIsManualEntry] = useState(false);
 
-    // Permission check
-    const canEditPricing = user?.role === 'PHARMACY_OWNER' || user?.operationalPermissions?.managePricing;
+    // Permissions check: Staff always have access if they are on the page.
+    // Owners have strict permission-based access (Oversight Mode toggle).
+    const role = user?.role?.toLowerCase();
+    const isStaff = ['staff', 'pharmacist', 'technician', 'cashier', 'assistant', 'pharmacy_staff'].includes(role);
+    const canEditPricing = isStaff || (role === 'pharmacy_owner' && user?.operationalPermissions?.managePricing !== false);
 
     const handleSearchCatalog = async (value) => {
         if (!value || value.length < 2) return;

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 // Order Controller for handling order-related operations
 
 const Order = require('../models/Order');
+const Payment = require('../models/Payment');
 const Medicine = require('../models/Medicine');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
@@ -128,6 +129,25 @@ const createOrder = async (req, res) => {
     });
 
     // Save order
+    await order.save({ session });
+
+    // Create associated payment record
+    const payment = new Payment({
+      order: order._id,
+      customer: req.user.userId,
+      pharmacy: req.body.pharmacyId,
+      amount: finalAmount,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: 'PENDING',
+      history: [{
+        status: 'PENDING',
+        note: 'Initial payment record created'
+      }]
+    });
+    await payment.save({ session });
+
+    // Link payment back to order
+    order.payment = payment._id;
     await order.save({ session });
 
     // Item updates not needed here anymore as stock is deducted later

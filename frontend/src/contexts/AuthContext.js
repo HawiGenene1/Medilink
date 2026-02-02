@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       if (email.includes('admin')) role = 'admin';
       if (email.includes('cashier')) role = 'cashier';
       if (email.includes('delivery')) role = 'delivery';
-      if (email.includes('owner') || email.includes('pharmacy')) role = 'PHARMACY_OWNER';
+      if (email.includes('owner') || email.includes('pharmacy')) role = 'pharmacy_owner';
       if (email.includes('staff')) role = 'staff';
 
       // Restore operational permissions from localStorage if available
@@ -100,11 +100,13 @@ export const AuthProvider = ({ children }) => {
       let operationalPermissions = storedPermissions ? JSON.parse(storedPermissions) : null;
 
       // Default permissions for testing if none exist
-      if (!operationalPermissions && (role === 'staff' || role === 'PHARMACY_OWNER')) {
+      const pharmacyRoles = ['staff', 'pharmacy_owner', 'pharmacist', 'technician', 'cashier', 'assistant'];
+      const normalizedRole = role.toLowerCase();
+      if (!operationalPermissions && pharmacyRoles.includes(normalizedRole)) {
         operationalPermissions = {
           manageInventory: true,
           prepareOrders: true,
-          manageStaff: role === 'PHARMACY_OWNER'
+          manageStaff: role === 'pharmacy_owner'
         };
       } else if (!operationalPermissions) {
         operationalPermissions = {};
@@ -119,7 +121,7 @@ export const AuthProvider = ({ children }) => {
         email,
         firstName: role.toUpperCase(),
         lastName: 'User',
-        role: role,
+        role: normalizedRole,
         pharmacyId: STABLE_MOCK_PHARMACY_ID,
         pharmacyName: 'MediLink Demo Pharmacy',
         operationalPermissions: operationalPermissions
@@ -154,7 +156,7 @@ export const AuthProvider = ({ children }) => {
       const userObj = {
         ...owner,
         id: owner.id || owner._id,
-        role: 'PHARMACY_OWNER',
+        role: 'pharmacy_owner',
         permissions: owner.permissions || []
       };
 

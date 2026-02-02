@@ -1,40 +1,56 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import CommonDashboardLayout from './CommonDashboardLayout';
 import { OWNER_MENU_ITEMS } from '../constants/ownerConstants';
 import { useAuth } from '../contexts/AuthContext';
 
 const OwnerLayout = () => {
     const { user } = useAuth();
+    const location = useLocation();
 
-    // Filter menu items based on operational permissions and role
+    // Staff specifically allowed routes
+    const staffAllowedKeys = [
+        '/owner/dashboard',
+        '/owner/inventory',
+        '/owner/orders',
+        '/owner/profile',
+        '/owner/notifications'
+    ];
+
+    // Filter menu items based on explicit permissions and role restrictions
     const filteredItems = OWNER_MENU_ITEMS.filter(item => {
-        // Staff specifically allowed routes
-        const staffAllowedKeys = [
-            '/owner/dashboard',
-            '/owner/inventory',
-            '/owner/orders',
-            '/owner/profile',
-            '/owner/notifications'
-        ];
+        const role = user?.role?.toLowerCase();
+        const isOwner = role === 'pharmacy_owner';
+        const isStaff = ['staff', 'pharmacist', 'technician', 'cashier', 'assistant', 'pharmacy_staff'].includes(role);
 
-        // If staff, strictly filter to allowed keys only
-        if (user?.role === 'staff' && !staffAllowedKeys.includes(item.key)) {
+        // 1. Strict Restrictions for Staff (No access to management/config/reports)
+        const ownerOnlyPages = [
+            '/owner/staff',
+            '/owner/pharmacy',
+            '/owner/subscription',
+            '/owner/reports',
+            '/owner/analytics',
+            '/owner/settings'
+        ];
+        if (isStaff && ownerOnlyPages.includes(item.key)) {
             return false;
         }
 
-        // Show Inventory only if manageInventory permission is enabled (for both owner/staff)
-        if (item.key === '/owner/inventory') {
-            return user?.role === 'PHARMACY_OWNER' || user?.operationalPermissions?.manageInventory === true;
+        // 2. Permanent visibility for Staff allowed pages
+        if (isStaff) {
+            return staffAllowedKeys.includes(item.key);
         }
 
-        // Show Orders only if prepareOrders or manageInventory permission is enabled
-        if (item.key === '/owner/orders') {
-            const hasOrderPerm = user?.operationalPermissions?.prepareOrders === true || user?.operationalPermissions?.manageInventory === true;
-            return user?.role === 'PHARMACY_OWNER' || hasOrderPerm;
+        // 3. Owner visibility logic (Strict Permission-Based Access / Oversight Mode)
+        if (isOwner) {
+            // HIDE Inventory if the owner has explicitly disabled their own inventory view (Oversight Mode)
+            const isOversightMode = user?.operationalPermissions?.prepareOrders === true && user?.operationalPermissions?.manageInventory === false;
+            if (isOversightMode && (item.key === '/owner/inventory')) {
+                return false;
+            }
+            return true;
         }
 
-        // Show all other menu items (already filtered for staff above)
         return true;
     });
 

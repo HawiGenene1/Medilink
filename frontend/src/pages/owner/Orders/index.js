@@ -17,7 +17,9 @@ const OrderManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
-    const canProcess = user?.role === 'PHARMACY_OWNER' || user?.operationalPermissions?.prepareOrders;
+    const role = user?.role?.toLowerCase();
+    const isStaff = ['staff', 'pharmacist', 'technician', 'cashier', 'assistant', 'pharmacy_staff'].includes(role);
+    const canProcess = isStaff || (role === 'pharmacy_owner' && user?.operationalPermissions?.prepareOrders !== false);
 
     const fetchOrders = useCallback(async () => {
         try {

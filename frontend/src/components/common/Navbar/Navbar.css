@@ -13,6 +13,7 @@
   /* Pill shape */
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   padding: 0 40px;
   /* Increased to clear rounded corners */
@@ -21,6 +22,8 @@
   display: flex !important;
   align-items: center;
   justify-content: center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
 }
 
 .navbar.scrolled {

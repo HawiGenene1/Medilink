@@ -14,7 +14,7 @@ const pharmacyStaffSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['pharmacist', 'cashier', 'staff'],
+    enum: ['pharmacist', 'cashier', 'staff', 'technician', 'assistant'],
     default: 'cashier',
     required: [true, 'Role is required']
   },

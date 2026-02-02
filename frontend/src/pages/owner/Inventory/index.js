@@ -65,8 +65,11 @@ const InventoryPage = () => {
         totalValuation: medicines.reduce((acc, m) => acc + ((m.quantity || 0) * (m.sellingPrice || 0)), 0)
     };
 
-    // Permissions check
-    const canManageInventory = user?.role === 'PHARMACY_OWNER' || user?.operationalPermissions?.manageInventory;
+    // Permissions check: Staff always have access if they are on the page. 
+    // Owners have strict permission-based access (Oversight Mode toggle).
+    const role = user?.role?.toLowerCase();
+    const isStaff = ['staff', 'pharmacist', 'technician', 'cashier', 'assistant', 'pharmacy_staff'].includes(role);
+    const canManageInventory = isStaff || (role === 'pharmacy_owner' && user?.operationalPermissions?.manageInventory !== false);
 
     const fetchInventory = useCallback(async () => {
         try {
@@ -188,7 +191,10 @@ const InventoryPage = () => {
                             setEditingMedicine(record);
                             form.setFieldsValue({
                                 ...record,
-                                expiryDate: record.expiryDate ? dayjs(record.expiryDate) : null
+                                expiryDate: record.expiryDate ? dayjs(record.expiryDate) : null,
+                                reorderLevel: record.reorderLevel || 0,
+                                costPrice: record.costPrice || 0,
+                                notes: record.notes || ''
                             });
                             setIsModalOpen(true);
                         }}
@@ -334,16 +340,37 @@ const InventoryPage = () => {
                 footer={null}
             >
                 <Form form={form} layout="vertical" onFinish={handleUpdate}>
-                    <Form.Item label="Quantity" name="quantity" rules={[{ required: true }]}>
-                        <InputNumber min={0} style={{ width: '100%' }} prefix={<StockOutlined />} />
-                    </Form.Item>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item label="Quantity" name="quantity" rules={[{ required: true }]}>
+                                <InputNumber min={0} style={{ width: '100%' }} prefix={<StockOutlined />} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Reorder Level" name="reorderLevel">
+                                <InputNumber min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Form.Item label="Expiry Date" name="expiryDate" rules={[{ required: true }]}>
                         <DatePicker style={{ width: '100%' }} />
                     </Form.Item>
-                    <Form.Item label="Selling Price" name="sellingPrice" rules={[{ required: true }]}>
-                        <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item label="Cost Price" name="costPrice">
+                                <InputNumber min={0} precision={2} style={{ width: '100%' }} prefix="ETB" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Selling Price" name="sellingPrice" rules={[{ required: true }]}>
+                                <InputNumber min={0} precision={2} style={{ width: '100%' }} prefix="ETB" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Form.Item label="Internal Notes" name="notes">
+                        <Input.TextArea rows={3} placeholder="Add any internal notes about this stock item..." />
                     </Form.Item>
-                    <Button type="primary" htmlType="submit" block>Update Record</Button>
+                    <Button type="primary" htmlType="submit" block size="large" style={{ borderRadius: '8px', marginTop: '8px' }}>Update Record</Button>
                 </Form>
             </Modal>
         </div>

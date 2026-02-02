@@ -153,7 +153,7 @@ const login = async (req, res) => {
     };
 
     // If staff, fetch detailed permissions
-    if (['staff', 'cashier', 'pharmacist'].includes(safeUser.role)) {
+    if (['staff', 'cashier', 'pharmacist', 'technician', 'assistant'].includes(safeUser.role)) {
       const staffDetails = await PharmacyStaff.findOne({ user: safeUser._id });
       if (staffDetails) {
         userData.operationalPermissions = {
@@ -205,7 +205,7 @@ const getCurrentUser = async (req, res) => {
       phone: user.phone,
     };
 
-    if (['staff', 'cashier', 'pharmacist'].includes(user.role)) {
+    if (['staff', 'cashier', 'pharmacist', 'technician', 'assistant'].includes(user.role)) {
       const staffDetails = await PharmacyStaff.findOne({ user: user._id });
       if (staffDetails) {
         userData.operationalPermissions = {

@@ -33,7 +33,7 @@ const OwnerProfile = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const isDev = process.env.NODE_ENV === 'development';
-    const isStaff = user?.role === 'staff';
+    const isStaff = ['staff', 'pharmacist', 'technician', 'cashier'].includes(user?.role);
     const [loading, setLoading] = useState(!isDev && !isStaff);
     const [pharmacy, setPharmacy] = useState(isDev ? { name: 'Sample Pharmacy', licenseNumber: 'ML-789-2023' } : null);
     const [subscription, setSubscription] = useState(isDev ? { plan: 'BASIC', status: 'ACTIVE', endDate: '2026-12-31' } : null);

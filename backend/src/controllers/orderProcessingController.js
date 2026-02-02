@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const Payment = require('../models/Payment');
 const Medicine = require('../models/Medicine');
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
@@ -71,8 +72,48 @@ exports.updateOrderStatus = asyncHandler(async (req, res, next) => {
         note: note || `Status updated to ${status} by staff`
     });
 
-    // Special logic for stock management if status becomes 'confirmed' or 'processing'
-    // (This might already be handled elsewhere, but adding a hook here if needed)
+    // Sync with Payment model
+    try {
+        if (order.payment) {
+            const paymentUpdate = {};
+            let paymentNote = '';
+
+            if (status === 'delivered' && order.paymentMethod === 'CASH_ON_DELIVERY') {
+                paymentUpdate.paymentStatus = 'PAID';
+                paymentUpdate.paidAt = new Date();
+                paymentNote = 'Payment collected upon delivery (COD)';
+
+                // Also update the order's internal payment status field for redundancy
+                order.paymentStatus = 'PAID';
+                order.paymentDetails = {
+                    ...order.paymentDetails,
+                    paidAt: paymentUpdate.paidAt
+                };
+                await order.save();
+            } else if (status === 'cancelled') {
+                paymentUpdate.paymentStatus = 'FAILED';
+                paymentNote = 'Payment cancelled due to order cancellation';
+
+                order.paymentStatus = 'FAILED';
+                await order.save();
+            }
+
+            if (Object.keys(paymentUpdate).length > 0) {
+                await Payment.findByIdAndUpdate(order.payment, {
+                    ...paymentUpdate,
+                    $push: {
+                        history: {
+                            status: paymentUpdate.paymentStatus,
+                            note: paymentNote
+                        }
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Failed to sync payment status:', error);
+        // We don't fail the whole request if payment sync fails, but we log it
+    }
 
     res.status(200).json({
         success: true,

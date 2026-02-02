@@ -18,7 +18,7 @@ const OwnerLogin = () => {
             const result = await ownerLogin(values.email, values.password);
 
             if (result.success) {
-                const isStaff = result.user.role === 'staff';
+                const isStaff = ['staff', 'pharmacist', 'technician', 'cashier'].includes(result.user.role);
                 message.success(isStaff ? 'Login successful! Welcome to the Staff Portal.' : 'Welcome back, Pharmacy Owner!');
                 navigate('/owner/dashboard');
             } else {

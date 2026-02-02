@@ -1,4 +1,5 @@
 const PharmacyOwner = require('../models/PharmacyOwner');
+const Pharmacy = require('../models/Pharmacy');
 const Order = require('../models/Order');
 const Inventory = require('../models/Inventory');
 const PharmacyStaff = require('../models/PharmacyStaff');
@@ -112,9 +113,28 @@ const updateProfile = asyncHandler(async (req, res, next) => {
 
     if (fullName) owner.fullName = fullName;
     if (phone) owner.phone = phone;
-    if (operationalPermissions) owner.operationalPermissions = { ...owner.operationalPermissions, ...operationalPermissions };
+    if (operationalPermissions) {
+        // Enforce backend mutual exclusivity
+        if (operationalPermissions.manageInventory === true && operationalPermissions.prepareOrders === true) {
+            return next(new ErrorResponse('Please choose only one operational permission at a time', 400));
+        }
 
-    await owner.save();
+        // Enforce at least one permission
+        // If they are trying to set both to false, reject
+        if (operationalPermissions.manageInventory === false && operationalPermissions.prepareOrders === false) {
+            return next(new ErrorResponse('At least one operational mode must be enabled', 400));
+        }
+
+        owner.operationalPermissions = { ...owner.operationalPermissions, ...operationalPermissions };
+        owner.markModified('operationalPermissions');
+    }
+
+    try {
+        await owner.save();
+    } catch (saveError) {
+        console.error('[ProfileUpdate] Save failed:', saveError);
+        return next(new ErrorResponse('Failed to save profile changes. Please try again.', 500));
+    }
 
     res.json({
         success: true,

@@ -40,17 +40,17 @@ const createStaff = asyncHandler(async (req, res, next) => {
             email,
             phone,
             password,
-            role: role || 'staff', // Use provided role or default to staff
+            role: role || 'staff',
             pharmacyId
         });
 
         await user.save();
 
-        // 4. Create PharmacyStaff record
+        // Create PharmacyStaff record
         const pharmacyStaff = new PharmacyStaff({
             user: user._id,
             pharmacy: pharmacyId,
-            role: role || 'assistant',
+            role: role || 'staff',
             permissions: permissions || {
                 inventory: { view: true, add: false, edit: false, delete: false },
                 orders: { view: true, process: false, cancel: false },

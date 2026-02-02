@@ -43,6 +43,8 @@ const OwnerSettings = () => {
     const [accountForm] = Form.useForm();
     const [passwordForm] = Form.useForm();
 
+    const [operationsForm] = Form.useForm();
+
     // Update active tab when URL changes
     useEffect(() => {
         const tab = searchParams.get('tab');
@@ -92,22 +94,13 @@ const OwnerSettings = () => {
 
     const onOperationsUpdate = async (values) => {
         try {
-            // Validate: require exactly one permission to be enabled
-            const enabledCount = Object.values(values).filter(v => v === true).length;
-
-            if (enabledCount === 0) {
+            // Validate: require at least one permission to be enabled
+            if (!values.manageInventory && !values.prepareOrders) {
                 message.warning('Please enable at least one operational permission');
                 return;
             }
 
-            if (enabledCount === 2) {
-                message.warning('Please choose only one operational permission at a time');
-                return;
-            }
-
             setLoading(true);
-            // values comes as { manageInventory: true, prepareOrders: false }
-            // we need to wrap it in operationalPermissions object
             const response = await pharmacyOwnerAPI.updateProfile({
                 operationalPermissions: values
             });
@@ -116,9 +109,28 @@ const OwnerSettings = () => {
                 if (updateUser) updateUser(response.data.owner);
             }
         } catch (error) {
-            message.error('Failed to update operational permissions');
+            const errorMsg = error.response?.data?.message || 'Failed to update operational permissions';
+            message.error(errorMsg);
+            console.error('[OperationsUpdate] Error:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOperationsValuesChange = (changedValues, allValues) => {
+        // Enforce mutual exclusivity AND mandatory selection
+        if (changedValues.manageInventory === true) {
+            operationsForm.setFieldsValue({ prepareOrders: false });
+        } else if (changedValues.prepareOrders === true) {
+            operationsForm.setFieldsValue({ manageInventory: false });
+        } else if (changedValues.manageInventory === false && allValues.prepareOrders === false) {
+            // Don't allow turning off the last one
+            operationsForm.setFieldsValue({ manageInventory: true });
+            message.info('At least one operational mode must be active.');
+        } else if (changedValues.prepareOrders === false && allValues.manageInventory === false) {
+            // Don't allow turning off the last one
+            operationsForm.setFieldsValue({ prepareOrders: true });
+            message.info('At least one operational mode must be active.');
         }
     };
 
@@ -290,10 +302,12 @@ const OwnerSettings = () => {
                         style={{ marginBottom: '24px' }}
                     />
                     <Form
+                        form={operationsForm}
                         layout="vertical"
                         initialValues={{
                             ...user?.operationalPermissions
                         }}
+                        onValuesChange={handleOperationsValuesChange}
                         onFinish={onOperationsUpdate}
                     >
                         <Form.Item name="manageInventory" valuePropName="checked" label="Inventory Operations (Optional Access)">

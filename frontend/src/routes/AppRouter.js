@@ -60,7 +60,9 @@ import DeliveryDashboard from '../pages/delivery/Dashboard';
  */
 const PharmacyDashboard = () => {
   const { user } = useAuth();
-  return user?.role === 'staff' ? <StaffDashboard /> : <OwnerDashboard />;
+  const role = user?.role?.toLowerCase();
+  const isStaff = ['staff', 'pharmacist', 'technician', 'cashier', 'assistant'].includes(role);
+  return isStaff ? <StaffDashboard /> : <OwnerDashboard />;
 };
 
 const AppRouter = () => {
@@ -120,7 +122,7 @@ const AppRouter = () => {
       </Route>
 
       {/* Shared Owner & Staff Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['PHARMACY_OWNER', 'staff']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['pharmacy_owner', 'staff', 'pharmacist', 'technician', 'cashier', 'assistant', 'pharmacy_staff']} />}>
         <Route element={<OwnerLayout />}>
           <Route path="/owner/dashboard" element={<PharmacyDashboard />} />
           <Route path="/owner/inventory" element={<OwnerInventory />} />
@@ -132,7 +134,7 @@ const AppRouter = () => {
       </Route>
 
       {/* Exclusive Owner Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['PHARMACY_OWNER']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['pharmacy_owner']} />}>
         <Route element={<OwnerLayout />}>
           <Route path="/owner/staff" element={<StaffManagement />} />
           <Route path="/owner/pharmacy" element={<PharmacyDetails />} />

@@ -20,7 +20,7 @@ const Login = () => {
 
         // Redirect based on user role
         const role = result.user.role;
-        switch (role) {
+        switch (role?.toLowerCase()) {
           case 'customer':
             navigate('/customer/home');
             break;
@@ -33,7 +33,11 @@ const Login = () => {
           case 'admin':
             navigate('/admin/dashboard');
             break;
-          case 'PHARMACY_OWNER':
+          case 'pharmacy_owner':
+          case 'pharmacist':
+          case 'technician':
+          case 'assistant':
+          case 'pharmacy_staff':
           case 'staff':
             navigate('/owner/dashboard');
             break;

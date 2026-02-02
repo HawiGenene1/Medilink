@@ -87,6 +87,7 @@ const PharmacyDetails = () => {
             city: pharmacy.address?.city,
             state: pharmacy.address?.state,
             zipCode: pharmacy.address?.zipCode,
+            country: pharmacy.address?.country || 'Ethiopia',
             description: pharmacy.description,
             openingHours: formattedHours
         });
@@ -120,7 +121,8 @@ const PharmacyDetails = () => {
                     street: values.street,
                     city: values.city,
                     state: values.state,
-                    zipCode: values.zipCode
+                    zipCode: values.zipCode,
+                    country: values.country
                 },
                 openingHours: {}
             };
@@ -202,18 +204,23 @@ const PharmacyDetails = () => {
                                 <Input />
                             </Form.Item>
                             <Row gutter={16}>
-                                <Col span={8}>
+                                <Col span={6}>
                                     <Form.Item label="City" name="city" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>
-                                <Col span={8}>
-                                    <Form.Item label="State/Region" name="state">
+                                <Col span={6}>
+                                    <Form.Item label="State/Region" name="state" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>
-                                <Col span={8}>
-                                    <Form.Item label="Zip Code" name="zipCode">
+                                <Col span={6}>
+                                    <Form.Item label="Zip Code" name="zipCode" rules={[{ required: true }]}>
+                                        <Input />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={6}>
+                                    <Form.Item label="Country" name="country" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>

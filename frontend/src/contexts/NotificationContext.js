@@ -20,6 +20,9 @@ export const NotificationProvider = ({ children }) => {
 
     // Fetch notifications on mount and periodically
     useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
         fetchNotifications();
 
         // Poll for new notifications every 30 seconds
