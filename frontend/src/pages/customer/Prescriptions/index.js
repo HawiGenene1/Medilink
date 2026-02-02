@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Row, Col, Card, Typography, Button, Upload, List, Tag, Table, Space, Alert, Modal, theme, Avatar } from 'antd';
+import { Row, Col, Card, Typography, Button, Upload, List, Tag, Table, Space, Alert, Modal, theme, Avatar, notification, Input } from 'antd';
 import {
   InboxOutlined,
   FileProtectOutlined,
@@ -10,41 +10,86 @@ import {
   DownloadOutlined
 } from '@ant-design/icons';
 import './Prescriptions.css';
+import { getPrescriptions, uploadPrescription } from '../../../services/api/prescriptions';
 
 const { Title, Text, Paragraph } = Typography;
 const { Dragger } = Upload;
 
 const Prescriptions = () => {
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [fileList, setFileList] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
   const { token } = theme.useToken();
 
-  // Mock Data for Prescriptions
-  const prescriptions = [
-    {
-      id: 'RX-8821',
-      fileName: 'amoxicillin_rx_jan.pdf',
-      date: '2026-01-15',
-      status: 'Verified',
-      pharmacy: 'Kenema Pharmacy No. 4',
-      expiryDate: '2026-07-15'
-    },
-    {
-      id: 'RX-8815',
-      fileName: 'chronic_needs_doc.jpg',
-      date: '2026-01-10',
-      status: 'Pending',
-      pharmacy: 'Awaiting Selection',
-      expiryDate: 'N/A'
-    },
-    {
-      id: 'RX-8790',
-      fileName: 'old_prescription.pdf',
-      date: '2025-11-20',
-      status: 'Expired',
-      pharmacy: 'City Central Pharma',
-      expiryDate: '2026-01-05'
+  React.useEffect(() => {
+    fetchPrescriptions();
+  }, []);
+
+  const fetchPrescriptions = async () => {
+    setLoading(true);
+    try {
+      const response = await getPrescriptions();
+      if (response.success) {
+        setPrescriptions(response.data.prescriptions.map(p => ({
+          key: p._id,
+          id: p._id.substring(p._id.length - 8).toUpperCase(),
+          fileName: p.originalName,
+          imageUrl: p.imageUrl,
+          date: new Date(p.uploadedAt).toLocaleDateString(),
+          status: p.status === 'pending_review' ? 'Pending' :
+            p.status === 'approved' ? 'Verified' :
+              p.status === 'rejected' ? 'Rejected' :
+                p.status === 'processed' ? 'Processed' : 'Completed',
+          pharmacy: p.pharmacy?.name || 'Awaiting Selection',
+          expiryDate: p.expiryDate ? new Date(p.expiryDate).toLocaleDateString() : 'N/A'
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching prescriptions:', error);
+      notification.error({
+        message: 'Error',
+        description: 'Failed to fetch prescriptions.'
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleUpload = async () => {
+    if (fileList.length === 0) {
+      notification.warning({ message: 'Please select a file' });
+      return;
+    }
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('prescription', fileList[0]);
+    formData.append('notes', notes);
+
+    try {
+      const response = await uploadPrescription(formData);
+      if (response.success) {
+        notification.success({ message: 'Prescription uploaded successfully' });
+        setUploadModalVisible(false);
+        setFileList([]);
+        setNotes('');
+        fetchPrescriptions();
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      notification.error({
+        message: 'Upload Failed',
+        description: error.response?.data?.message || 'Error uploading prescription.'
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const getStatusTag = (status) => {
     switch (status) {
@@ -97,11 +142,26 @@ const Prescriptions = () => {
     {
       title: 'Action',
       key: 'action',
-      width: 100,
-      render: () => (
+      width: 120,
+      render: (_, record) => (
         <Space>
-          <Button size="small" icon={<EyeOutlined />} type="text" />
-          <Button size="small" icon={<DownloadOutlined />} type="text" />
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            type="text"
+            onClick={() => {
+              setPreviewImage(`http://localhost:5000${record.imageUrl}`);
+              setPreviewVisible(true);
+            }}
+          />
+          <Button
+            size="small"
+            icon={<DownloadOutlined />}
+            type="text"
+            href={`http://localhost:5000${record.imageUrl}`}
+            download={record.fileName}
+            target="_blank"
+          />
         </Space>
       )
     }
@@ -132,7 +192,8 @@ const Prescriptions = () => {
             <Table
               columns={columns}
               dataSource={prescriptions}
-              rowKey="id"
+              rowKey="key"
+              loading={loading}
               pagination={{ pageSize: 5 }}
               scroll={{ x: 1000 }}
               tableLayout="fixed"
@@ -170,14 +231,23 @@ const Prescriptions = () => {
       <Modal
         title="Upload Prescription"
         open={uploadModalVisible}
-        onCancel={() => setUploadModalVisible(false)}
+        onCancel={() => {
+          setUploadModalVisible(false);
+          setFileList([]);
+          setNotes('');
+        }}
         footer={null}
         width={600}
       >
         <div className="upload-modal-content">
           <Dragger
             multiple={false}
-            action="/api/upload" // Placeholder
+            fileList={fileList}
+            beforeUpload={(file) => {
+              setFileList([file]);
+              return false;
+            }}
+            onRemove={() => setFileList([])}
             className="rx-dragger"
             style={{
               background: token.colorFillAlter,
@@ -192,15 +262,53 @@ const Prescriptions = () => {
               Support for a single scan per upload. Please ensure the doctor's stamp and signature are clearly visible.
             </p>
           </Dragger>
+
+          <div style={{ marginTop: '20px' }}>
+            <Text strong>Additional Notes (Optional)</Text>
+            <Input.TextArea
+              rows={3}
+              placeholder="e.g. For recurring migraine medicine..."
+              style={{ marginTop: '8px', borderRadius: '8px' }}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
           <div style={{ marginTop: '24px', textAlign: 'right' }}>
-            <Button style={{ marginRight: '8px' }} onClick={() => setUploadModalVisible(false)}>
+            <Button
+              style={{ marginRight: '8px' }}
+              onClick={() => {
+                setUploadModalVisible(false);
+                setFileList([]);
+                setNotes('');
+              }}
+            >
               Cancel
             </Button>
-            <Button type="primary" onClick={() => setUploadModalVisible(false)}>
+            <Button
+              type="primary"
+              onClick={handleUpload}
+              loading={uploading}
+              disabled={fileList.length === 0}
+            >
               Submit for Review
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={previewVisible}
+        title="Prescription Preview"
+        footer={null}
+        onCancel={() => setPreviewVisible(false)}
+        width={800}
+      >
+        <img
+          alt="prescription"
+          style={{ width: '100%', borderRadius: '8px' }}
+          src={previewImage}
+        />
       </Modal>
     </div>
   );

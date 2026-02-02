@@ -48,6 +48,7 @@ app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
 app.use('/api/delivery/onboarding', require('./routes/deliveryOnboardingRoutes'));
 app.use('/api/delivery', require('./routes/deliveryRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/prescriptions', require('./routes/prescriptionRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 

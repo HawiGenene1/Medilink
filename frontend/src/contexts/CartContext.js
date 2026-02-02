@@ -39,7 +39,10 @@ export const CartProvider = ({ children }) => {
                 ...medicine,
                 quantity,
                 pharmacy,
-                priceValue
+                priceValue,
+                prescriptionId: medicine.prescriptionId,
+                prescriptionImage: medicine.prescriptionImage,
+                prescriptionRequired: medicine.requiresPrescription
             }];
         });
     };

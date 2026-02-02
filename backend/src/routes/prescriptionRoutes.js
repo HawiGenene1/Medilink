@@ -8,7 +8,7 @@ const {
   deletePrescription
 } = require('../controllers/prescriptionController');
 const { protect } = require('../middleware/authMiddleware');
-const { roleMiddleware } = require('../middleware/roleMiddleware');
+const { authorize: roleMiddleware } = require('../middleware/roleMiddleware');
 
 // Apply authentication middleware to all prescription routes
 router.use(protect);

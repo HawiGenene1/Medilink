@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, Button, Tag, Space, Tabs, InputNumber, Divider, Alert, Avatar, Spin, Empty, notification } from 'antd';
-import api from '../../../services/api';
 import {
     ShoppingCartOutlined,
     MedicineBoxOutlined,
@@ -12,15 +10,27 @@ import {
     StarFilled,
     UploadOutlined,
     CheckCircleOutlined,
-    ArrowRightOutlined
+    ArrowRightOutlined,
+    InboxOutlined,
+    FileProtectOutlined,
+    HeartOutlined,
+    HeartFilled
 } from '@ant-design/icons';
+import { getPrescriptions, uploadPrescription } from '../../../services/api/prescriptions';
+import {
+    Modal, List, Upload, notification, Input, Typography,
+    Button, Space, Avatar, Tag, Alert, Tabs, Spin, Empty,
+    Row, Col, Card, Divider, InputNumber
+} from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HeartOutlined, HeartFilled, FlashOnOutlined } from '@ant-design/icons';
 import { useCart } from '../../../contexts/CartContext';
 import { useFavorites } from '../../../contexts/FavoritesContext';
+import api from '../../../services/api';
 import './MedicineDetail.css';
 
+const { Dragger } = Upload;
 const { Title, Text, Paragraph } = Typography;
+const AntdTabs = Tabs;
 
 const MedicineDetail = () => {
     const { id } = useParams();
@@ -28,10 +38,18 @@ const MedicineDetail = () => {
     const { addToCart } = useCart();
     const { isFavorite, toggleFavorite } = useFavorites();
     const [quantity, setQuantity] = useState(1);
-    const [rxUploaded, setRxUploaded] = useState(false);
+    const [selectedRx, setSelectedRx] = useState(null);
     const [medicine, setMedicine] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Prescription Modal State
+    const [isRxModalVisible, setIsRxModalVisible] = useState(false);
+    const [userPrescriptions, setUserPrescriptions] = useState([]);
+    const [loadingRx, setLoadingRx] = useState(false);
+    const [fileList, setFileList] = useState([]);
+    const [uploadingRx, setUploadingRx] = useState(false);
+    const [rxNotes, setRxNotes] = useState('');
 
     useEffect(() => {
         const fetchMedicine = async () => {
@@ -49,44 +67,52 @@ const MedicineDetail = () => {
         fetchMedicine();
     }, [id]);
 
+    const fetchUserPrescriptions = async () => {
+        setLoadingRx(true);
+        try {
+            const response = await getPrescriptions({ status: 'approved' });
+            if (response.success) {
+                setUserPrescriptions(response.data.prescriptions);
+            }
+        } catch (error) {
+            console.error('Error fetching prescriptions:', error);
+        } finally {
+            setLoadingRx(false);
+        }
+    };
+
+    const handleUploadRx = async () => {
+        if (fileList.length === 0) return;
+        setUploadingRx(true);
+        const formData = new FormData();
+        formData.append('prescription', fileList[0]);
+        formData.append('notes', rxNotes);
+
+        try {
+            const response = await uploadPrescription(formData);
+            if (response.success) {
+                notification.success({ message: 'Rx Uploaded', description: 'Your prescription is pending review.' });
+                setSelectedRx({
+                    id: response.data.prescriptionId,
+                    url: response.data.imageUrl,
+                    isNew: true
+                });
+                setIsRxModalVisible(false);
+                setFileList([]);
+                setRxNotes('');
+            }
+        } catch (error) {
+            notification.error({ message: 'Upload Failed', description: 'Please try again.' });
+        } finally {
+            setUploadingRx(false);
+        }
+    };
+
+
     if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>;
     if (error) return <Alert message="Error" description={error} type="error" showIcon style={{ margin: '24px' }} />;
     if (!medicine) return <Empty description="Medicine not found" style={{ margin: '48px' }} />;
 
-    const PharmaciesList = () => (
-        <div className="pharmacies-tab-list">
-            {medicine.pharmacy ? (
-                <div className="pharmacy-row">
-                    <Row justify="space-between" align="middle" gutter={16}>
-                        <Col flex="auto">
-                            <Space size="middle">
-                                <Avatar shape="square" icon={<ShopOutlined />} style={{ color: '#1E88E5', background: '#E3F2FD' }} />
-                                <div>
-                                    <Text strong>{medicine.pharmacy.name}</Text>
-                                    <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                                        <Space split={<span>•</span>}>
-                                            <span>⭐ {medicine.pharmacy.rating || 4.5}</span>
-                                            <span>{medicine.pharmacy.address?.city || 'Addis Ababa'}</span>
-                                        </Space>
-                                    </div>
-                                </div>
-                            </Space>
-                        </Col>
-                        <Col style={{ textAlign: 'right' }}>
-                            <div style={{ marginBottom: '8px' }}>
-                                <Text strong style={{ color: '#1E88E5', fontSize: '16px' }}>{medicine.price.toFixed(2)} ETB</Text>
-                            </div>
-                            <Button size="small" type={medicine.quantity > 0 ? "primary" : "default"} disabled={medicine.quantity <= 0}>
-                                {medicine.quantity > 0 ? 'Select' : 'Out of Stock'}
-                            </Button>
-                        </Col>
-                    </Row>
-                </div>
-            ) : (
-                <Empty description="No pharmacy information available" />
-            )}
-        </div>
-    );
 
     const tabsItems = [
         {
@@ -136,7 +162,40 @@ const MedicineDetail = () => {
         {
             key: '4',
             label: 'Available At',
-            children: <PharmaciesList />,
+            children: (
+                <div className="pharmacies-tab-list">
+                    {medicine.pharmacy ? (
+                        <div className="pharmacy-row">
+                            <Row justify="space-between" align="middle" gutter={16}>
+                                <Col flex="auto">
+                                    <Space size="middle">
+                                        <Avatar shape="square" icon={<ShopOutlined />} style={{ color: '#1E88E5', background: '#E3F2FD' }} />
+                                        <div>
+                                            <Text strong>{medicine.pharmacy.name}</Text>
+                                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                                                <Space split={<span>•</span>}>
+                                                    <span>⭐ {medicine.pharmacy.rating || 4.5}</span>
+                                                    <span>{medicine.pharmacy.address?.city || 'Addis Ababa'}</span>
+                                                </Space>
+                                            </div>
+                                        </div>
+                                    </Space>
+                                </Col>
+                                <Col style={{ textAlign: 'right' }}>
+                                    <div style={{ marginBottom: '8px' }}>
+                                        <Text strong style={{ color: '#1E88E5', fontSize: '16px' }}>{medicine.price.toFixed(2)} ETB</Text>
+                                    </div>
+                                    <Button size="small" type={medicine.quantity > 0 ? "primary" : "default"} disabled={medicine.quantity <= 0}>
+                                        {medicine.quantity > 0 ? 'Select' : 'Out of Stock'}
+                                    </Button>
+                                </Col>
+                            </Row>
+                        </div>
+                    ) : (
+                        <Empty description="No pharmacy information available" />
+                    )}
+                </div>
+            ),
         },
     ];
 
@@ -243,11 +302,21 @@ const MedicineDetail = () => {
                                     block
                                     icon={<UploadOutlined />}
                                     className="upload-rx-btn"
-                                    type={rxUploaded ? "default" : "primary"}
-                                    onClick={() => setRxUploaded(true)}
+                                    type={selectedRx ? "default" : "primary"}
+                                    onClick={() => {
+                                        setIsRxModalVisible(true);
+                                        fetchUserPrescriptions();
+                                    }}
                                 >
-                                    {rxUploaded ? 'Prescription Uploaded ✅' : 'Upload Prescription'}
+                                    {selectedRx ? 'Rx Attached ✓' : 'Attach Prescription'}
                                 </Button>
+                                {selectedRx && (
+                                    <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                                        <Text type="success" style={{ fontSize: '12px' }}>
+                                            <CheckCircleOutlined /> Prescription {selectedRx.isNew ? 'uploaded' : 'selected'}
+                                        </Text>
+                                    </div>
+                                )}
                                 <Paragraph type="secondary" style={{ fontSize: '12px', marginTop: '8px', textAlign: 'center' }}>
                                     Required for bacterial medications and hormones.
                                 </Paragraph>
@@ -261,13 +330,20 @@ const MedicineDetail = () => {
                                 block
                                 icon={<ShoppingCartOutlined />}
                                 className="add-to-cart-btn"
-                                disabled={medicine.requiresPrescription && !rxUploaded}
+                                disabled={medicine.requiresPrescription && !selectedRx}
                                 onClick={() => {
-                                    addToCart({ ...medicine, id: medicine._id, priceValue: medicine.price, pharmacyId: medicine.pharmacy?._id }, quantity, medicine.pharmacy?.name || 'Pharmacy');
+                                    addToCart({
+                                        ...medicine,
+                                        id: medicine._id,
+                                        priceValue: medicine.price,
+                                        pharmacyId: medicine.pharmacy?._id,
+                                        prescriptionId: selectedRx?.id,
+                                        prescriptionImage: selectedRx?.url
+                                    }, quantity, medicine.pharmacy?.name || 'Pharmacy');
                                     notification.success({ message: 'Added to cart' });
                                 }}
                             >
-                                {medicine.requiresPrescription && !rxUploaded ? 'Upload Rx First' : 'Add to Cart'}
+                                {medicine.requiresPrescription && !selectedRx ? 'Attach Rx First' : 'Add to Cart'}
                             </Button>
 
                             <Button
@@ -275,9 +351,16 @@ const MedicineDetail = () => {
                                 block
                                 style={{ background: '#f59e0b', color: 'white', border: 'none' }}
                                 icon={<ArrowRightOutlined />}
-                                disabled={medicine.requiresPrescription && !rxUploaded}
+                                disabled={medicine.requiresPrescription && !selectedRx}
                                 onClick={() => {
-                                    addToCart({ ...medicine, id: medicine._id, priceValue: medicine.price, pharmacyId: medicine.pharmacy?._id }, quantity, medicine.pharmacy?.name || 'Pharmacy');
+                                    addToCart({
+                                        ...medicine,
+                                        id: medicine._id,
+                                        priceValue: medicine.price,
+                                        pharmacyId: medicine.pharmacy?._id,
+                                        prescriptionId: selectedRx?.id,
+                                        prescriptionImage: selectedRx?.url
+                                    }, quantity, medicine.pharmacy?.name || 'Pharmacy');
                                     navigate('/customer/checkout');
                                 }}
                             >
@@ -294,6 +377,77 @@ const MedicineDetail = () => {
                     </Card>
                 </Col>
             </Row>
+            <Modal
+                title="Medical Prescription Required"
+                open={isRxModalVisible}
+                onCancel={() => setIsRxModalVisible(false)}
+                footer={null}
+                width={700}
+            >
+                <Tabs defaultActiveKey="1">
+                    <Tabs.TabPane tab="Select Existing" key="1">
+                        <List
+                            loading={loadingRx}
+                            dataSource={userPrescriptions}
+                            renderItem={rx => (
+                                <List.Item
+                                    actions={[
+                                        <Button
+                                            type={selectedRx?.id === rx._id ? "primary" : "default"}
+                                            onClick={() => {
+                                                setSelectedRx({ id: rx._id, url: rx.imageUrl, isNew: false });
+                                                setIsRxModalVisible(false);
+                                            }}
+                                        >
+                                            {selectedRx?.id === rx._id ? 'Selected' : 'Select'}
+                                        </Button>
+                                    ]}
+                                >
+                                    <List.Item.Meta
+                                        avatar={<Avatar icon={<FileProtectOutlined />} style={{ background: '#E3F2FD', color: '#1E88E5' }} />}
+                                        title={rx.originalName}
+                                        description={`Uploaded on ${new Date(rx.uploadedAt).toLocaleDateString()}`}
+                                    />
+                                </List.Item>
+                            )}
+                            locale={{ emptyText: <div style={{ padding: '20px', textAlign: 'center' }}><Text type="secondary">No approved prescriptions found.</Text></div> }}
+                        />
+                    </Tabs.TabPane>
+                    <Tabs.TabPane tab="Upload New" key="2">
+                        <div style={{ padding: '10px 0' }}>
+                            <Dragger
+                                multiple={false}
+                                fileList={fileList}
+                                beforeUpload={file => {
+                                    setFileList([file]);
+                                    return false;
+                                }}
+                                onRemove={() => setFileList([])}
+                            >
+                                <p className="ant-upload-drag-icon"><InboxOutlined /></p>
+                                <p className="ant-upload-text">Click or drag prescription image to this area</p>
+                            </Dragger>
+                            <Input.TextArea
+                                rows={3}
+                                placeholder="Additional notes for the pharmacist..."
+                                style={{ marginTop: '16px' }}
+                                value={rxNotes}
+                                onChange={e => setRxNotes(e.target.value)}
+                            />
+                            <Button
+                                type="primary"
+                                block
+                                style={{ marginTop: '20px' }}
+                                onClick={handleUploadRx}
+                                loading={uploadingRx}
+                                disabled={fileList.length === 0}
+                            >
+                                Upload RX
+                            </Button>
+                        </div>
+                    </Tabs.TabPane>
+                </Tabs>
+            </Modal>
         </div>
     );
 };

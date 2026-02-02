@@ -135,7 +135,9 @@ const createOrder = async (req, res) => {
       finalAmount,
       address,
       paymentMethod,
-      paymentDetails
+      paymentDetails,
+      prescriptionRequired,
+      prescriptionImage
     } = req.body;
 
     // Use req.user.userId from protect middleware or fallback for dev
@@ -173,6 +175,8 @@ const createOrder = async (req, res) => {
       paymentMethod: paymentMethod || 'cash',
       paymentStatus: 'pending',
       status: 'pending',
+      prescriptionRequired: prescriptionRequired || false,
+      prescriptionImage: prescriptionImage || null,
       statusHistory: [{
         status: 'pending',
         timestamp: new Date(),
