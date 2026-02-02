@@ -1,0 +1,95 @@
+/* Delivery Details Styles */
+.delivery-details-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    position: relative;
+    overflow: hidden;
+}
+
+.delivery-map-wrapper {
+    flex: 4;
+    /* ~60% */
+    width: 100%;
+    position: relative;
+}
+
+.delivery-info-sheet {
+    flex: 3;
+    /* ~40% */
+    background: #ffffff;
+    border-radius: 32px 32px 0 0;
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    z-index: 1000;
+    margin-top: -30px;
+    overflow-y: auto;
+}
+
+.floating-back-btn {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    z-index: 1001;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.delivery-nav-btn {
+    position: absolute;
+    bottom: 50px;
+    right: 24px;
+    z-index: 1001;
+    height: 56px !important;
+    width: 56px !important;
+    border-radius: 28px !important;
+    box-shadow: 0 8px 24px rgba(30, 136, 229, 0.3) !important;
+}
+
+.status-stepper {
+    margin-bottom: 24px;
+}
+
+.action-card {
+    background: #f0f7ff;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.primary-action-btn {
+    height: 56px !important;
+    border-radius: 16px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 8px 20px rgba(30, 136, 229, 0.2) !important;
+}
+
+.arrival-banner {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+    width: 90%;
+    max-width: 400px;
+    animation: slideDown 0.4s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translate(-50%, -100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+.soft-blue-map .leaflet-tile-container {
+    filter: hue-rotate(10deg) saturate(0.8) brightness(1.05) contrast(1.05);
+}

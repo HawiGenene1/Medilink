@@ -1,108 +1,86 @@
 const express = require('express');
-const { body, param, query } = require('express-validator');
+const router = express.Router();
 const {
+  getAllUsers,
+  getUserById,
+  updateUserRole,
+  disableUser,
+  enableUser,
   getPendingRegistrations,
-  getRegistrationDetails,
   approveRegistration,
   rejectRegistration,
-  getAllSubscriptions,
-  activateSubscription,
-  deactivateSubscription,
-  renewSubscription
+  bulkExportData,
+  createDeliveryPerson,
+  getDashboardStats
 } = require('../controllers/adminController');
-const { authenticate, authorize } = require('../middleware/authMiddleware');
-const router = express.Router();
+const { logAdminAction } = require('../middleware/auditMiddleware');
 
-// Protect all routes - admin only
-router.use(authenticate);
-router.use(authorize('admin'));
+// @desc    Admin Health Check
+router.get('/check', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Admin access verified',
+    user: {
+      id: req.user._id,
+      email: req.user.email,
+      role: req.user.role
+    }
+  });
+});
 
-// ============ PHARMACY REGISTRATION ROUTES ============
+// Dashboard Stats
+router.get('/dashboard/stats', getDashboardStats);
 
-/**
- * @route   GET /api/admin/registrations
- * @desc    Get all pending pharmacy registrations
- * @access  Private (Admin only)
- */
-router.get('/registrations', [
-  query('status').optional().isIn(['pending', 'approved', 'rejected']),
-  query('page').optional().isInt({ min: 1 }),
-  query('limit').optional().isInt({ min: 1, max: 100 })
-], getPendingRegistrations);
+// User Management
+router.get('/users', getAllUsers);
+router.get('/users/:id', getUserById); // Mapped getUserDetail -> getUserById
+router.patch('/users/:id/role', logAdminAction('UPDATE_USER_ROLE', 'User'), updateUserRole);
+// router.patch('/users/:id/status', logAdminAction('UPDATE_USER_STATUS', 'User'), updateUserStatus); // TODO: Implement updateUserStatus or map to disable/enable
 
-/**
- * @route   GET /api/admin/registrations/:id
- * @desc    Get details of a specific registration
- * @access  Private (Admin only)
- */
-router.get('/registrations/:id', [
-  param('id').isMongoId().withMessage('Invalid registration ID')
-], getRegistrationDetails);
+// Pharmacy Management
+// router.get('/pharmacies', getAllPharmacies); // TODO: Implement getAllPharmacies
+// Registration Management
+router.get('/registrations/pending', getPendingRegistrations);
+router.post('/registrations/approve/:id', logAdminAction('APPROVE', 'USER'), approveRegistration);
+router.post('/registrations/reject/:id', logAdminAction('REJECT', 'USER'), rejectRegistration);
+router.post('/delivery-person', logAdminAction('CREATE_DELIVERY_PERSON', 'User'), createDeliveryPerson);
 
-/**
- * @route   POST /api/admin/registrations/:id/approve
- * @desc    Approve a pharmacy registration
- * @access  Private (Admin only)
- */
-router.post('/registrations/:id/approve', [
-  param('id').isMongoId().withMessage('Invalid registration ID'),
-  body('subscriptionMode').optional().isIn(['monthly', 'annually'])
-], approveRegistration);
+// Medicine Repository Management (TODO: Implement Medicine Controller)
+// router.get('/medicines', getAllMedicines);
+// router.post('/medicines', logAdminAction('CREATE_MEDICINE', 'Medicine'), createMedicine);
+// router.put('/medicines/:id', logAdminAction('UPDATE_MEDICINE', 'Medicine'), updateMedicine);
+// router.delete('/medicines/:id', logAdminAction('DELETE_MEDICINE', 'Medicine'), deleteMedicine);
 
-/**
- * @route   POST /api/admin/registrations/:id/reject
- * @desc    Reject a pharmacy registration
- * @access  Private (Admin only)
- */
-router.post('/registrations/:id/reject', [
-  param('id').isMongoId().withMessage('Invalid registration ID'),
-  body('rejectionReason', 'Rejection reason is required').not().isEmpty().trim()
-], rejectRegistration);
+// Order Oversight (TODO: Implement Order Controller)
+// router.get('/orders', getAllOrders);
+// router.get('/orders/:id', getOrderDetail);
+// router.patch('/orders/:id/status', logAdminAction('UPDATE_ORDER_STATUS', 'Order'), updateOrderStatus);
 
-// ============ SUBSCRIPTION MANAGEMENT ROUTES ============
+// Monitoring
+// router.get('/monitoring/health', getSystemHealth); // TODO: Implement Monitoring
 
-/**
- * @route   GET /api/admin/subscriptions
- * @desc    Get all subscriptions with filters
- * @access  Private (Admin only)
- */
-router.get('/subscriptions', [
-  query('status').optional().isIn(['active', 'expired', 'cancelled', 'suspended']),
-  query('paymentStatus').optional().isIn(['pending', 'completed', 'failed', 'cancelled']),
-  query('page').optional().isInt({ min: 1 }),
-  query('limit').optional().isInt({ min: 1, max: 100 })
-], getAllSubscriptions);
+// Audit Logs
+// router.get('/audit', getAuditLogs); // TODO: Implement Audit
+// router.get('/audit/:id', getLogDetail);
 
-/**
- * @route   POST /api/admin/subscriptions/:id/activate
- * @desc    Activate a subscription after payment
- * @access  Private (Admin only)
- */
-router.post('/subscriptions/:id/activate', [
-  param('id').isMongoId().withMessage('Invalid subscription ID'),
-  body('paymentMethod', 'Payment method is required').isIn(['bank_transfer', 'card', 'cash', 'cheque']),
-  body('transactionId', 'Transaction ID is required').not().isEmpty().trim(),
-  body('receiptUrl').optional().isURL()
-], activateSubscription);
+// Communication
+// router.get('/communication/tickets', getAllSupportTickets); // TODO: Implement Communication
+// router.post('/communication/announcements', logAdminAction('CREATE_ANNOUNCEMENT', 'Notification'), createAnnouncement);
 
-/**
- * @route   POST /api/admin/subscriptions/:id/deactivate
- * @desc    Deactivate a subscription
- * @access  Private (Admin only)
- */
-router.post('/subscriptions/:id/deactivate', [
-  param('id').isMongoId().withMessage('Invalid subscription ID'),
-  body('reason', 'Deactivation reason is required').not().isEmpty().trim()
-], deactivateSubscription);
+// Data Management
+// router.post('/data/backup', logAdminAction('TRIGGER_BACKUP', 'System'), triggerBackup);
+router.post('/data/export', logAdminAction('TRIGGER_EXPORT', 'System'), bulkExportData); // Mapped triggerExport -> bulkExportData
 
-/**
- * @route   POST /api/admin/subscriptions/:id/renew
- * @desc    Renew a subscription
- * @access  Private (Admin only)
- */
-router.post('/subscriptions/:id/renew', [
-  param('id').isMongoId().withMessage('Invalid subscription ID'),
-  body('mode').optional().isIn(['monthly', 'annually'])
-], renewSubscription);
+// Analytics
+// const {
+//   getDashboardStats,
+//   getGrowthMetrics,
+//   getPharmacyPerformance
+// } = require('../controllers/admin/analyticsController'); // TODO: Implement Analytics
+
+// router.get('/analytics/dashboard', getDashboardStats);
+// router.get('/analytics/growth', getGrowthMetrics);
+// router.get('/analytics/pharmacies', getPharmacyPerformance);
 
 module.exports = router;
+

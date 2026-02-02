@@ -1,16 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col } from 'react-bootstrap'; // Keep Container for layout or replace with div
-import { Input, Select, Button, Card, Spin, Badge, Tag, Space, Typography } from 'antd';
-import { SearchOutlined, FilterOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { Container, Row, Col, Card, Form, Button, Spinner } from 'react-bootstrap';
+import { Search, Filter, Plus } from 'react-bootstrap-icons';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import './MedicineList.css'; // Ensure this file exists or styles are handled
-
-const { Search } = Input;
-const { Option } = Select;
-const { Meta } = Card;
-const { Title, Text } = Typography;
+import './MedicineList.css';
 
 const MedicineList = () => {
   const [medicines, setMedicines] = useState([]);
@@ -25,35 +19,15 @@ const MedicineList = () => {
 
   useEffect(() => {
     const fetchMedicines = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const params = new URLSearchParams();
-        if (filters.search) params.append('search', filters.search);
-        if (filters.category) params.append('category', filters.category);
-        if (filters.minPrice) params.append('minPrice', filters.minPrice);
-        if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-        if (filters.sort) params.append('sort', filters.sort);
-
-        // Mock data for development if API fails or is empty (Optional: remove in production)
-        // const response = await api.get(`/medicines?${params.toString()}`);
-        // setMedicines(response.data);
-
-        // TEMPORARY: Attempt fetch, fallback to empty array or handle error
-        // const response = await api.get(`/medicines?${params.toString()}`);
-        // setMedicines(response.data);
-
-        // Simple mock for UI dev
-        setTimeout(() => {
-          setMedicines([
-            { _id: '1', name: 'Paracetamol', manufacturer: 'EthioPharm', description: 'Pain reliever and fever reducer.', price: 50, imageUrl: '', category: 'otc', stock: 100 },
-            { _id: '2', name: 'Amoxicillin', manufacturer: 'Cadila', description: 'Antibiotic for bacterial infections.', price: 120, imageUrl: '', category: 'prescription', stock: 50 },
-            { _id: '3', name: 'Vitamin C', manufacturer: 'SunPharma', description: 'Immune system booster.', price: 200, imageUrl: '', category: 'supplement', stock: 0 },
-          ]);
-          setLoading(false);
-        }, 1000);
-
+        const response = await api.get('/medicines', { params: filters });
+        // Handle both direct array and { success: true, data: [...] } structures
+        const medicineData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        setMedicines(medicineData);
       } catch (error) {
         console.error('Error fetching medicines:', error);
+      } finally {
         setLoading(false);
       }
     };
@@ -61,102 +35,95 @@ const MedicineList = () => {
     fetchMedicines();
   }, [filters]);
 
-  const handleSearch = (value) => {
-    setFilters(prev => ({ ...prev, search: value }));
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCategoryChange = (value) => {
-    setFilters(prev => ({ ...prev, category: value }));
-  };
+  if (loading) {
+    return <Spinner animation="border" />;
+  }
 
   return (
-    <div className="medicine-list-page" style={{ padding: '24px' }}>
-      <div className="container">
-        <Title level={2} style={{ marginBottom: '24px' }}>Browse Medicines</Title>
+    <Container className="my-4" style={{ paddingTop: '100px' }}>
+      <h2 className="mb-4">Browse Medicines</h2>
 
-        {/* Search and Filter Section */}
-        <Card style={{ marginBottom: '24px' }}>
-          <Row gutter={[16, 16]} align="middle">
-            <Col xs={12} md={6}>
-              <Search
-                placeholder="Search by name, manufacturer, etc."
-                allowClear
-                enterButton={<Button type="primary" icon={<SearchOutlined />}>Search</Button>}
-                size="large"
-                onSearch={handleSearch}
-              />
-            </Col>
-            <Col xs={6} md={3}>
-              <Select
-                placeholder="Select Category"
-                style={{ width: '100%' }}
-                size="large"
-                onChange={handleCategoryChange}
-                allowClear
-              >
-                <Option value="prescription">Prescription</Option>
-                <Option value="otc">Over the Counter</Option>
-                <Option value="supplement">Supplements</Option>
-                <Option value="equipment">Medical Equipment</Option>
-              </Select>
-            </Col>
-            <Col xs={6} md={3} style={{ textAlign: 'right' }}>
-              {/* Placeholder for Add Medicine (Admin/Staff only) - hidden for public */}
-            </Col>
-          </Row>
-        </Card>
-
-        {/* Medicine Grid */}
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '50px' }}>
-            <Spin size="large" tip="Loading medicines..." />
-          </div>
-        ) : (
-          <Row gutter={[24, 24]}>
-            {medicines.map(medicine => (
-              <Col xs={24} sm={12} md={8} lg={6} key={medicine._id} style={{ marginBottom: '24px' }}>
-                <Card
-                  hoverable
-                  cover={
-                    <img
-                      alt={medicine.name}
-                      src={medicine.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image'}
-                      style={{ height: '200px', objectFit: 'cover' }}
-                    />
-                  }
-                  actions={[
-                    <Link to={`/medicines/${medicine._id}`} key="view">
-                      <Button type="link">View Details</Button>
-                    </Link>,
-                    <Button type="primary" icon={<ShoppingCartOutlined />} disabled={medicine.stock === 0} key="add">
-                      Add
-                    </Button>
-                  ]}
-                >
-                  <Meta
-                    title={
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{medicine.name}</span>
-                        <Text type="success">${medicine.price}</Text>
-                      </div>
-                    }
-                    description={
-                      <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                        <Text type="secondary" style={{ fontSize: '12px' }}>{medicine.manufacturer}</Text>
-                        <Space>
-                          {medicine.category === 'prescription' && <Tag color="red">Prescription</Tag>}
-                          {medicine.stock > 0 ? <Tag color="green">In Stock</Tag> : <Tag color="default">Out of Stock</Tag>}
-                        </Space>
-                      </Space>
-                    }
+      {/* Search and Filter Section */}
+      <Card className="mb-4">
+        <Card.Body>
+          <Form>
+            <Row>
+              <Col md={9}>
+                <Form.Group>
+                  <Form.Label><Search /> Search Medicines</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="search"
+                    value={filters.search}
+                    onChange={handleFilterChange}
+                    placeholder="Search by name, manufacturer, etc."
                   />
-                </Card>
+                </Form.Group>
               </Col>
-            ))}
-          </Row>
-        )}
-      </div>
-    </div>
+              <Col md={3}>
+                <Form.Group>
+                  <Form.Label><Filter /> Category</Form.Label>
+                  <Form.Select
+                    name="category"
+                    value={filters.category}
+                    onChange={handleFilterChange}
+                  >
+                    <option value="">All Categories</option>
+                    <option value="prescription">Prescription</option>
+                    <option value="otc">Over the Counter</option>
+                    <option value="supplement">Supplements</option>
+                    <option value="equipment">Medical Equipment</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
+          </Form>
+        </Card.Body>
+      </Card>
+
+      {/* Medicine Grid */}
+      <Row xs={1} md={2} lg={4} className="g-4">
+        {Array.isArray(medicines) && medicines.map(medicine => (
+          <Col key={medicine._id}>
+            <Card className="h-100">
+              <Card.Img
+                variant="top"
+                src={(medicine.images && medicine.images[0]) || medicine.imageUrl || '/images/medicine-placeholder.jpg'}
+                alt={medicine.name}
+                style={{ height: '160px', objectFit: 'cover' }}
+              />
+              <Card.Body className="d-flex flex-column">
+                <Card.Title>{medicine.name}</Card.Title>
+                <Card.Subtitle className="mb-2 text-muted">
+                  {medicine.manufacturer}
+                </Card.Subtitle>
+                <Card.Text>
+                  {medicine.description?.substring(0, 100)}...
+                </Card.Text>
+                <div className="d-flex justify-content-between align-items-center mt-auto">
+                  <h6 className="mb-0 fw-bold">
+                    ETB {(medicine.price?.basePrice || medicine.price || 0).toFixed(2)}
+                  </h6>
+                  <Button
+                    variant="primary"
+                    as={Link}
+                    to={`/medicines/${medicine._id}`}
+                    className="view-details-btn"
+                  >
+                    View Details
+                  </Button>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+    </Container>
   );
 };
 

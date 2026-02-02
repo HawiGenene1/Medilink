@@ -6,14 +6,17 @@ import {
     MessageOutlined,
     ClockCircleOutlined,
     CheckCircleFilled,
-    NavigationOutlined,
+    SendOutlined,
     UserOutlined,
-    LoadingOutlined
+    LoadingOutlined,
+    SyncOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ordersAPI } from '../../../services/api/orders';
+import { useSocket } from '../../../contexts/SocketContext';
+import { notification } from 'antd';
 import './OrderTracking.css';
 
 // Fix Leaflet icons
@@ -37,9 +40,13 @@ const OrderTracking = () => {
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
     const driverMarkerRef = useRef(null);
+    const pharmacyMarkerRef = useRef(null);
+    const destMarkerRef = useRef(null);
 
     // Live Tracking State
     const [driverPos, setDriverPos] = useState([9.0227, 38.7460]); // Fallback pos
+
+    const socket = useSocket();
 
     const fetchTracking = async () => {
         try {
@@ -47,10 +54,10 @@ const OrderTracking = () => {
             if (response.data?.success) {
                 const tracking = response.data.data;
                 setOrderData(tracking);
-                if (tracking.deliveryPerson?.location) {
+                if (tracking.courier?.location?.coordinates) {
                     const newPos = [
-                        tracking.deliveryPerson.location.latitude,
-                        tracking.deliveryPerson.location.longitude
+                        tracking.courier.location.coordinates[1], // lat
+                        tracking.courier.location.coordinates[0]  // lng
                     ];
                     setDriverPos(newPos);
 
@@ -68,27 +75,146 @@ const OrderTracking = () => {
         }
     };
 
-    // Initialize Map
+    // Socket.io Listener
     useEffect(() => {
-        if (mapRef.current && !mapInstance.current) {
-            mapInstance.current = L.map(mapRef.current).setView(driverPos, 15);
+        if (!socket) return;
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
+        socket.emit('track_order', id);
+
+        const handleLocationUpdate = (coords) => {
+            // coords might be { latitude, longitude } or [lng, lat] depending on source
+            // The backend sends { latitude, longitude } in `update_location` event in socket.js
+            if (coords && coords.latitude && coords.longitude) {
+                const newPos = [coords.latitude, coords.longitude];
+                setDriverPos(newPos);
+                if (driverMarkerRef.current) {
+                    driverMarkerRef.current.setLatLng(newPos);
+                }
+                setLastSync(new Date().toLocaleTimeString());
+            }
+        };
+
+        socket.on('driver_location_update', handleLocationUpdate);
+
+        socket.on('order_status_update', (data) => {
+            // Refresh full data on status change
+            fetchTracking();
+            notification.info({ message: `Order Status Updated: ${data.status}` });
+        });
+
+        return () => {
+            socket.off('driver_location_update', handleLocationUpdate);
+            socket.off('order_status_update');
+        };
+    }, [socket, id]);
+
+    // Initialize Map once loading is finished and mapRef is in DOM
+    useEffect(() => {
+        if (!loading && mapRef.current && !mapInstance.current) {
+            mapInstance.current = L.map(mapRef.current, {
+                zoomControl: false,
+                attributionControl: false
+            }).setView(driverPos, 15);
+
+            // Layers
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19
             }).addTo(mapInstance.current);
 
-            driverMarkerRef.current = L.marker(driverPos)
-                .addTo(mapInstance.current)
-                .bindPopup('Driver is here. Heading to your location.');
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                opacity: 0.8
+            }).addTo(mapInstance.current);
+
+            // Force recalculate size after render
+            setTimeout(() => {
+                if (mapInstance.current) {
+                    mapInstance.current.invalidateSize();
+                }
+            }, 100);
         }
 
         return () => {
             if (mapInstance.current) {
                 mapInstance.current.remove();
                 mapInstance.current = null;
+                driverMarkerRef.current = null;
+                pharmacyMarkerRef.current = null;
+                destMarkerRef.current = null;
             }
         };
-    }, []);
+    }, [loading]);
+
+    // Update Markers and Bounds
+    useEffect(() => {
+        if (!mapInstance.current || !orderData) return;
+
+        const markers = [];
+
+        // 1. Driver/Courier Marker
+        if (driverMarkerRef.current) {
+            driverMarkerRef.current.setLatLng(driverPos);
+        } else {
+            const courierIcon = L.divIcon({
+                className: 'pulse-marker',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            driverMarkerRef.current = L.marker(driverPos, { icon: courierIcon })
+                .addTo(mapInstance.current)
+                .bindPopup('<b>Courier</b><br/>Heading to your location');
+        }
+        markers.push(driverPos);
+
+        // 2. Destination Marker
+        if (orderData?.address?.coordinates || orderData?.address?.geojson?.coordinates) {
+            const destPos = orderData.address.coordinates ?
+                [orderData.address.coordinates.latitude, orderData.address.coordinates.longitude] :
+                [orderData.address.geojson.coordinates[1], orderData.address.geojson.coordinates[0]];
+
+            if (destMarkerRef.current) {
+                destMarkerRef.current.setLatLng(destPos);
+            } else {
+                const destIcon = L.divIcon({
+                    className: 'customer-destination-marker',
+                    html: '📍',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
+                destMarkerRef.current = L.marker(destPos, { icon: destIcon })
+                    .addTo(mapInstance.current)
+                    .bindPopup('<b>Delivery Destination</b><br/>You are here');
+            }
+            markers.push(destPos);
+        }
+
+        // 3. Pharmacy Marker
+        if (orderData?.pharmacy?.location?.coordinates) {
+            const [plng, plat] = orderData.pharmacy.location.coordinates;
+            const pPos = [plat, plng];
+
+            if (pharmacyMarkerRef.current) {
+                pharmacyMarkerRef.current.setLatLng(pPos);
+            } else {
+                const pharmacyIcon = L.divIcon({
+                    className: 'pharmacy-marker-icon',
+                    html: '🏥',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
+                pharmacyMarkerRef.current = L.marker(pPos, { icon: pharmacyIcon })
+                    .addTo(mapInstance.current)
+                    .bindPopup(`<b>${orderData.pharmacy.name}</b><br/>Pickup Point`);
+            }
+            markers.push(pPos);
+        }
+
+        // Fit bounds once when data is available
+        if (markers.length > 1) {
+            const bounds = L.latLngBounds(markers);
+            mapInstance.current.fitBounds(bounds, { padding: [50, 50] });
+        }
+    }, [orderData, driverPos]);
 
     useEffect(() => {
         fetchTracking(); // Initial fetch
@@ -98,26 +224,65 @@ const OrderTracking = () => {
     }, [id]);
 
     const getStatusIcon = (status, isCurrent) => {
-        if (status === 'out_for_delivery') return <LoadingOutlined style={{ color: '#1E88E5', fontSize: '16px' }} />;
+        if (status === 'in_transit') return <LoadingOutlined style={{ color: '#1E88E5', fontSize: '16px' }} />;
         if (isCurrent) return <ClockCircleOutlined style={{ color: '#1E88E5', fontSize: '16px' }} />;
         return <CheckCircleFilled style={{ color: '#43A047', fontSize: '16px' }} />;
     };
 
-    const timelineItems = (orderData?.statusHistory || []).map((item, index) => ({
-        dot: getStatusIcon(item.status, index === (orderData?.statusHistory.length - 1)),
-        children: (
-            <div>
-                <Text strong style={{ textTransform: 'capitalize' }}>
-                    {item.status.replace(/_/g, ' ')}
-                </Text>
-                <br />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {new Date(item.timestamp || new Date()).toLocaleString()}
-                </Text>
-                {item.note && <div style={{ fontSize: '13px' }}>{item.note}</div>}
-            </div>
-        )
-    }));
+    const statusMapping = {
+        'pending': 'Order Placed',
+        'confirmed': 'Order Approved & Assigned',
+        'preparing': 'Pharmacy is Preparing Order',
+        'ready': 'Ready for Pickup',
+        'in_transit': 'Courier is Traveling to You',
+        'delivered': 'Delivered'
+    };
+
+    const timelineItems = (orderData?.statusHistory || []).map((item, index) => {
+        const mappedStatus = statusMapping[item.status] || (item.status ? item.status.replace(/_/g, ' ') : 'Processing');
+        const isLatest = index === (orderData?.statusHistory.length - 1);
+
+        return {
+            dot: getStatusIcon(item.status, isLatest),
+            children: (
+                <div style={{ opacity: isLatest ? 1 : 0.7 }}>
+                    <Text strong style={{
+                        fontSize: isLatest ? '14px' : '13px',
+                        color: isLatest ? '#1E88E5' : 'inherit'
+                    }}>
+                        {mappedStatus}
+                    </Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                        {new Date(item.timestamp || new Date()).toLocaleString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    {item.note && isLatest && (
+                        <div style={{ fontSize: '12px', marginTop: '4px', color: '#64748b' }}>
+                            {item.note}
+                        </div>
+                    )}
+                </div>
+            )
+        };
+    });
+
+    // Fallback if history is empty
+    if (timelineItems.length === 0 && orderData?.status) {
+        timelineItems.push({
+            dot: getStatusIcon(orderData.status, true),
+            children: (
+                <div>
+                    <Text strong style={{ color: '#1E88E5' }}>
+                        {statusMapping[orderData.status] || orderData.status}
+                    </Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '11px' }}>
+                        Current Status
+                    </Text>
+                </div>
+            )
+        });
+    }
 
     if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}><LoadingOutlined style={{ fontSize: '24px' }} /></div>;
 
@@ -154,8 +319,30 @@ const OrderTracking = () => {
 
                 {/* Status Section */}
                 <Col xs={24} lg={8}>
-                    <Card title={<Title level={4} style={{ margin: 0 }}>Order Status</Title>} style={{ marginBottom: '24px' }}>
-                        <div style={{ padding: '12px 0' }}>
+                    <Card
+                        title={
+                            <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                                <Title level={4} style={{ margin: 0 }}>Progress</Title>
+                                <Tag color="blue" icon={<SyncOutlined spin />}>Live</Tag>
+                            </Space>
+                        }
+                        style={{ marginBottom: '24px', borderRadius: '16px' }}
+                    >
+                        {orderData?.status && (
+                            <div style={{
+                                background: '#f0f7ff',
+                                padding: '12px',
+                                borderRadius: '12px',
+                                marginBottom: '20px',
+                                border: '1px solid #bae7ff'
+                            }}>
+                                <Text type="secondary" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Status</Text>
+                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#003a8c' }}>
+                                    {statusMapping[orderData.status] || orderData.status.replace(/_/g, ' ')}
+                                </div>
+                            </div>
+                        )}
+                        <div style={{ padding: '0 4px' }}>
                             <Timeline items={timelineItems} />
                         </div>
                     </Card>
@@ -166,24 +353,48 @@ const OrderTracking = () => {
                                 <Avatar size={54} icon={<UserOutlined />} style={{ background: '#E3F2FD', color: '#1E88E5' }} />
                             </Col>
                             <Col flex="auto">
-                                <Text strong style={{ fontSize: '16px' }}>Samuel Girma</Text>
-                                <br /><Text type="secondary">MediLink Delivery Partner</Text>
+                                <Text strong style={{ fontSize: '16px' }}>
+                                    {orderData?.courier?.firstName} {orderData?.courier?.lastName || ''}
+                                </Text>
+                                <br /><Text type="secondary">MediLink Courier Partner • {orderData?.courier?.phone || 'Carrier'}</Text>
                             </Col>
                         </Row>
                         <Divider style={{ margin: '16px 0' }} />
                         <Row gutter={12}>
                             <Col span={12}>
-                                <Button block icon={<PhoneOutlined />} type="default">Call</Button>
+                                <Button
+                                    block
+                                    icon={<PhoneOutlined />}
+                                    type="default"
+                                    onClick={() => {
+                                        if (orderData?.courier?.phone) {
+                                            window.location.href = `tel:${orderData.courier.phone}`;
+                                        }
+                                    }}
+                                >
+                                    Call
+                                </Button>
                             </Col>
                             <Col span={12}>
-                                <Button block icon={<MessageOutlined />} type="primary">Message</Button>
+                                <Button
+                                    block
+                                    icon={<MessageOutlined />}
+                                    type="primary"
+                                    onClick={() => {
+                                        if (orderData?.courier?.phone) {
+                                            window.location.href = `sms:${orderData.courier.phone}`;
+                                        }
+                                    }}
+                                >
+                                    Message
+                                </Button>
                             </Col>
                         </Row>
                     </Card>
 
                     <Card style={{ marginTop: '24px' }}>
                         <Title level={5}>Need Help?</Title>
-                        <Text type="secondary" style={{ fontSize: '13px' }}>If you have issues with your clinical delivery, contact our 24/7 support.</Text>
+                        <Text type="secondary" style={{ fontSize: '13px' }}>If you have issues with your order, contact our 24/7 support.</Text>
                         <Button block type="dashed" style={{ marginTop: '16px' }}>Support Chat</Button>
                     </Card>
                 </Col>

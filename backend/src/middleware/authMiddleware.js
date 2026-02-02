@@ -76,7 +76,9 @@ const protect = async (req, res, next) => {
 
     try {
       // Verify token
+      console.log(`[Auth] Verifying token...`);
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+<<<<<<< HEAD
 
       // Check for Pharmacy Owner (handles both casing and legacy 'pharmacy_admin')
       const decodedRole = decoded.role?.toLowerCase();
@@ -114,16 +116,22 @@ const protect = async (req, res, next) => {
         };
         return next();
       }
+=======
+      console.log(`[Auth] Token verified for userId: ${decoded.userId}`);
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 
       // Find user by ID from token
       const user = await User.findById(decoded.userId).select('-password');
 
       if (!user) {
+        console.warn(`[Auth] User not found for ID: ${decoded.userId}`);
         return res.status(401).json({
           success: false,
           message: 'User not found. Token is invalid.'
         });
       }
+
+      console.log(`[Auth] Authenticated user: ${user.email} (${user.role})`);
 
       // Check if user is active
       if (!user.isActive) {
@@ -135,12 +143,20 @@ const protect = async (req, res, next) => {
 
       // Attach user to request object
       req.user = {
+<<<<<<< HEAD
         _id: user._id,
         userId: user._id,
         email: user.email,
         role: user.role,
         pharmacyId: user.pharmacyId,
         isOwner: user.role.toLowerCase() === 'pharmacy_owner'
+=======
+        id: user._id.toString(),
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        pharmacyId: user.pharmacyId ? user.pharmacyId.toString() : null
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
       };
 
       // If user is staff, attach detailed permissions
@@ -210,9 +226,13 @@ const authRequired = authorize;
 // Basic auth (no role restrictions) for routes like /api/auth/me
 const authenticate = protect;
 
+// Composite middleware for admin access
+const protectAdmin = [protect, authorize('admin')];
+
 module.exports = {
   protect,
   authorize,
   authRequired,
-  authenticate
+  authenticate,
+  protectAdmin
 };

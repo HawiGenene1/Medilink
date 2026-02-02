@@ -1,4 +1,6 @@
 const TempPharmacy = require('../models/TempPharmacy');
+const Pharmacy = require('../models/Pharmacy');
+const Medicine = require('../models/Medicine');
 const { generatePassword, hashPassword } = require('../utils/passwordGenerator');
 const { sendWelcomeEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
@@ -138,6 +140,39 @@ const registerPharmacy = async (req, res) => {
   }
 };
 
+
+
+/**
+ * @route   GET /api/pharmacy/:id
+ * @desc    Get public pharmacy details by ID
+ * @access  Public
+ */
+const getPharmacyById = async (req, res) => {
+  try {
+    const pharmacy = await Pharmacy.findById(req.params.id)
+      .select('name address phone location openingHours isVerified rating reviewCount');
+
+    if (!pharmacy) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pharmacy not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: pharmacy
+    });
+  } catch (error) {
+    logger.error('Error fetching pharmacy:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 /**
  * @route   GET /api/pharmacy/status/:id
  * @desc    Check registration status of a pharmacy
@@ -243,9 +278,71 @@ const requestSubscriptionRenewal = async (req, res) => {
 // Admin functions would go here (approvePharmacy, rejectPharmacy, etc.)
 // These would be protected by admin middleware
 
+/**
+ * @route   GET /api/pharmacy
+ * @desc    Get list of verified pharmacies with optional filtering
+ * @access  Public
+ */
+const getPharmacies = async (req, res) => {
+  try {
+    const { search, lat, lng, radius = 5, medicine } = req.query;
+    const query = { status: 'approved', isActive: true };
+
+    // Search by name
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+
+    // Medicine Search Filter
+    if (medicine) {
+      // Find medicines with matching name that are in stock
+      const medicines = await Medicine.find({
+        name: { $regex: medicine, $options: 'i' },
+        quantity: { $gt: 0 }
+      }).select('pharmacy');
+
+      const pharmacyIds = medicines.map(m => m.pharmacy);
+      query._id = { $in: pharmacyIds };
+    }
+
+    // Geospatial query
+    if (lat && lng) {
+      const radiusInRadians = radius / 6378.1; // Earth radius ~6378km
+      query.location = {
+        $geoWithin: {
+          $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInRadians]
+        }
+      };
+    }
+
+    const pharmacies = await Pharmacy.find(query)
+      .select('name address phone location rating reviewCount openingHours status')
+      .lean();
+
+    // Calculate distance if user location is provided (for sorting/display manually if needed)
+    // Note: $geoWithin doesn't return calculated distance field like $near does, 
+    // but $near requires specific index setup. sticking to simple filtering for now.
+
+    res.json({
+      success: true,
+      count: pharmacies.length,
+      data: pharmacies
+    });
+  } catch (error) {
+    logger.error('Error fetching pharmacies:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pharmacies',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   registerPharmacy,
   checkPharmacyStatus,
   getPharmacySubscription,
-  requestSubscriptionRenewal
+  requestSubscriptionRenewal,
+  getPharmacyById,
+  getPharmacies
 };

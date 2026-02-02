@@ -37,6 +37,16 @@ const MedilinkUI = {
             message: 'Prescription Approved',
             description: 'Your uploaded prescription has been verified.',
             placement: 'topRight',
+        }),
+        info: (title, desc) => notification.info({
+            message: title,
+            description: desc,
+            placement: 'topRight'
+        }),
+        warning: (title, desc) => notification.warning({
+            message: title,
+            description: desc,
+            placement: 'topRight'
         })
     }
 };

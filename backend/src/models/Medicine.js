@@ -19,283 +19,214 @@ const locationSchema = new Schema({
   postalCode: String
 }, { _id: false });
 
-const priceSchema = new Schema({
-  basePrice: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  discount: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 100
-  },
-  currency: {
-    type: String,
-    default: 'ETB',
-    uppercase: true
-  }
-}, { _id: false });
-
-const activeIngredientSchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  strength: {
-    type: String,
-    trim: true
-  }
-}, { _id: false });
-
 const medicineSchema = new Schema({
-  // Basic Information
   name: {
     type: String,
     required: [true, 'Medicine name is required'],
-    trim: true
-  },
-  genericName: {
-    type: String,
-    trim: true
+    trim: true,
+    index: true
   },
   brand: {
     type: String,
-    trim: true
+    required: [true, 'Brand is required'],
+    trim: true,
+    index: true
   },
   manufacturer: {
     type: String,
     required: [true, 'Manufacturer is required'],
-    trim: true
-  },
-
-  // Classification
-  category: {
-    type: String,
-    required: [true, 'Category is required'],
     trim: true,
-    enum: ['prescription', 'otc', 'herbal', 'supplement', 'medical_device', 'other']
+    index: true
   },
-  therapeuticClass: {
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: [true, 'Category is required'],
+    index: true
+  },
+  type: {
+    type: String,
+    enum: ['tablet', 'capsule', 'liquid', 'injection', 'cream', 'ointment', 'inhaler', 'drops', 'spray', 'other'],
+    required: [true, 'Medicine type is required'],
+    index: true
+  },
+  formulation: {
     type: String,
     trim: true
-  },
-
-  // Composition
-  activeIngredients: [activeIngredientSchema],
-  dosageForm: {
-    type: String,
-    required: [true, 'Dosage form is required'],
-    enum: ['tablet', 'capsule', 'syrup', 'injection', 'cream', 'ointment', 'drops', 'inhaler', 'suppository', 'other']
   },
   strength: {
     type: String,
-    required: [true, 'Strength is required']
+    required: [true, 'Strength is required'],
+    trim: true
   },
-  packSize: {
+  unit: {
     type: String,
-    required: [true, 'Pack size is required']
+    enum: ['mg', 'g', 'ml', 'mcg', 'iu', 'units'],
+    required: [true, 'Unit is required']
   },
-  sku: {
-    type: String,
-    unique: true,
-    sparse: true
-  },
-  barcode: String,
-
-  // Pricing & Inventory
-  price: priceSchema,
-  inStock: {
-    type: Boolean,
-    default: true
-  },
-  stockQuantity: {
+  price: {
     type: Number,
-    required: true,
-    min: 0
+    required: [true, 'Price is required'],
+    min: [0, 'Price cannot be negative']
+  },
+  quantity: {
+    type: Number,
+    required: [true, 'Quantity is required'],
+    min: [0, 'Quantity cannot be negative'],
+    default: 0
   },
   minStockLevel: {
     type: Number,
     default: 10,
     min: 0
   },
-  costPrice: Number,
-  unitPrice: Number,
-  expiryDate: {
-    type: Date
-  },
-  minOrderQuantity: {
+  maxStockLevel: {
     type: Number,
-    default: 1,
-    min: 1
+    default: 1000,
+    min: 0
   },
-  storageCondition: {
-    type: String,
-    enum: ['Room Temperature', 'Refrigerated', 'Frozen', 'Dry Place', 'Cool Place'],
-    default: 'Room Temperature'
-  },
-  therapeuticClass: {
-    type: String,
-    trim: true
-  },
-  // Media & Description
   description: {
     type: String,
     trim: true
   },
-  indications: [String],
-  sideEffects: [String],
-  images: [{
-    type: String, // URL to the image
-    trim: true
+  activeIngredients: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    strength: String,
+    unit: String
   }],
-  imageUrl: {
+  dosageForm: {
     type: String,
     trim: true
   },
+  route: {
+    type: String,
+    enum: ['oral', 'topical', 'intravenous', 'intramuscular', 'subcutaneous', 'inhalation', 'nasal', 'ocular', 'aural', 'rectal', 'vaginal'],
+    default: 'oral'
+  },
+  prescriptionRequired: {
+    type: Boolean,
+    default: false
+  },
+  storageConditions: {
+    temperature: String,
+    humidity: String,
+    lightSensitive: {
+      type: Boolean,
+      default: false
+    }
+  },
+  expiryDate: {
+    type: Date,
+    required: [true, 'Expiry date is required']
+  },
+  batchNumber: {
+    type: String,
+    trim: true,
+    index: true
+  },
+  barcode: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true
+  },
+  images: [{
+    type: String
+  }],
+  tags: [{
+    type: String,
+    trim: true,
+    index: true
+  }],
+  sideEffects: [{
+    type: String,
+    trim: true
+  }],
+  contraindications: [{
+    type: String,
+    trim: true
+  }],
+  warnings: [{
+    type: String,
+    trim: true
+  }],
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+  isDiscontinued: {
+    type: Boolean,
+    default: false
+  },
+  pharmacy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Pharmacy',
+    required: [true, 'Pharmacy is required'],
+    index: true
+  },
+  rating: {
+    average: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+    count: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
+  },
+  salesData: {
+    totalSold: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    lastSold: Date,
+    popularity: {
+      type: Number,
+      default: 0
+    }
+  },
 
-  // Location & Availability
+  // Add location reference
   location: {
     type: locationSchema,
     index: '2dsphere' // For geospatial queries
   },
-  availableAt: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Pharmacy'
-  }],
 
-  // Search & Metadata
-  searchText: String, // For full-text search
-  tags: [String],
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-
-  // Audit Fields
-  addedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  lastUpdatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }
+  // Add text index for search
+  searchText: String // Will contain searchable text
 }, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-// Virtual for discounted price
-medicineSchema.virtual('discountedPrice').get(function () {
-  if (!this.price || this.price.basePrice === undefined) return 0;
-  return this.price.basePrice * (1 - ((this.price.discount || 0) / 100));
+  timestamps: true
 });
 
 // Create text index for search
 medicineSchema.index({
   name: 'text',
-  genericName: 'text',
-  brand: 'text',
   manufacturer: 'text',
   'activeIngredients.name': 'text',
-  searchText: 'text',
-  therapeuticClass: 'text'
+  searchText: 'text'
 }, {
   weights: {
     name: 10,
-    genericName: 8,
-    brand: 5,
     manufacturer: 5,
     'activeIngredients.name': 3,
-    therapeuticClass: 3,
     searchText: 1
   },
   default_language: 'english'
 });
 
-// Compound index for common queries
-medicineSchema.index({ category: 1, isActive: 1 });
-medicineSchema.index({ requiresPrescription: 1, isActive: 1 });
-medicineSchema.index({ 'price.discount': -1, isActive: 1 });
-
 // Pre-save hook to update searchText
 medicineSchema.pre('save', function () {
-  this.searchText = [
-    this.name,
-    this.genericName,
-    this.brand,
-    this.manufacturer,
-    this.therapeuticClass,
-    ...(this.activeIngredients?.map(i => i.name) || []),
-    ...(this.tags || [])
-  ].filter(Boolean).join(' ');
+  const ingredients = (this.activeIngredients || []).map(i => i.name).join(' ');
+  this.searchText = `${this.name || ''} ${this.manufacturer || ''} ${this.brand || ''} ${ingredients}`.trim();
 });
-
-// Static method for search
-medicineSchema.statics.search = async function (query, filters = {}) {
-  const { minPrice, maxPrice, category, requiresPrescription, inStock, sortBy = 'relevance' } = filters;
-
-  const pipeline = [];
-
-  // Text search stage
-  if (query) {
-    pipeline.push({
-      $match: {
-        $text: { $search: query },
-        isActive: true
-      }
-    });
-
-    // Add text score for sorting
-    pipeline.push({
-      $addFields: {
-        score: { $meta: 'textScore' }
-      }
-    });
-  } else {
-    pipeline.push({
-      $match: { isActive: true }
-    });
-  }
-
-  // Filter stages
-  const matchStage = {};
-
-  if (minPrice || maxPrice) {
-    matchStage['price.basePrice'] = {};
-    if (minPrice) matchStage['price.basePrice'].$gte = Number(minPrice);
-    if (maxPrice) matchStage['price.basePrice'].$lte = Number(maxPrice);
-  }
-
-  if (category) matchStage.category = category;
-  if (requiresPrescription !== undefined) matchStage.requiresPrescription = requiresPrescription === 'true';
-  if (inStock === 'true') matchScope.stockQuantity = { $gt: 0 };
-
-  if (Object.keys(matchStage).length > 0) {
-    pipeline.push({ $match: matchStage });
-  }
-
-  // Sorting
-  const sortStage = {};
-  if (query) {
-    sortStage.score = { $meta: 'textScore' };
-  }
-
-  if (sortBy === 'price-asc') sortStage['price.basePrice'] = 1;
-  else if (sortBy === 'price-desc') sortStage['price.basePrice'] = -1;
-  else if (sortBy === 'newest') sortStage.createdAt = -1;
-  else if (sortBy === 'discount') sortStage['price.discount'] = -1;
-
-  if (Object.keys(sortStage).length > 0) {
-    pipeline.push({ $sort: sortStage });
-  }
-
-  return this.aggregate(pipeline);
-};
 
 module.exports = mongoose.model('Medicine', medicineSchema);

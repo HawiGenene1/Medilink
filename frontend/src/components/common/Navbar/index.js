@@ -20,18 +20,41 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const getDashboardLink = () => {
+    if (!user) return '/auth/login';
+    switch (user.role) {
+      case 'admin': return '/admin/dashboard';
+      case 'delivery': return '/delivery/dashboard';
+      case 'pharmacy_admin': return '/pharmacy-admin/dashboard';
+      case 'pharmacy_staff': return '/pharmacy-staff/inventory';
+      case 'cashier': return '/cashier/dashboard';
+      case 'customer': return '/customer/dashboard';
+      default: return '/customer/dashboard';
+    }
+  };
+
+  const getProfileLink = () => {
+    if (!user) return '/auth/login';
+    switch (user.role) {
+      case 'admin': return '/admin/settings';
+      case 'delivery': return '/delivery/profile';
+      case 'customer': return '/customer/profile';
+      default: return getDashboardLink(); // Fallback to their dashboard if no profile page exists
+    }
+  };
+
   const userMenuItems = [
     {
       key: 'dashboard',
       label: (
-        <Link to={user?.role === 'pharmacy' ? '/pharmacy/dashboard' : '/customer/dashboard'}>
+        <Link to={getDashboardLink()}>
           Dashboard
         </Link>
       )
     },
     {
       key: 'profile',
-      label: <Link to="/customer/profile">Profile</Link>
+      label: <Link to={getProfileLink()}>Profile</Link>
     },
     {
       type: 'divider'
@@ -57,8 +80,8 @@ const Navbar = () => {
         <div className="navbar-links desktop-only">
           <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Home</Link>
           <Link to="/medicines" className={location.pathname === '/medicines' ? 'active' : ''}>Medicines</Link>
-          <Link to="/pharmacies" className={location.pathname === '/pharmacies' ? 'active' : ''}>Pharmacies</Link>
-          <Link to="/about">About Us</Link>
+          <Link to="/pharmacies" className={location.pathname === '/pharmacies' ? 'active' : ''}>Nearby Pharmacies</Link>
+          <Link to="/about" className={location.pathname === '/about' ? 'active' : ''}>About Us</Link>
         </div>
 
         {/* Actions */}
@@ -73,7 +96,7 @@ const Navbar = () => {
           ) : (
             <>
               <Link to="/auth/login">
-                <Button type="text" className="btn-link">Sign In</Button>
+                <Button type="text" className="btn-link">  Sign in </Button>
               </Link>
               <Link to="/auth/register">
                 <Button type="primary" className="btn-signup">Get Started</Button>
@@ -100,7 +123,7 @@ const Navbar = () => {
           <div className="mobile-links">
             <Link to="/" onClick={() => setMobileMenuOpen(false)}>Home</Link>
             <Link to="/medicines" onClick={() => setMobileMenuOpen(false)}>Medicines</Link>
-            <Link to="/pharmacies" onClick={() => setMobileMenuOpen(false)}>Pharmacies</Link>
+            <Link to="/pharmacies" onClick={() => setMobileMenuOpen(false)}>Nearby Pharmacies</Link>
             <Link to="/about" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
 
             <div className="mobile-actions">

@@ -1,8 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-const { register, login, getCurrentUser } = require('../controllers/authController');
-const { authenticate } = require('../middleware/authMiddleware');
+const {
+  register,
+  login,
+  getCurrentUser,
+  verifyEmail
+} = require('../controllers/authController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const {
   requestPasswordReset,
   resetPassword,
@@ -42,9 +47,14 @@ const validateRegistration = [
 ];
 
 // @route   POST /api/auth/register
-// @desc    Register a new user
+// @desc    Register a new user (Customer, Pharmacy, or Delivery)
 // @access  Public
 router.post('/register', validateRegistration, register);
+
+// @route   GET /api/auth/verify-email/:token
+// @desc    Verify email & activate account
+// @access  Public
+router.get('/verify-email/:token', verifyEmail);
 
 // @desc    Authenticate user & get token
 // @route   POST /api/auth/login
@@ -58,19 +68,19 @@ router.post(
   login
 );
 
-// @desc    Get current user
+// @desc    Verify 2FA code
+// @route   POST /api/auth/verify-2fa
+// @access  Public
+router.post('/verify-2fa', require('../controllers/authController').verify2FA);
+
+// @desc    Get current user profile
 // @route   GET /api/auth/me
 // @access  Private
-router.get('/me', authenticate, getCurrentUser);
+router.get('/me', protect, getCurrentUser);
 
-// @desc    Request password reset
-// @route   POST /api/auth/request-reset
-// @access  Public
-router.post("/request-reset", requestPasswordReset);
-
-// @desc    Reset password
-// @route   POST /api/auth/reset-password/:token
-// @access  Public
-router.post("/reset-password/:token", resetPassword);
+// Password reset routes
+router.post('/request-password-reset', requestPasswordReset);
+router.post('/send-recovery-code', require("../controllers/passwordController").sendRecoveryCode);
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

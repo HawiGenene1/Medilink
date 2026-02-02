@@ -1,35 +1,35 @@
-// frontend/src/services/api/prescriptions.js
 import api from './config';
 
-const prescriptionsAPI = {
-  // Upload a prescription
-  upload: async (data) => {
-    const formData = new FormData();
-    formData.append('image', data.file);
-    formData.append('doctorName', data.doctorName);
-    formData.append('issueDate', data.issueDate);
-    formData.append('expiryDate', data.expiryDate);
-    if (data.notes) formData.append('notes', data.notes);
-
-    return api.post('/prescriptions', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-  },
-
-  // Get pending prescriptions (for pharmacy staff)
-  getPending: async () => {
-    return api.get('/prescriptions/pending');
-  },
-
-  // Update prescription status
-  updateStatus: async (id, status, reviewNotes = '') => {
-    return api.patch(`/prescriptions/${id}/status`, {
-      status,
-      reviewNotes
-    });
-  }
+// Upload prescription
+export const uploadPrescription = async (formData) => {
+  const response = await api.post('/prescriptions/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
 };
 
-export default prescriptionsAPI;
+// Get user's prescriptions
+export const getPrescriptions = async (params = {}) => {
+  const response = await api.get('/prescriptions', { params });
+  return response.data;
+};
+
+// Get prescription details
+export const getPrescriptionDetails = async (id) => {
+  const response = await api.get(`/prescriptions/${id}`);
+  return response.data;
+};
+
+// Update prescription status (pharmacy staff/admin)
+export const updatePrescriptionStatus = async (id, data) => {
+  const response = await api.patch(`/prescriptions/${id}/status`, data);
+  return response.data;
+};
+
+// Delete prescription
+export const deletePrescription = async (id) => {
+  const response = await api.delete(`/prescriptions/${id}`);
+  return response.data;
+};

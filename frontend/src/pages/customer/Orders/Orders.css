@@ -14,13 +14,13 @@
 .clinical-order-card {
     border-radius: 16px !important;
     margin-bottom: 16px;
-    border: 1px solid var(--border-color) !important;
+    /* border handled by JS tokens */
     transition: all 0.3s ease !important;
 }
 
 .clinical-order-card:hover {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
-    border-color: var(--primary-color) !important;
+    /* border-color handled by JS tokens */
 }
 
 .status-tag {
@@ -42,7 +42,7 @@
 }
 
 .order-items-preview {
-    background: #f8fafc;
+    /* background handled by JS tokens */
     padding: 8px 12px;
     border-radius: 8px;
     display: inline-block;

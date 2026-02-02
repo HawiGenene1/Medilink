@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+<<<<<<< HEAD
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
 
@@ -165,3 +166,97 @@ exports.deleteNotification = asyncHandler(async (req, res, next) => {
         message: 'Notification deleted'
     });
 });
+=======
+const logger = require('../utils/logger');
+
+/**
+ * @route   GET /api/notifications
+ * @desc    Get user notifications
+ * @access  Private
+ */
+exports.getNotifications = async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id;
+        const notifications = await Notification.find({ user: userId })
+            .sort({ createdAt: -1 })
+            .limit(50);
+
+        const unreadCount = await Notification.countDocuments({ user: userId, isRead: false });
+
+        res.json({
+            success: true,
+            data: notifications,
+            unreadCount
+        });
+    } catch (error) {
+        logger.error('Error fetching notifications:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * @route   PATCH /api/notifications/:id/read
+ * @desc    Mark a notification as read
+ * @access  Private
+ */
+exports.markAsRead = async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id;
+        const notification = await Notification.findOneAndUpdate(
+            { _id: req.params.id, user: userId },
+            { isRead: true },
+            { new: true }
+        );
+
+        if (!notification) {
+            return res.status(404).json({ success: false, message: 'Notification not found' });
+        }
+
+        res.json({ success: true, data: notification });
+    } catch (error) {
+        logger.error('Error marking notification as read:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * @route   PATCH /api/notifications/read-all
+ * @desc    Mark all notifications as read
+ * @access  Private
+ */
+exports.markAllAsRead = async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id;
+        await Notification.updateMany(
+            { user: userId, isRead: false },
+            { isRead: true }
+        );
+
+        res.json({ success: true, message: 'All notifications marked as read' });
+    } catch (error) {
+        logger.error('Error marking all notifications as read:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * @route   DELETE /api/notifications/:id
+ * @desc    Delete a notification
+ * @access  Private
+ */
+exports.deleteNotification = async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id;
+        const notification = await Notification.findOneAndDelete({ _id: req.params.id, user: userId });
+
+        if (!notification) {
+            return res.status(404).json({ success: false, message: 'Notification not found' });
+        }
+
+        res.json({ success: true, message: 'Notification deleted' });
+    } catch (error) {
+        logger.error('Error deleting notification:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1

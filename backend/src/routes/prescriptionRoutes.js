@@ -1,57 +1,25 @@
-// backend/src/routes/prescriptionRoutes.js
 const express = require('express');
 const router = express.Router();
-const { body } = require('express-validator');
-const { authenticate, authorize } = require('../middleware/authMiddleware');
 const {
-  upload,
   uploadPrescription,
-  getPendingPrescriptions,
+  getPrescriptions,
+  getPrescriptionDetails,
   updatePrescriptionStatus,
-  getCustomerPrescriptions
+  deletePrescription
 } = require('../controllers/prescriptionController');
+const { protect } = require('../middleware/authMiddleware');
+const { authorize: roleMiddleware } = require('../middleware/roleMiddleware');
 
-// Public route for uploading prescriptions
-router.post(
-  '/',
-  upload.single('image'),
-  [
-    body('doctorName').trim().notEmpty().withMessage('Doctor name is required'),
-    body('issueDate').isISO8601().withMessage('Valid issue date is required'),
-    body('expiryDate').isISO8601().withMessage('Valid expiry date is required'),
-    body('notes').optional().trim()
-  ],
-  uploadPrescription
-);
+// Apply authentication middleware to all prescription routes
+router.use(protect);
 
-// Protected route for customers to get their prescriptions
-router.get(
-  '/',
-  (req, res, next) => {
-    // Development bypass - skip authentication in development
-    if (process.env.NODE_ENV === 'development') {
-      // Mock user for development
-      req.user = {
-        userId: 'dev-user-123',
-        email: 'dev@example.com',
-        role: 'customer'
-      };
-      return next();
-    }
-    // In production, use actual authentication
-    return authenticate(req, res, next);
-  },
-  (req, res, next) => {
-    // Development bypass - skip role authorization in development
-    if (process.env.NODE_ENV === 'development') {
-      return next();
-    }
-    // In production, use actual authorization
-    return authorize(['customer', 'admin'])(req, res, next);
-  },
-  getCustomerPrescriptions
-);
+// Customer routes
+router.post('/upload', roleMiddleware('customer'), uploadPrescription);
+router.get('/', roleMiddleware('customer'), getPrescriptions);
+router.get('/:id', getPrescriptionDetails);
+router.delete('/:id', roleMiddleware('customer'), deletePrescription);
 
+<<<<<<< HEAD
 // Protected routes for pharmacy staff
 router.get(
   '/pending',
@@ -74,3 +42,9 @@ router.patch(
 );
 
 module.exports = router;
+=======
+// Pharmacy staff/admin routes
+router.patch('/:id/status', roleMiddleware(['pharmacy_staff', 'pharmacy_admin', 'admin']), updatePrescriptionStatus);
+
+module.exports = router;
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1

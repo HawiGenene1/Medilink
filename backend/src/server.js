@@ -1,105 +1,49 @@
-// require('dotenv').config();
-// const express = require('express');
-// const mongoose = require('mongoose');
-// const cors = require('cors');
-
-// // Initialize Express app
-// const app = express();
-
-// // Middleware
-// app.use(cors());
-// app.use(express.json());
-
-// // Import routes
-// const authRoutes = require('./routes/authRoutes');
-
-// // API Routes
-// app.use('/api/auth', authRoutes);
-
-// // Test route
-// app.get('/', (req, res) => {
-//   res.json({
-//     success: true,
-//     message: 'Medilink backend is running!',
-//     version: '1.0.0'
-//   });
-// });
-
-// // MongoDB connection
-// const MONGO_URI = process.env.MONGODB_URI;
-// if (MONGO_URI) {
-//   mongoose.connect(MONGO_URI)
-//     .then(() => console.log('MongoDB connected successfully'))
-//     .catch(err => console.log('MongoDB connection error:', err));
-// } else {
-//   console.log('MongoDB URI not found in environment variables');
-// }
-
-// // Start server
-// const PORT = process.env.PORT || 5000;
-// app.listen(PORT, () => {
-//   console.log(`Server running on port ${PORT}`);
-// });
-
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const connectDB = require('./config/db');
 const ErrorResponse = require('./utils/errorResponse');
 
 // Initialize Express app
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json()); // parse JSON requests
-app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
-app.use("/api/test", require("./routes/testRoutes"));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// Get environment variables
-const PORT = process.env.PORT || 5000;
-// MongoDB connection connection
-const connectDB = async () => {
-  try {
-    const connUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/medilink';
-    console.log(`Connecting to MongoDB: ${connUri}`);
-
-    await mongoose.connect(connUri, {
-      serverSelectionTimeoutMS: 5000, // Fail fast if no connection
-    });
-
-    console.log(`MongoDB Connected: ${mongoose.connection.host}`);
-  } catch (err) {
-    console.error(`Error connecting to MongoDB: ${err.message}`);
-    // Don't exit in dev mode, maybe it'll reconnect
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
-  }
-};
-
+// Connect to Database
 connectDB();
 
+// Middleware
+app.use(cors()); // Allow all CORS for now, restrict later
+app.use(express.json()); // parse JSON requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] Incoming Request: ${req.method} ${req.url}`);
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    console.log('Request Body:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
+app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use("/api/test", require("./routes/testRoutes"));
 
-// Import routes (only import what exists)
+// Import routes
 const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes'); // Added
-const medicineRoutes = require('./routes/medicineRoutes'); // Added
-const prescriptionRoutes = require('./routes/prescriptionRoutes'); // Added
-const orderRoutes = require('./routes/orderRoutes'); // Added
-const deliveryRoutes = require('./routes/deliveryRoutes'); // Added
-const favoriteRoutes = require('./routes/favoriteRoutes'); // Added
-const pharmacyOwnerRoutes = require('./routes/pharmacyOwnerRoutes'); // Added
-const adminRoutes = require('./routes/adminRoutes'); // Enabled
-const pharmacyRoutes = require('./routes/pharmacyRoutes'); // Enabled
-const inventoryRoutes = require('./routes/inventoryRoutes'); // Added
-const orderProcessingRoutes = require('./routes/orderProcessingRoutes'); // Added
-const notificationRoutes = require('./routes/notificationRoutes'); // Added
+const userRoutes = require('./routes/userRoutes');
+const medicineRoutes = require('./routes/medicineRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const deliveryRoutes = require('./routes/deliveryRoutes');
+const favoriteRoutes = require('./routes/favoriteRoutes');
+const pharmacyOwnerRoutes = require('./routes/pharmacyOwnerRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const pharmacyRoutes = require('./routes/pharmacyRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
+const orderProcessingRoutes = require('./routes/orderProcessingRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
+const deliveryOnboardingRoutes = require('./routes/deliveryOnboardingRoutes');
 
-// Import middleware (comment out if files don't exist)
-const { authenticate, authorize } = require('./middleware/authMiddleware');
+// Import middleware
+const { authenticate, authorize, protectAdmin } = require('./middleware/authMiddleware');
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -108,25 +52,29 @@ app.use('/api/medicines', medicineRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/delivery/onboarding', deliveryOnboardingRoutes);
 app.use('/api/favorites', favoriteRoutes);
+app.use('/api/favorite', favoriteRoutes);
 app.use('/api/pharmacy-owner', pharmacyOwnerRoutes);
-app.use('/api/admin', adminRoutes); // Mount admin routes
-app.use('/api/pharmacy', pharmacyRoutes); // Mount pharmacy routes (public for registration)
-app.use('/api/inventory', inventoryRoutes); // Mount inventory routes
-app.use('/api/order-processing', orderProcessingRoutes); // Mount order processing routes
-app.use('/api/notifications', notificationRoutes); // Mount notification routes
+app.use('/api/admin', protectAdmin, adminRoutes);
+app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
+app.use('/api/pharmacy', pharmacyRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/order-processing', orderProcessingRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Test route
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Medilink backend is running!',
+    message: 'Medilink Admin Backend is running! (V1.0.1)',
     version: '1.0.0'
   });
 });
 
 // 404 handler
 app.use((req, res) => {
+  console.log(`[404] Route not found: ${req.method} ${req.url}`);
   res.status(404).json({
     success: false,
     message: 'Route not found'
@@ -170,8 +118,14 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
+const http = require('http');
+const { init } = require('./socket');
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+init(server);
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

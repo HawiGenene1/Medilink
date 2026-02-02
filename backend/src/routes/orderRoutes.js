@@ -4,7 +4,7 @@ const { authenticate, authorize } = require('../middleware/authMiddleware');
 const {
   createOrder,
   getMyOrders,
-  getOrderDetails,
+  getOrderById,
   cancelOrder,
   getOrderTracking,
   getPharmacyOrders,
@@ -13,6 +13,7 @@ const {
 const { checkSubscription } = require('../middleware/subscriptionMiddleware');
 const { checkOperationalPermission } = require('../middleware/pharmacyOwnerAuthMiddleware');
 
+<<<<<<< HEAD
 // Public route for creating orders (Customers)
 router.post('/', authenticate, createOrder);
 
@@ -46,5 +47,24 @@ router.put(
 
 // Live tracking route
 router.get('/:id/tracking', authenticate, getOrderTracking);
+=======
+// Basic authentication middleware
+const authenticateUser = authenticate;
+
+// Public route for creating orders
+router.post('/', authenticateUser, createOrder);
+
+// Protected route for customers to get their orders
+router.get('/', authenticateUser, getMyOrders);
+
+// Protected route for getting specific order
+router.get('/:id', authenticateUser, getOrderById);
+
+// Protected route for canceling order
+router.patch('/:id/cancel', authenticateUser, cancelOrder);
+
+// Live tracking route
+router.get('/:id/tracking', authenticateUser, getOrderTracking);
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 
 module.exports = router;

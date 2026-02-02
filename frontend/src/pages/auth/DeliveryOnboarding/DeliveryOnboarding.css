@@ -1,0 +1,92 @@
+.onboarding-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.onboarding-card {
+    width: 100%;
+    max-width: 800px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.onboarding-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.onboarding-steps {
+    margin-bottom: 40px;
+    padding: 0 20px;
+}
+
+.step-content-wrapper {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid #f0f0f0;
+}
+
+.background-info {
+    background: #f0f7ff;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.bg-icon {
+    font-size: 48px;
+    color: #1e88e5;
+    margin-bottom: 16px;
+}
+
+.orientation-module {
+    text-align: center;
+}
+
+.video-placeholder {
+    background: #1a1a1a;
+    color: white;
+    padding: 60px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.module-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    color: #1e88e5;
+}
+
+.mini-feature {
+    background: #f8fafc;
+    border-radius: 12px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+}
+
+/* Ant Design Overrides */
+.ant-steps-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ant-form-item-label>label {
+    font-weight: 600;
+    color: #475569;
+}
+
+.ant-btn-primary {
+    height: 50px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 16px;
+}

@@ -1,21 +1,41 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, authorize } = require('../middleware/authMiddleware');
-const { updateLocation } = require('../controllers/deliveryController');
+const { protect, authorize } = require('../middleware/authMiddleware');
+const {
+    findNearbyDrivers,
+    requestDelivery,
+    acceptOrder,
+    updateDriverStatus,
+    startDelivery,
+    completeDelivery,
+    getActiveDeliveries,
+    getDeliveryHistory,
+    getEarningsStats,
+    getAvailableRequests,
+    getDeliveryProfile,
+    updateDeliveryProfile,
+    requestPayout
+} = require('../controllers/deliveryController');
 
-// Development bypass middleware (optional, but good for consistency)
-const devAuth = (req, res, next) => {
-    if (process.env.NODE_ENV === 'development') {
-        req.user = {
-            userId: 'dev-driver-001',
-            role: 'delivery'
-        };
-        return next();
-    }
-    return authenticate(req, res, next);
-};
+// All routes here should be protected
+router.use(protect);
 
-// Update delivery live location
-router.patch('/location', devAuth, updateLocation);
+router.get('/nearby', findNearbyDrivers);
+router.post('/request', requestDelivery);
+router.get('/requests/available', authorize('delivery'), getAvailableRequests);
+router.put('/accept', authorize('delivery'), acceptOrder);
+router.put('/status', authorize('delivery'), updateDriverStatus);
+
+// Status Actions
+router.put('/pickup', authorize('delivery'), startDelivery);
+router.put('/complete', authorize('delivery'), completeDelivery);
+
+// Metrics & Dashboard
+router.get('/active', authorize('delivery'), getActiveDeliveries);
+router.get('/history', authorize('delivery'), getDeliveryHistory);
+router.get('/profile', authorize('delivery'), getDeliveryProfile);
+router.put('/profile', authorize('delivery'), updateDeliveryProfile);
+router.get('/earnings', authorize('delivery'), getEarningsStats);
+router.post('/payout/request', authorize('delivery'), requestPayout);
 
 module.exports = router;

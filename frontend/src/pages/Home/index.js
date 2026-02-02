@@ -63,7 +63,7 @@ const Home = () => {
                 <div className="hero-stats">
                   <div>
                     <Title level={3} style={{ marginBottom: 0 }}>500+</Title>
-                    <Text type="secondary">Pharmacies</Text>
+                    <Text type="secondary">Nearby Pharmacies</Text>
                   </div>
                   <div className="divider-vertical"></div>
                   <div>
@@ -153,11 +153,13 @@ const Home = () => {
 
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <Button type="primary" size="large" onClick={() => navigate('/auth/register?role=customer')}>
-              Join as a Patient <ArrowRightOutlined />
+              Join as a Customer <ArrowRightOutlined />
             </Button>
           </div>
         </div>
       </section>
+
+
 
       {/* For Pharmacies Section */}
       <section className="segment-section bg-gray">
@@ -207,6 +209,58 @@ const Home = () => {
               <Button type="primary" size="large" style={{ marginTop: '40px' }} onClick={() => navigate('/auth/owner/register')}>
                 Get Your Pharmacy Online
               </Button>
+            </Col>
+          </Row>
+        </div>
+      </section>
+
+      {/* For Delivery Partners Section */}
+      <section className="segment-section bg-white">
+        <div className="container">
+          <Row gutter={[48, 48]} align="middle">
+            <Col xs={24} lg={12}>
+              <Tag color="#1E88E5" style={{ marginBottom: '16px' }}>FOR DELIVERY PARTNERS</Tag>
+              <Title level={2}>Earn by Delivering Health</Title>
+              <Paragraph className="section-desc" style={{ textAlign: 'left', marginBottom: '32px' }}>
+                Join our clinical logistics network. Enjoy flexible hours, competitive pay, and the satisfaction of helping your community.
+              </Paragraph>
+
+              <Row gutter={[16, 24]}>
+                <Col span={12}>
+                  <Card bordered={false} className="mini-feature">
+                    <CarOutlined style={{ fontSize: '24px', color: '#1E88E5' }} />
+                    <Title level={5}>Flexible Hours</Title>
+                    <Text type="secondary">Be your own boss and work when you want.</Text>
+                  </Card>
+                </Col>
+                <Col span={12}>
+                  <Card bordered={false} className="mini-feature">
+                    <BarChartOutlined style={{ fontSize: '24px', color: '#1E88E5' }} />
+                    <Title level={5}>Weekly Payouts</Title>
+                    <Text type="secondary">Get paid regularly for your completed deliveries.</Text>
+                  </Card>
+                </Col>
+                <Col span={24}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    className="btn-hero-primary"
+                    icon={<CarOutlined />}
+                    onClick={() => navigate('/auth/delivery/register')}
+                  >
+                    Join as a Delivery Partner
+                  </Button>
+                </Col>
+              </Row>
+            </Col>
+            <Col xs={24} lg={12}>
+              <div className="image-stack">
+                <img
+                  src={require('../../assets/delivery-app-3d.png')}
+                  alt="Delivery Partner App"
+                  className="rounded-image shadow-lg floating-animate"
+                />
+              </div>
             </Col>
           </Row>
         </div>

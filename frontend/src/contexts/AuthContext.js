@@ -14,32 +14,23 @@ export const useAuth = () => {
   return context;
 };
 
-// Development-only mock user
-const devUser = {
-  _id: 'dev-user-123',
-  email: 'dev@example.com',
-  firstName: 'Dev',
-  lastName: 'User',
-  role: 'customer',
-  isEmailVerified: true
-};
 
-// Development-only mock token
-const devToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkZXYtdXNlci0xMjMiLCJlbWFpbCI6ImRldkBleGFtcGxlLmNvbSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTYzNTc5MDQwMCwiZXhwIjoxNjM1ODc2ODAwfQ.mock-token-for-development';
-
-// Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
+<<<<<<< HEAD
   // Check if user is logged in on initial load
   // Check if user is logged in on initial load
+=======
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
   useEffect(() => {
     const token = localStorage.getItem('token');
 
     if (token) {
+<<<<<<< HEAD
       // In development, check if it's a mock token and restore user from it
       if (process.env.NODE_ENV === 'development' && token.startsWith('header.')) {
         try {
@@ -66,6 +57,8 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
+=======
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
       api.get('/auth/me')
         .then(response => {
           setUser(response.data.user);
@@ -86,6 +79,7 @@ export const AuthProvider = ({ children }) => {
 
   // Login function
   const login = async (email, password) => {
+<<<<<<< HEAD
     // In development, return mock user based on email
     if (process.env.NODE_ENV === 'development') {
       let role = 'customer';
@@ -133,19 +127,33 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: mockUser };
     }
 
+=======
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     try {
       const response = await api.post('/auth/login', { email, password });
+
+      if (response.data.requires2FA) {
+        return {
+          success: true,
+          requires2FA: true,
+          tempId: response.data.tempId,
+          email: response.data.email,
+          phone: response.data.phone
+        };
+      }
+
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       setUser(user);
       setIsAuthenticated(true);
-      return { success: true, user }; // Return user for redirect logic
+      return { success: true, user };
     } catch (error) {
       console.error('Login failed:', error);
       return { success: false, message: error.response?.data?.message || 'Login failed' };
     }
   };
 
+<<<<<<< HEAD
   // Specialized login for pharmacy owner
   const ownerLogin = async (email, password) => {
     try {
@@ -167,6 +175,39 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Owner login failed:', error);
       return { success: false, message: error.response?.data?.message || 'Login failed' };
+=======
+  // Verify 2FA function
+  const verify2FA = async (userId, code) => {
+    try {
+      const response = await api.post('/auth/verify-2fa', { userId, code });
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true, user };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Invalid code' };
+    }
+  };
+
+  // Registration function
+  const register = async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      console.log(`[AuthContext] Token stored: ${token ? 'YES' : 'NO'} (length: ${token?.length})`);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true, user };
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Registration failed',
+        errors: error.response?.data?.errors
+      };
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     }
   };
 
@@ -192,6 +233,7 @@ export const AuthProvider = ({ children }) => {
     return roles.includes(user.role);
   };
 
+<<<<<<< HEAD
   // Update user data (e.g., after profile/permissions update)
   const updateUser = (userData) => {
     setUser(prevUser => ({
@@ -202,6 +244,22 @@ export const AuthProvider = ({ children }) => {
     // In development mode, persist operational permissions to localStorage
     if (process.env.NODE_ENV === 'development' && userData.operationalPermissions) {
       localStorage.setItem('operationalPermissions', JSON.stringify(userData.operationalPermissions));
+=======
+  // Refresh user data
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/auth/me', {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      setUser(response.data.user);
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      return { success: false };
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     }
   };
 
@@ -210,8 +268,13 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     loading,
     login,
+<<<<<<< HEAD
     ownerLogin,
+=======
+    register,
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     logout,
+    refreshUser,
     hasRole,
     hasAnyRole,
     updateUser

@@ -13,7 +13,6 @@ import api from '../../../services/api';
 import './PharmacyRegister.css';
 
 const { TextArea } = Input;
-
 const PharmacyRegister = () => {
   const [loading, setLoading] = useState(false);
   const [licenseFileList, setLicenseFileList] = useState([]);
@@ -26,6 +25,7 @@ const PharmacyRegister = () => {
     console.log('Submitting registration with values:', values);
 
     try {
+<<<<<<< HEAD
       const formData = new FormData();
 
       // 1. Process text fields
@@ -80,6 +80,26 @@ const PharmacyRegister = () => {
       console.error('Registration error details:', error);
       const serverMsg = error.response?.data?.message || error.response?.data?.errors?.join(', ');
       message.error(serverMsg || 'Network error: Backend server might be unreachable.');
+=======
+      const userData = {
+        ...values,
+        licenseDocument: "license_doc_id", // Placeholder for actual file upload handling
+        tinDocument: "tin_doc_id"         // Placeholder
+      };
+
+      // Send registration request using api utility
+      const response = await api.post('/pharmacy/register', userData);
+
+      if (response.data.success) {
+        message.success(response.data.message || 'Registration submitted for approval!');
+        navigate('/auth/login');
+      } else {
+        message.error(response.data.message || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      message.error(error.response?.data?.message || 'An error occurred during registration. Please try again.');
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     } finally {
       setLoading(false);
     }

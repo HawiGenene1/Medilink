@@ -1,0 +1,41 @@
+/* Notifications Page Styles */
+.notifications-page {
+    padding: 8px;
+}
+
+.notifications-card {
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.noti-tabs .ant-tabs-nav {
+    padding: 0 24px;
+    margin-bottom: 0 !important;
+}
+
+.notification-item {
+    padding: 24px !important;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #F1F5F9 !important;
+}
+
+.notification-item:last-child {
+    border-bottom: none !important;
+}
+
+.notification-item.unread {
+    background: #F0F9FF;
+}
+
+.notification-item:hover {
+    background: #F8FAFC;
+    cursor: pointer;
+}
+
+.notification-item .ant-list-item-meta-title {
+    margin-bottom: 4px;
+}
+
+.notification-item .ant-list-item-meta-avatar {
+    margin-right: 20px;
+}

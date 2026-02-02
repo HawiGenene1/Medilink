@@ -1,5 +1,17 @@
-
 import apiClient from './config';
+import authAPI from './auth';
+import medicinesAPI from './medicines';
+import { ordersAPI } from './orders';
+import { pharmacyStaffAPI } from './pharmacyStaff';
+import { pharmacyAdminAPI } from './pharmacyAdmin';
+import * as prescriptionsAPI from './prescriptions';
 
-// Re-export the configured axios instance for convenience
-export default apiClient;
+export {
+    apiClient as default,
+    authAPI as auth,
+    medicinesAPI as medicines,
+    ordersAPI as orders,
+    pharmacyStaffAPI as pharmacyStaff,
+    pharmacyAdminAPI as pharmacyAdmin,
+    prescriptionsAPI as prescriptions
+};

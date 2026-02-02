@@ -43,4 +43,11 @@ const notificationSchema = new mongoose.Schema({
 // Index for faster querying
 notificationSchema.index({ pharmacyId: 1, roleTarget: 1, isRead: 1, createdAt: -1 });
 
+<<<<<<< HEAD
 module.exports = mongoose.model('Notification', notificationSchema);
+=======
+// TTL index to auto-delete notifications after 30 days
+notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
+module.exports = mongoose.model('Notification', notificationSchema);
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1

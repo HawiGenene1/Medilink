@@ -152,9 +152,17 @@ const orderSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
-  deliveryFee: {
+  serviceFee: {
     type: Number,
     default: 0
+  },
+  courierEarnings: {
+    type: Number,
+    default: 0
+  },
+  isPaidToDriver: {
+    type: Boolean,
+    default: false
   },
   tax: {
     type: Number,
@@ -170,6 +178,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
+<<<<<<< HEAD
     enum: [
       'pending',
       'verified',
@@ -185,6 +194,9 @@ const orderSchema = new mongoose.Schema({
       'refunded',
       'on_hold'
     ],
+=======
+    enum: ['pending', 'confirmed', 'preparing', 'ready', 'in_transit', 'delivered', 'cancelled', 'refunded'],
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     default: 'pending'
   },
   paymentStatus: {
@@ -194,42 +206,53 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
+<<<<<<< HEAD
     enum: ['CASH_ON_DELIVERY', 'CARD'],
     default: 'CASH_ON_DELIVERY'
   },
   payment: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Payment'
+=======
+    enum: ['cash', 'card', 'mobile_money', 'bank_transfer', 'telebirr', 'cbe'],
+    default: 'cash'
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
   },
   paymentDetails: {
     transactionId: String,
     paidAt: Date
   },
-  deliveryAddress: {
-    street: {
-      type: String,
-      required: true
-    },
-    city: {
-      type: String,
-      required: true
-    },
+  address: {
+    street: String,
+    city: String,
     state: String,
     zipCode: String,
     country: {
       type: String,
       default: 'Ethiopia'
     },
+    label: String, // For the full address string
     coordinates: {
       latitude: Number,
       longitude: Number
+    },
+    geojson: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        index: '2dsphere'
+      }
     }
   },
-  deliveryPerson: {
+  courier: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  deliveryInstructions: {
+  instructions: {
     type: String,
     trim: true
   },
@@ -258,6 +281,7 @@ const orderSchema = new mongoose.Schema({
     note: String,
     metadata: mongoose.Schema.Types.Mixed
   }],
+<<<<<<< HEAD
 
   // Enhanced notification system
   notifications: [notificationSchema],
@@ -274,9 +298,12 @@ const orderSchema = new mongoose.Schema({
     of: mongoose.Schema.Types.Mixed
   },
   estimatedDeliveryTime: {
+=======
+  estimatedArrivalTime: {
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     type: Date
   },
-  actualDeliveryTime: {
+  actualArrivalTime: {
     type: Date
   },
   cancelledAt: {
@@ -307,11 +334,16 @@ const orderSchema = new mongoose.Schema({
 });
 
 // Generate order number before saving
+<<<<<<< HEAD
+=======
+// Generate order number before saving
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 orderSchema.pre('save', async function () {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();
     this.orderNumber = `ORD-${Date.now()}-${(count + 1).toString().padStart(5, '0')}`;
   }
+<<<<<<< HEAD
 
   // Set default delivery status if not set
   if (!this.delivery) {
@@ -325,11 +357,17 @@ orderSchema.pre('save', async function () {
       status: 'pending_verification'
     };
   }
+=======
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 });
 
 // Calculate final amount before saving
 orderSchema.pre('save', function () {
+<<<<<<< HEAD
   this.finalAmount = (this.totalAmount || 0) + (this.deliveryFee || 0) + (this.tax || 0) - (this.discount || 0);
+=======
+  this.finalAmount = this.totalAmount + this.serviceFee + this.tax - this.discount;
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 });
 
 // Add status to history when status changes
@@ -486,8 +524,8 @@ orderSchema.index({ customer: 1, createdAt: -1 });
 // Index for pharmacy orders
 orderSchema.index({ pharmacy: 1, createdAt: -1 });
 
-// Index for delivery person
-orderSchema.index({ deliveryPerson: 1, status: 1 });
+// Index for courier
+orderSchema.index({ courier: 1, status: 1 });
 
 // Index for delivery tracking
 orderSchema.index({ 'delivery.trackingNumber': 1 }, { sparse: true });

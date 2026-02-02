@@ -3,12 +3,18 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { protect } = require('../middleware/authMiddleware');
-const { uploadProfileImage, getUserProfile, updateUserProfile } = require('../controllers/userController');
+const { uploadProfileImage, getUserProfile, updateUserProfile, deleteUserProfile } = require('../controllers/userController');
+
+const fs = require('fs');
 
 // Configure Multer Storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/');
+        const dir = 'uploads/';
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
     },
     filename: function (req, file, cb) {
         cb(null, `user-${req.user.id}-${Date.now()}${path.extname(file.originalname)}`);
@@ -39,6 +45,7 @@ router.use(protect); // Protect all routes
 
 router.get('/profile', getUserProfile);
 router.put('/profile', updateUserProfile);
+router.delete('/profile', deleteUserProfile);
 router.post('/profile-image', upload.single('image'), uploadProfileImage);
 
 module.exports = router;

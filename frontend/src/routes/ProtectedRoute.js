@@ -26,6 +26,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;

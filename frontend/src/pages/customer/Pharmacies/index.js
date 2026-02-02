@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, List, Avatar, Button, Tag, Space, Input, Rate } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Row, Col, Card, Typography, List, Avatar, Button, Tag, Space, Input, Rate, theme, Breadcrumb, Divider } from 'antd';
 import {
     EnvironmentOutlined,
     SearchOutlined,
     ShopOutlined,
     PhoneOutlined,
     CompassOutlined,
-    FilterOutlined,
     MedicineBoxOutlined,
-    AimOutlined
+    AimOutlined,
+    RightOutlined,
+    UndoOutlined
 } from '@ant-design/icons';
 import { AutoComplete, Slider } from 'antd';
 import medicinesAPI from '../../../services/api/medicines';
+import apiClient from '../../../services/api/config';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Pharmacies.css';
@@ -26,7 +29,6 @@ L.Icon.Default.mergeOptions({
 
 const { Title, Text } = Typography;
 
-
 // SVG Icon Component
 const NavigationOutlined = (props) => (
     <span role="img" aria-label="navigation" className="anticon anticon-navigation" {...props}>
@@ -37,109 +39,101 @@ const NavigationOutlined = (props) => (
 );
 
 const Pharmacies = () => {
+    const navigate = useNavigate();
+    const { token } = theme.useToken();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedPharmacy, setSelectedPharmacy] = useState(null);
     const [userLocation, setUserLocation] = useState(null);
+    const [pharmacies, setPharmacies] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [medicineSearch, setMedicineSearch] = useState('');
-    const [radius, setRadius] = useState(5); // 5km radius
+    const [radius, setRadius] = useState(5);
     const [medicineOptions, setMedicineOptions] = useState([]);
     const [loadingLocation, setLoadingLocation] = useState(false);
 
-    const mapRef = React.useRef(null);
-    const mapInstance = React.useRef(null);
-    const markersRef = React.useRef({});
-    const userMarkerRef = React.useRef(null);
+    const mapRef = useRef(null);
+    const mapInstance = useRef(null);
+    const markersRef = useRef({});
+    const userMarkerRef = useRef(null);
+    const radiusCircleRef = useRef(null);
 
-    // Mock stock data (Internal mapping for demonstration)
-    const stockData = {
-        'ph-1': ['Amoxicillin', 'Paracetamol', 'Ibuprofen'],
-        'ph-2': ['Amoxicillin', 'Aspirin'],
-        'ph-3': ['Paracetamol', 'Vitamin C']
-    };
+    // Fetch Pharmacies
+    useEffect(() => {
+        const fetchPharmacies = async () => {
+            setLoading(true);
+            try {
+                const params = {};
+                if (searchQuery) params.search = searchQuery;
+                if (medicineSearch) params.medicine = medicineSearch;
+                if (userLocation) {
+                    params.lat = userLocation[0];
+                    params.lng = userLocation[1];
+                    params.radius = radius;
+                }
 
-    // Haversine formula for distance
+                const response = await apiClient.get('/pharmacy', { params });
+                const data = response.data;
+
+                if (data.success) {
+                    const mapped = data.data.map(p => ({
+                        id: p._id,
+                        name: p.name,
+                        pos: p.location?.coordinates ? [p.location.coordinates[1], p.location.coordinates[0]] : [9.03, 38.74],
+                        rating: p.rating || 0,
+                        address: p.address?.street ? `${p.address.city}, ${p.address.street}` : p.address?.city || 'Addis Ababa',
+                        status: p.status === 'approved' ? 'Open' : 'Closed',
+                        distance: userLocation ? 'Calculating...' : 'N/A',
+                        phone: p.phone
+                    }));
+                    setPharmacies(mapped);
+                }
+            } catch (error) {
+                console.error('Failed to fetch pharmacies:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const timeoutId = setTimeout(fetchPharmacies, 500);
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery, medicineSearch, userLocation, radius]);
+
+    // Haversine distance
     const getDistance = (pos1, pos2) => {
-        const R = 6371; // km
+        const R = 6371;
         const dLat = (pos2[0] - pos1[0]) * Math.PI / 180;
         const dLon = (pos2[1] - pos1[1]) * Math.PI / 180;
         const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos(pos1[0] * Math.PI / 180) * Math.cos(pos2[0] * Math.PI / 180) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+        return parseFloat((R * c).toFixed(1));
     };
 
-    // Load medicine options for AutoComplete
+    // Load medicine options
     useEffect(() => {
         const fetchMedicines = async () => {
             try {
                 const response = await medicinesAPI.list();
-                if (response.data) {
-                    setMedicineOptions(response.data.map(m => ({ value: m.name })));
+                if (response.data?.data) {
+                    setMedicineOptions(response.data.data.map(m => ({ value: m.name })));
                 }
             } catch (err) {
                 console.error('Failed to fetch medicines:', err);
-                // Fallback mock
-                setMedicineOptions([
-                    { value: 'Amoxicillin' },
-                    { value: 'Paracetamol' },
-                    { value: 'Ibuprofen' },
-                    { value: 'Aspirin' }
-                ]);
             }
         };
         fetchMedicines();
     }, []);
 
-    const pharmacies = [
-        {
-            id: 'ph-1',
-            name: 'Kenema Pharmacy No. 4',
-            pos: [9.0227, 38.7460],
-            rating: 4.8,
-            reviews: 124,
-            status: 'Open',
-            distance: '0.5 km',
-            address: 'Bole Road, Addis Ababa',
-            phone: '+251 11 123 4567'
-        },
-        {
-            id: 'ph-2',
-            name: 'Abyssinia Central Pharma',
-            pos: [9.0270, 38.7510],
-            rating: 4.5,
-            reviews: 89,
-            status: 'Open',
-            distance: '1.2 km',
-            address: 'Kazanchis, Addis Ababa',
-            phone: '+251 11 987 6543'
-        },
-        {
-            id: 'ph-3',
-            name: 'Red Cross Dispensary',
-            pos: [9.0180, 38.7400],
-            rating: 4.9,
-            reviews: 312,
-            status: 'Closed',
-            distance: '2.5 km',
-            address: 'Piazza, Addis Ababa',
-            phone: '+251 11 555 0199'
-        }
-    ];
-
-    // Filter Pharmacies
-    const filteredPharmacies = pharmacies.filter(ph => {
-        const matchesName = ph.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesMedicine = medicineSearch ? stockData[ph.id]?.some(m => m.toLowerCase().includes(medicineSearch.toLowerCase())) : true;
-
-        // Distance filter if user location is known
+    const filteredPharmacies = pharmacies.map(ph => {
+        let dist = 'N/A';
+        let distVal = 99999;
         if (userLocation) {
-            const dist = getDistance(userLocation, ph.pos);
-            return matchesName && matchesMedicine && dist <= radius;
+            distVal = getDistance(userLocation, ph.pos);
+            dist = `${distVal} km`;
         }
-
-        return matchesName && matchesMedicine;
-    });
+        return { ...ph, distance: dist, distVal };
+    }).sort((a, b) => a.distVal - b.distVal);
 
     const handleLocateUser = () => {
         setLoadingLocation(true);
@@ -151,9 +145,11 @@ const Pharmacies = () => {
                     setUserLocation(pos);
                     setLoadingLocation(false);
                     if (mapInstance.current) {
-                        mapInstance.current.flyTo(pos, 15);
+                        // Calculate zoom level based on radius
+                        // Radius 1km -> Zoom 15, Radius 20km -> Zoom 11
+                        const zoom = Math.max(11, 15 - Math.floor(radius / 5));
+                        mapInstance.current.setView(pos, zoom);
 
-                        // Update or Create User Marker
                         if (userMarkerRef.current) {
                             userMarkerRef.current.setLatLng(pos);
                         } else {
@@ -165,6 +161,21 @@ const Pharmacies = () => {
                             userMarkerRef.current = L.marker(pos, { icon: userIcon })
                                 .addTo(mapInstance.current)
                                 .bindPopup("You are here");
+                        }
+
+                        // Update Radius Circle
+                        if (radiusCircleRef.current) {
+                            radiusCircleRef.current.setLatLng(pos);
+                            radiusCircleRef.current.setRadius(radius * 1000);
+                        } else {
+                            radiusCircleRef.current = L.circle(pos, {
+                                radius: radius * 1000,
+                                color: token.colorPrimary,
+                                fillColor: token.colorPrimary,
+                                fillOpacity: 0.1,
+                                weight: 1,
+                                dashArray: '5, 10'
+                            }).addTo(mapInstance.current);
                         }
                     }
                 },
@@ -179,47 +190,89 @@ const Pharmacies = () => {
     // Initialize Map
     useEffect(() => {
         if (mapRef.current && !mapInstance.current) {
-            mapInstance.current = L.map(mapRef.current).setView([9.0227, 38.7460], 14);
+            mapInstance.current = L.map(mapRef.current, {
+                zoomControl: true,
+                attributionControl: false
+            }).setView([9.0227, 38.7460], 13);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            // High-Resolution Satellite Hybrid Layer (ESRI)
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'ESRI World Imagery'
             }).addTo(mapInstance.current);
 
-            // Add Markers
-            pharmacies.forEach(ph => {
-                const marker = L.marker(ph.pos)
-                    .addTo(mapInstance.current)
-                    .bindPopup(`
-                        <div class="map-popup-content">
-                            <strong style="color: #1E88E5">${ph.name}</strong><br />
-                            <span style="font-size: 12px; color: #666">${ph.address}</span><br />
-                            <div style="margin-top: 8px">
-                                <span style="background: #1E88E5; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px">View Details</span>
-                            </div>
-                        </div>
-                    `);
+            // Add Road Overlay for Hybrid View
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                opacity: 0.8
+            }).addTo(mapInstance.current);
 
-                marker.on('click', () => setSelectedPharmacy(ph));
-                markersRef.current[ph.id] = marker;
-            });
+            // Force recalculate size after a short delay
+            setTimeout(() => {
+                if (mapInstance.current) {
+                    mapInstance.current.invalidateSize();
+                }
+            }, 500);
         }
 
         return () => {
             if (mapInstance.current) {
+                userMarkerRef.current = null;
+                radiusCircleRef.current = null;
+                markersRef.current = {};
                 mapInstance.current.remove();
                 mapInstance.current = null;
             }
         };
     }, []);
 
-    // Update map view when selectedPharmacy changes
+    // Update Markers
+    useEffect(() => {
+        if (!mapInstance.current) return;
+        Object.values(markersRef.current).forEach(marker => marker.remove());
+        markersRef.current = {};
+
+        filteredPharmacies.forEach(ph => {
+            const marker = L.marker(ph.pos)
+                .addTo(mapInstance.current)
+                .bindPopup(`
+                    <div class="map-popup-content">
+                        <strong>${ph.name}</strong><br />
+                        <span style="font-size: 12px; color: #666">${ph.address}</span>
+                    </div>
+                `);
+            marker.on('click', () => setSelectedPharmacy(ph));
+            markersRef.current[ph.id] = marker;
+        });
+    }, [pharmacies, token]);
+
     useEffect(() => {
         if (selectedPharmacy && mapInstance.current) {
-            mapInstance.current.flyTo(selectedPharmacy.pos, 15);
+            mapInstance.current.flyTo(selectedPharmacy.pos, 16);
             const marker = markersRef.current[selectedPharmacy.id];
             if (marker) marker.openPopup();
         }
     }, [selectedPharmacy]);
+
+    // Handle Radius Change on Map
+    useEffect(() => {
+        if (userLocation && radiusCircleRef.current) {
+            radiusCircleRef.current.setRadius(radius * 1000);
+
+            // Optionally adjust zoom when radius changes significantly
+            if (mapInstance.current) {
+                const zoom = Math.max(11, 15 - Math.floor(radius / 5));
+                mapInstance.current.setZoom(zoom);
+            }
+        }
+    }, [radius]);
+
+    const resetFilters = () => {
+        setSearchQuery('');
+        setMedicineSearch('');
+        setRadius(5);
+        setUserLocation(null);
+    };
 
     return (
         <div className="pharmacies-page fade-in">
@@ -227,61 +280,100 @@ const Pharmacies = () => {
                 {/* Sidebar */}
                 <div className="pharmacy-sidebar">
                     <div className="sidebar-header">
-                        <Title level={3} style={{ margin: 0 }}>Nearby Pharmacies</Title>
-                        <Text type="secondary">Found {filteredPharmacies.length} providers near you</Text>
+                        <Space align="center" style={{ marginBottom: '24px' }}>
+                            <div style={{ padding: '8px', background: token.colorPrimary, borderRadius: '12px', color: 'white', display: 'flex' }}>
+                                <EnvironmentOutlined style={{ fontSize: '20px' }} />
+                            </div>
+                            <div>
+                                <Title level={3} style={{ margin: 0, fontSize: '22px' }}>Pharmacy Finder</Title>
+                                <Text type="secondary" style={{ fontSize: '12px' }}>Explore verified providers near you</Text>
+                            </div>
+                        </Space>
 
                         <div className="search-box-wrapper">
-                            <Input
-                                prefix={<SearchOutlined />}
-                                placeholder="Search by pharmacy..."
-                                className="pharmacy-search"
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                            />
-                            <Button
-                                icon={<AimOutlined />}
-                                loading={loadingLocation}
-                                onClick={handleLocateUser}
-                                title="Locate Me"
-                            />
-                        </div>
-
-                        <div style={{ marginTop: '16px' }}>
-                            <Text type="secondary" size="small">Find Medicines</Text>
-                            <AutoComplete
-                                style={{ width: '100%', marginTop: '4px' }}
-                                options={medicineOptions}
-                                placeholder="Search medicine stock..."
-                                value={medicineSearch}
-                                onChange={setMedicineSearch}
-                                filterOption={(inputValue, option) =>
-                                    option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
-                                }
-                            >
-                                <Input prefix={<MedicineBoxOutlined />} allowClear />
-                            </AutoComplete>
-                        </div>
-
-                        {userLocation && (
-                            <div style={{ marginTop: '16px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <Text type="secondary">Radius: {radius}km</Text>
-                                    <Text type="secondary" style={{ fontSize: '10px' }}>Proximal Filtering</Text>
-                                </div>
-                                <Slider
-                                    min={1}
-                                    max={20}
-                                    value={radius}
-                                    onChange={setRadius}
-                                    tooltip={{ formatter: val => `${val}km` }}
+                            <Space direction="vertical" style={{ width: '100%' }} size="small">
+                                <Input
+                                    prefix={<SearchOutlined />}
+                                    placeholder="Search by name..."
+                                    size="large"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
                                 />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <AutoComplete
+                                        style={{ flex: 1 }}
+                                        options={medicineOptions}
+                                        value={medicineSearch}
+                                        onChange={setMedicineSearch}
+                                        filterOption={(inputValue, option) =>
+                                            option.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+                                        }
+                                    >
+                                        <Input
+                                            prefix={<MedicineBoxOutlined />}
+                                            placeholder="Stock search..."
+                                            allowClear
+                                        />
+                                    </AutoComplete>
+                                    <Button
+                                        icon={<AimOutlined />}
+                                        loading={loadingLocation}
+                                        onClick={handleLocateUser}
+                                        title="Use GPS"
+                                    />
+                                </div>
+                            </Space>
+                        </div>
+
+                        <div style={{ marginTop: '24px', padding: '16px', background: token.colorFillAlter, borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <Text strong style={{ fontSize: '13px' }}>Search Radius</Text>
+                                <Tag color="blue">{radius} km</Tag>
                             </div>
-                        )}
+                            <Slider
+                                min={1}
+                                max={20}
+                                value={radius}
+                                onChange={setRadius}
+                            />
+                            <Text type="secondary" style={{ fontSize: '11px' }}>Finding pharmacies within {radius}km of your location.</Text>
+                        </div>
                     </div>
 
                     <div className="pharmacy-list-scroll">
                         <List
+                            loading={loading}
                             dataSource={filteredPharmacies}
+                            locale={{
+                                emptyText: (
+                                    <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+                                        <div style={{ marginBottom: '16px', fontSize: '48px', opacity: 0.2, color: token.colorPrimary }}>
+                                            <ShopOutlined />
+                                        </div>
+                                        <Text strong style={{ display: 'block', fontSize: '16px' }}>No Pharmacies Found</Text>
+                                        <Text type="secondary" style={{ fontSize: '13px' }}>
+                                            Try adjusting filters or expanding your radius.
+                                        </Text>
+
+                                        <div style={{ marginTop: '24px', textAlign: 'left', background: '#f8f9fa', padding: '16px', borderRadius: '12px', border: '1px solid #eee' }}>
+                                            <Text strong style={{ fontSize: '13px' }}>Quick Tips:</Text>
+                                            <ul style={{ paddingLeft: '20px', marginTop: '12px', fontSize: '12px', color: '#666', lineHeight: '1.8' }}>
+                                                <li>Check spelling or try generic names</li>
+                                                <li>Increase radius up to 20km</li>
+                                                <li>Enable GPS for accurate local results</li>
+                                            </ul>
+                                            <Button
+                                                block
+                                                icon={<UndoOutlined />}
+                                                style={{ marginTop: '12px' }}
+                                                onClick={resetFilters}
+                                            >
+                                                Reset Settings
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )
+                            }}
                             renderItem={item => (
                                 <div
                                     className={`pharmacy-list-card ${selectedPharmacy?.id === item.id ? 'selected' : ''}`}
@@ -293,7 +385,7 @@ const Pharmacies = () => {
                                                 shape="square"
                                                 size={48}
                                                 icon={<ShopOutlined />}
-                                                style={{ background: '#E3F2FD', color: '#1E88E5' }}
+                                                style={{ background: token.colorFillSecondary, color: token.colorPrimary }}
                                             />
                                         </Col>
                                         <Col flex="auto">
@@ -326,10 +418,10 @@ const Pharmacies = () => {
                                 <Col flex="auto">
                                     <Title level={4} style={{ margin: 0 }}>{selectedPharmacy.name}</Title>
                                     <Text type="secondary">{selectedPharmacy.address}</Text>
-                                    <div style={{ marginTop: '12px' }}>
+                                    <div style={{ marginTop: '16px' }}>
                                         <Space size="large">
                                             <Space><PhoneOutlined /> <Text>{selectedPharmacy.phone}</Text></Space>
-                                            <Space><CompassOutlined /> <Text>{selectedPharmacy.distance} away</Text></Space>
+                                            <Space><CompassOutlined /> <Text>{selectedPharmacy.distance}</Text></Space>
                                         </Space>
                                     </div>
                                 </Col>
@@ -347,5 +439,4 @@ const Pharmacies = () => {
         </div>
     );
 };
-
 export default Pharmacies;
