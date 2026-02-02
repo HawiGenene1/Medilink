@@ -178,15 +178,16 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-<<<<<<< HEAD
     enum: [
       'pending',
       'verified',
       'confirmed',
-      'processing',
+      'preparing', // remote had this
       'prepared',
       'awaiting_prescription',
       'ready_for_pickup',
+      'ready', // remote had this
+      'in_transit', // remote had this
       'out_for_delivery',
       'delivered',
       'completed',
@@ -194,9 +195,6 @@ const orderSchema = new mongoose.Schema({
       'refunded',
       'on_hold'
     ],
-=======
-    enum: ['pending', 'confirmed', 'preparing', 'ready', 'in_transit', 'delivered', 'cancelled', 'refunded'],
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     default: 'pending'
   },
   paymentStatus: {
@@ -206,17 +204,12 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-<<<<<<< HEAD
-    enum: ['CASH_ON_DELIVERY', 'CARD'],
-    default: 'CASH_ON_DELIVERY'
+    enum: ['CASH_ON_DELIVERY', 'CARD', 'cash', 'card', 'mobile_money', 'bank_transfer', 'telebirr', 'cbe'],
+    default: 'cash'
   },
   payment: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Payment'
-=======
-    enum: ['cash', 'card', 'mobile_money', 'bank_transfer', 'telebirr', 'cbe'],
-    default: 'cash'
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
   },
   paymentDetails: {
     transactionId: String,
@@ -281,8 +274,6 @@ const orderSchema = new mongoose.Schema({
     note: String,
     metadata: mongoose.Schema.Types.Mixed
   }],
-<<<<<<< HEAD
-
   // Enhanced notification system
   notifications: [notificationSchema],
 
@@ -298,9 +289,9 @@ const orderSchema = new mongoose.Schema({
     of: mongoose.Schema.Types.Mixed
   },
   estimatedDeliveryTime: {
-=======
+    type: Date
+  },
   estimatedArrivalTime: {
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     type: Date
   },
   actualArrivalTime: {
@@ -334,17 +325,12 @@ const orderSchema = new mongoose.Schema({
 });
 
 // Generate order number before saving
-<<<<<<< HEAD
-=======
 // Generate order number before saving
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 orderSchema.pre('save', async function () {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();
     this.orderNumber = `ORD-${Date.now()}-${(count + 1).toString().padStart(5, '0')}`;
   }
-<<<<<<< HEAD
-
   // Set default delivery status if not set
   if (!this.delivery) {
     this.delivery = { status: 'pending' };
@@ -357,17 +343,11 @@ orderSchema.pre('save', async function () {
       status: 'pending_verification'
     };
   }
-=======
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 });
 
 // Calculate final amount before saving
 orderSchema.pre('save', function () {
-<<<<<<< HEAD
-  this.finalAmount = (this.totalAmount || 0) + (this.deliveryFee || 0) + (this.tax || 0) - (this.discount || 0);
-=======
-  this.finalAmount = this.totalAmount + this.serviceFee + this.tax - this.discount;
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
+  this.finalAmount = (this.totalAmount || 0) + (this.serviceFee || 0) + (this.tax || 0) - (this.discount || 0);
 });
 
 // Add status to history when status changes

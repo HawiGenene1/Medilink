@@ -85,9 +85,9 @@ async function sendEmail(to, subject, content, retries = 3) {
  * @param {string} password - Generated password
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function sendWelcomeEmail(email, name, password, verificationToken) {
+async function sendWelcomeEmail(email, name, password, verificationToken, role = 'customer') {
     const welcomeEmail = require('../templates/welcomeEmail');
-    const { subject, html } = welcomeEmail(name, password, verificationToken);
+    const { subject, html } = welcomeEmail(name, password, verificationToken, role);
     return sendEmail(email, subject, html);
 }
 

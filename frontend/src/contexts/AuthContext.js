@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       api.get('/auth/me')
         .then(response => {
-          setUser(response.data.user); 
+          setUser(response.data.user);
           setIsAuthenticated(true);
         })
         .catch(() => {
@@ -64,10 +64,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/register', userData);
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      setIsAuthenticated(true);
-      return { success: true, user };
+
+      if (token) {
+        localStorage.setItem('token', token);
+        setUser(user);
+        setIsAuthenticated(true);
+      }
+
+      return { success: true, user, message: response.data.message };
     } catch (error) {
       console.error('Registration failed:', error);
       return {
@@ -100,6 +104,19 @@ export const AuthProvider = ({ children }) => {
     return roles.includes(user.role);
   };
 
+  // Refresh user data function
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data.user);
+      setIsAuthenticated(true);
+      return { success: true, user: response.data.user };
+    } catch (error) {
+      console.error('Refresh user failed:', error);
+      return { success: false, message: 'Failed to refresh user data' };
+    }
+  };
+
   const value = {
     user,
     isAuthenticated,
@@ -107,6 +124,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    refreshUser,
     hasRole,
     hasAnyRole
   };

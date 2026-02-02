@@ -12,55 +12,6 @@ let redisDisabledMessageShown = false;
 // Initialize Redis client only when URL is provided; otherwise stay silent
 if (useRedis) {
   try {
-<<<<<<< HEAD
-    const { search, category, minPrice, maxPrice, sort, pharmacyId } = req.query;
-    const filter = {};
-
-    if (pharmacyId) {
-      filter.availableAt = pharmacyId;
-    }
-
-    if (search) {
-      // simple text search on name and description
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    if (category) filter.category = category;
-    if (minPrice) filter.price = { ...(filter.price || {}), $gte: Number(minPrice) };
-    if (maxPrice) filter.price = { ...(filter.price || {}), $lte: Number(maxPrice) };
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const query = Medicine.find(filter)
-      .sort(sort === 'price' ? { 'price.basePrice': 1 } : { createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const [medicines, total] = await Promise.all([
-      query.exec(),
-      Medicine.countDocuments(filter)
-    ]);
-
-    return res.json({
-      success: true,
-      data: {
-        medicines,
-        pagination: {
-          total,
-          page,
-          pages: Math.ceil(total / limit),
-          limit
-        }
-      },
-      // For compatibility with inconsistent frontend components
-      medicines
-    });
-=======
     redisClient = createClient({
       url: process.env.REDIS_URL,
       socket: {
@@ -70,9 +21,9 @@ if (useRedis) {
               console.warn('Max retries reached. Could not connect to Redis - running without cache');
               redisDisabledMessageShown = true;
             }
-            return false; // Stop retrying after 5 attempts
+            return false;
           }
-          return Math.min(retries * 100, 5000); // Exponential backoff up to 5s
+          return Math.min(retries * 100, 5000);
         }
       }
     });
@@ -84,7 +35,6 @@ if (useRedis) {
       }
     });
 
-    // Connect to Redis, but don't block the server start if it fails
     redisClient.connect().catch(err => {
       if (!redisDisabledMessageShown) {
         console.warn('Failed to connect to Redis - running without cache:', err.message);
@@ -99,7 +49,6 @@ if (useRedis) {
   }
 }
 
-// Fallback no-op client when Redis is disabled or failed
 if (!redisClient) {
   redisClient = {
     get: () => Promise.resolve(null),
@@ -110,16 +59,13 @@ if (!redisClient) {
   };
 }
 
-// Improved cache middleware with better key generation and invalidation
 const cacheMiddleware = async (req, res, next) => {
-  // Skip cache for POST/PUT/DELETE requests
   if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
     return next();
   }
 
   const cacheKey = `medicines:${JSON.stringify({
     ...req.query,
-    // Remove pagination from cache key as it's handled separately
     page: undefined,
     limit: undefined,
     _: undefined
@@ -133,20 +79,16 @@ const cacheMiddleware = async (req, res, next) => {
       return res.json(data);
     }
 
-    // Cache miss - proceed to controller
     res.sendResponse = res.json;
     res.json = (data) => {
-      // Only cache successful responses
       if (res.statusCode === 200) {
-        // Cache for 5 minutes, but less for search results
-        const ttl = req.query.search ? 60 : 300; // 1 min for searches, 5 min for others
+        const ttl = req.query.search ? 60 : 300;
         redisClient.set(cacheKey, JSON.stringify(data), 'EX', ttl).catch(console.error);
       }
       res.sendResponse(data);
     };
     res.set('X-Cache', 'MISS');
     next();
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
   } catch (error) {
     console.error('Cache error:', error);
     next();
@@ -566,12 +508,6 @@ const getFilterOptions = async (req, res) => {
 // Get single medicine by ID
 const getMedicineById = async (req, res) => {
   try {
-<<<<<<< HEAD
-    const { id } = req.params;
-    const medicine = await Medicine.findById(id).exec();
-    if (!medicine) return res.status(404).json({ success: false, message: 'Medicine not found' });
-    return res.json({
-=======
     const medicine = await Medicine.findById(req.params.id)
       .populate('category', 'name')
       .populate('pharmacy', 'name address phone location');
@@ -584,7 +520,6 @@ const getMedicineById = async (req, res) => {
     }
 
     res.json({
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
       success: true,
       data: medicine
     });
@@ -882,14 +817,11 @@ const getInventoryAlerts = async (req, res) => {
 module.exports = {
   getMedicines,
   getMedicineById,
-<<<<<<< HEAD
   addMedicine,
   updateMedicine,
   deleteMedicine,
   updateStock,
-  getInventoryAlerts
-=======
+  getInventoryAlerts,
   getFilterOptions,
   cacheMiddleware
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 };

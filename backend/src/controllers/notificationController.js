@@ -1,44 +1,50 @@
 const Notification = require('../models/Notification');
-<<<<<<< HEAD
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
+const logger = require('../utils/logger');
 
 /**
- * @desc    Get notifications for a pharmacy
+ * @desc    Get notifications for the current user or pharmacy
  * @route   GET /api/notifications
- * @access  Private (Pharmacy Owner/Staff)
+ * @access  Private
  */
-exports.getPharmacyNotifications = asyncHandler(async (req, res, next) => {
+exports.getNotifications = asyncHandler(async (req, res, next) => {
+    const userId = req.user.userId || req.user.id;
     const pharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
-    const role = req.user?.role || req.owner?.role;
+    const role = (req.user?.role || req.owner?.role || '').toLowerCase();
 
-    if (!pharmacyId) {
-        return next(new ErrorResponse('User is not associated with any pharmacy', 400));
-    }
-
-    // Determine roleTarget based on user role
-    let roleTarget;
-    const normalizedRole = role?.toLowerCase();
-
-    if (normalizedRole === 'pharmacy_owner' || normalizedRole === 'pharmacy_admin') {
-        roleTarget = 'OWNER';
-    } else if (['pharmacy_staff', 'staff', 'pharmacist', 'cashier', 'technician', 'assistant'].includes(normalizedRole)) {
-        roleTarget = 'STAFF';
-    } else {
-        return next(new ErrorResponse(`Invalid role for notifications: ${role}`, 403));
-    }
-
-    const { isRead, limit = 20, page = 1 } = req.query;
+    const { isRead, limit = 50, page = 1, type } = req.query;
     const skip = (page - 1) * limit;
 
-    // Build query
-    const query = {
-        pharmacyId: pharmacyId,
-        roleTarget: roleTarget
-    };
+    let query = {};
+
+    // If it's a pharmacy staff/owner, they might want pharmacy-wide notifications
+    if (pharmacyId && ['pharmacy_owner', 'pharmacy_admin', 'pharmacy_staff', 'staff', 'pharmacist', 'cashier', 'technician', 'assistant'].includes(role)) {
+        let roleTarget;
+        if (role === 'pharmacy_owner' || role === 'pharmacy_admin') {
+            roleTarget = 'OWNER';
+        } else {
+            roleTarget = 'STAFF';
+        }
+
+        // Multi-condition query: either direct user notification OR pharmacy-wide for that role
+        query = {
+            $or: [
+                { user: userId },
+                { pharmacyId: pharmacyId, roleTarget: roleTarget }
+            ]
+        };
+    } else {
+        // Just regular user notifications
+        query = { user: userId };
+    }
 
     if (isRead !== undefined) {
         query.isRead = isRead === 'true';
+    }
+
+    if (type) {
+        query.type = type;
     }
 
     const notifications = await Notification.find(query)
@@ -47,11 +53,7 @@ exports.getPharmacyNotifications = asyncHandler(async (req, res, next) => {
         .limit(parseInt(limit));
 
     const total = await Notification.countDocuments(query);
-    const unreadCount = await Notification.countDocuments({
-        pharmacyId: pharmacyId,
-        roleTarget: roleTarget,
-        isRead: false
-    });
+    const unreadCount = await Notification.countDocuments({ ...query, isRead: false });
 
     res.status(200).json({
         success: true,
@@ -67,13 +69,17 @@ exports.getPharmacyNotifications = asyncHandler(async (req, res, next) => {
     });
 });
 
+// Alias for compatibility
+exports.getPharmacyNotifications = exports.getNotifications;
+
 /**
  * @desc    Mark notification as read
- * @route   PUT /api/notifications/:id/read
- * @access  Private (Pharmacy Owner/Staff)
+ * @route   PATCH/PUT /api/notifications/:id/read
+ * @access  Private
  */
 exports.markAsRead = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
+    const userId = req.user.userId || req.user.id;
     const pharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
 
     const notification = await Notification.findById(id);
@@ -82,8 +88,11 @@ exports.markAsRead = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse(`Notification not found with id of ${id}`, 404));
     }
 
-    // Verify ownership
-    if (notification.pharmacyId.toString() !== pharmacyId.toString()) {
+    // Verify ownership: either it's their user ID or their pharmacy ID
+    const isOwner = notification.user && notification.user.toString() === userId.toString();
+    const isPharmacyOwner = pharmacyId && notification.pharmacyId && notification.pharmacyId.toString() === pharmacyId.toString();
+
+    if (!isOwner && !isPharmacyOwner) {
         return next(new ErrorResponse('Not authorized to update this notification', 403));
     }
 
@@ -98,39 +107,35 @@ exports.markAsRead = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Mark all notifications as read
- * @route   PUT /api/notifications/read-all
- * @access  Private (Pharmacy Owner/Staff)
+ * @route   PATCH/PUT /api/notifications/read-all
+ * @access  Private
  */
 exports.markAllAsRead = asyncHandler(async (req, res, next) => {
+    const userId = req.user.userId || req.user.id;
     const pharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
-    const role = req.user?.role || req.owner?.role;
+    const role = (req.user?.role || req.owner?.role || '').toLowerCase();
 
-    if (!pharmacyId) {
-        return next(new ErrorResponse('User is not associated with any pharmacy', 400));
-    }
+    let query = {};
 
-    // Determine roleTarget
-    let roleTarget;
-    const normalizedRole = role?.toLowerCase();
-
-    if (normalizedRole === 'pharmacy_owner' || normalizedRole === 'pharmacy_admin') {
-        roleTarget = 'OWNER';
-    } else if (['pharmacy_staff', 'staff', 'pharmacist', 'cashier', 'technician', 'assistant'].includes(normalizedRole)) {
-        roleTarget = 'STAFF';
-    } else {
-        return next(new ErrorResponse(`Invalid role for notifications: ${role}`, 403));
-    }
-
-    const result = await Notification.updateMany(
-        {
-            pharmacyId: pharmacyId,
-            roleTarget: roleTarget,
-            isRead: false
-        },
-        {
-            isRead: true
+    if (pharmacyId && ['pharmacy_owner', 'pharmacy_admin', 'pharmacy_staff', 'staff', 'pharmacist', 'cashier', 'technician', 'assistant'].includes(role)) {
+        let roleTarget;
+        if (role === 'pharmacy_owner' || role === 'pharmacy_admin') {
+            roleTarget = 'OWNER';
+        } else {
+            roleTarget = 'STAFF';
         }
-    );
+
+        query = {
+            $or: [
+                { user: userId, isRead: false },
+                { pharmacyId: pharmacyId, roleTarget: roleTarget, isRead: false }
+            ]
+        };
+    } else {
+        query = { user: userId, isRead: false };
+    }
+
+    const result = await Notification.updateMany(query, { isRead: true });
 
     res.status(200).json({
         success: true,
@@ -142,10 +147,11 @@ exports.markAllAsRead = asyncHandler(async (req, res, next) => {
 /**
  * @desc    Delete a notification
  * @route   DELETE /api/notifications/:id
- * @access  Private (Pharmacy Owner/Staff)
+ * @access  Private
  */
 exports.deleteNotification = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
+    const userId = req.user.userId || req.user.id;
     const pharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
 
     const notification = await Notification.findById(id);
@@ -155,7 +161,10 @@ exports.deleteNotification = asyncHandler(async (req, res, next) => {
     }
 
     // Verify ownership
-    if (notification.pharmacyId.toString() !== pharmacyId.toString()) {
+    const isOwner = notification.user && notification.user.toString() === userId.toString();
+    const isPharmacyOwner = pharmacyId && notification.pharmacyId && notification.pharmacyId.toString() === pharmacyId.toString();
+
+    if (!isOwner && !isPharmacyOwner) {
         return next(new ErrorResponse('Not authorized to delete this notification', 403));
     }
 
@@ -166,97 +175,3 @@ exports.deleteNotification = asyncHandler(async (req, res, next) => {
         message: 'Notification deleted'
     });
 });
-=======
-const logger = require('../utils/logger');
-
-/**
- * @route   GET /api/notifications
- * @desc    Get user notifications
- * @access  Private
- */
-exports.getNotifications = async (req, res) => {
-    try {
-        const userId = req.user.userId || req.user.id;
-        const notifications = await Notification.find({ user: userId })
-            .sort({ createdAt: -1 })
-            .limit(50);
-
-        const unreadCount = await Notification.countDocuments({ user: userId, isRead: false });
-
-        res.json({
-            success: true,
-            data: notifications,
-            unreadCount
-        });
-    } catch (error) {
-        logger.error('Error fetching notifications:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-};
-
-/**
- * @route   PATCH /api/notifications/:id/read
- * @desc    Mark a notification as read
- * @access  Private
- */
-exports.markAsRead = async (req, res) => {
-    try {
-        const userId = req.user.userId || req.user.id;
-        const notification = await Notification.findOneAndUpdate(
-            { _id: req.params.id, user: userId },
-            { isRead: true },
-            { new: true }
-        );
-
-        if (!notification) {
-            return res.status(404).json({ success: false, message: 'Notification not found' });
-        }
-
-        res.json({ success: true, data: notification });
-    } catch (error) {
-        logger.error('Error marking notification as read:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-};
-
-/**
- * @route   PATCH /api/notifications/read-all
- * @desc    Mark all notifications as read
- * @access  Private
- */
-exports.markAllAsRead = async (req, res) => {
-    try {
-        const userId = req.user.userId || req.user.id;
-        await Notification.updateMany(
-            { user: userId, isRead: false },
-            { isRead: true }
-        );
-
-        res.json({ success: true, message: 'All notifications marked as read' });
-    } catch (error) {
-        logger.error('Error marking all notifications as read:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-};
-
-/**
- * @route   DELETE /api/notifications/:id
- * @desc    Delete a notification
- * @access  Private
- */
-exports.deleteNotification = async (req, res) => {
-    try {
-        const userId = req.user.userId || req.user.id;
-        const notification = await Notification.findOneAndDelete({ _id: req.params.id, user: userId });
-
-        if (!notification) {
-            return res.status(404).json({ success: false, message: 'Notification not found' });
-        }
-
-        res.json({ success: true, message: 'Notification deleted' });
-    } catch (error) {
-        logger.error('Error deleting notification:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-};
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1

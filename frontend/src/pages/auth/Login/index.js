@@ -15,7 +15,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleRedirect = (user) => {
-    const role = user.role;
+    const role = user.role?.toLowerCase();
     const status = user.status;
 
     if (role === 'delivery' && status === 'pending') {
@@ -24,13 +24,31 @@ const Login = () => {
     }
 
     switch (role) {
-      case 'customer': navigate('/customer/home'); break;
-      case 'pharmacy_staff': navigate('/pharmacy-staff/inventory'); break;
-      case 'pharmacy_admin': navigate('/pharmacy-admin/dashboard'); break;
-      case 'cashier': navigate('/cashier/dashboard'); break;
-      case 'delivery': navigate('/delivery/dashboard'); break;
-      case 'admin': navigate('/admin/dashboard'); break;
-      default: navigate('/');
+      case 'customer':
+        navigate('/customer/home');
+        break;
+      case 'cashier':
+        navigate('/cashier/dashboard');
+        break;
+      case 'delivery':
+        navigate('/delivery/dashboard');
+        break;
+      case 'admin':
+        navigate('/admin/dashboard');
+        break;
+      case 'pharmacy_owner':
+      case 'pharmacist':
+      case 'technician':
+      case 'assistant':
+      case 'pharmacy_staff':
+      case 'staff':
+        navigate('/owner/dashboard');
+        break;
+      case 'pharmacy_admin':
+        navigate('/pharmacy-admin/dashboard');
+        break;
+      default:
+        navigate('/');
     }
   };
 
@@ -40,35 +58,6 @@ const Login = () => {
       const result = await login(values.email, values.password);
 
       if (result.success) {
-<<<<<<< HEAD
-        message.success('Login successful!');
-
-        // Redirect based on user role
-        const role = result.user.role;
-        switch (role?.toLowerCase()) {
-          case 'customer':
-            navigate('/customer/home');
-            break;
-          case 'cashier':
-            navigate('/cashier/dashboard');
-            break;
-          case 'delivery':
-            navigate('/delivery/dashboard');
-            break;
-          case 'admin':
-            navigate('/admin/dashboard');
-            break;
-          case 'pharmacy_owner':
-          case 'pharmacist':
-          case 'technician':
-          case 'assistant':
-          case 'pharmacy_staff':
-          case 'staff':
-            navigate('/owner/dashboard');
-            break;
-          default:
-            navigate('/');
-=======
         if (result.requires2FA) {
           setRequires2FA(true);
           setTempUserId(result.tempId);
@@ -78,7 +67,6 @@ const Login = () => {
         } else {
           message.success('Login successful!');
           handleRedirect(result.user);
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
         }
       } else {
         message.error(result.message || 'Login failed. Please check your credentials.');
@@ -200,22 +188,11 @@ const Login = () => {
             </Link>
           </div>
 
-<<<<<<< HEAD
-          {/* Dev Helper - Quick Login */}
-          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '16px' }}>
-            <p style={{ fontSize: '12px', color: '#888', textAlign: 'center' }}>Demo Quick Login:</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-              <Button size="small" onClick={() => onFinish({ email: 'customer@test.com', password: '123' })}>Customer</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'pharmacy@test.com', password: '123' })}>Pharmacy</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'admin@test.com', password: '123' })}>Admin</Button>
-            </div>
-=======
           <div style={{ textAlign: 'center', padding: '12px', borderTop: '1px solid #f1f5f9' }}>
             <span style={{ color: '#64748b' }}>Want to earn with MediLink? </span>
             <Link to="/auth/delivery/register" style={{ fontWeight: 600, color: '#1E88E5' }}>
               Become a Delivery Partner
             </Link>
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
           </div>
         </Form>
       </Card>

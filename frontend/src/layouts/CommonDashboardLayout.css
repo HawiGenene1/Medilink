@@ -14,6 +14,7 @@
 
 /* Main Layout Container */
 .dashboard-layout {
+    display: flex !important;
     min-height: 100vh;
     height: 100vh;
     /* Force full height */
@@ -24,11 +25,11 @@
 /* Sidebar */
 .desktop-sider {
     box-shadow: 1px 0 0 0 var(--border-color);
-    z-index: 10;
-    background: #ffffff !important;
+    z-index: 1010 !important;
+    background: #f9fafb !important;
     height: 100vh;
     overflow-y: auto;
-    /* Allow sidebar to scroll if menu is long */
+    border-right: 1px solid var(--border-color);
 }
 
 .sidebar-logo {
@@ -90,12 +91,14 @@
     flex-direction: column;
 }
 
-/* Layout container for Header + Content */
 .site-layout {
+    flex: 1;
     height: 100vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    position: relative;
+    background: var(--bg-main);
 }
 
 /* Header */
@@ -201,9 +204,8 @@
     color: var(--text-main);
 }
 
-/* Content Area */
 .dashboard-content {
-    background: #ffffff;
+    background: transparent;
     padding: 32px;
     min-height: calc(100vh - 80px);
     overflow-y: auto;

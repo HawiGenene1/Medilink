@@ -303,16 +303,12 @@ const Profile = () => {
         <Col xs={24} md={8}>
           <Card style={{ textAlign: 'center', borderRadius: '16px' }}>
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-<<<<<<< HEAD
-              <Avatar size={100} icon={<UserOutlined />} src={user?.avatar ? `http://localhost:5001${user.avatar}` : null} style={{ backgroundColor: '#4361ee' }} />
-=======
               <Avatar
                 size={100}
                 icon={<UserOutlined />}
-                src={user?.avatar ? `http://localhost:5000${user.avatar}` : null}
+                src={user?.avatar ? `http://localhost:5001${user.avatar}` : null}
                 style={{ backgroundColor: '#4361ee', border: '4px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
               <Button
                 shape="circle"
                 icon={<CameraOutlined />}

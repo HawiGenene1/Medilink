@@ -38,6 +38,10 @@ const register = async (req, res) => {
     // Role safety: only allow customer and delivery to be requested via public registration
     const targetRole = (role === 'delivery' || role === 'customer') ? role : 'customer';
 
+    // Status: Customers are active immediately (their password is proof of email access),
+    // others (delivery) are pending manual approval.
+    const initialStatus = (targetRole === 'customer') ? 'active' : 'pending';
+
     // Generate a secure password
     const password = generatePassword(12);
 
@@ -45,14 +49,14 @@ const register = async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
-    // Create new user (Strictly Customer, Pending status)
+    // Create new user
     user = new User({
       firstName,
       lastName,
       email,
       phone,
       role: targetRole,
-      status: 'pending',
+      status: initialStatus,
       password,
       verificationToken,
       verificationTokenExpires,
@@ -63,29 +67,13 @@ const register = async (req, res) => {
     await user.save();
 
     // Non-blocking welcome email delivery with verification token
-    sendWelcomeEmail(email, `${firstName} ${lastName}`, password, verificationToken)
-      .then(() => logger.info(`Welcome email sent to ${email}`))
+    sendWelcomeEmail(email, `${firstName} ${lastName}`, password, verificationToken, targetRole)
+      .then(() => logger.info(`Welcome email sent to ${email} as ${targetRole}`))
       .catch((emailError) => logger.error('Failed to send welcome email:', emailError));
-
-    const token = generateToken({
-      userId: user._id,
-      email: user.email,
-      role: user.role,
-    });
 
     return res.status(201).json({
       success: true,
-      message: 'User registered successfully. Please check your email for your generated password.',
-      token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        status: user.status
-      },
+      message: 'Registration successful! Please check your email for your generated password and activation link.',
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -277,7 +265,7 @@ const registerPharmacy = async (req, res) => {
     await user.save();
 
     // Non-blocking welcome email delivery with verification token
-    sendWelcomeEmail(email, `${firstName} ${lastName}`, password, verificationToken)
+    sendWelcomeEmail(email, `${firstName} ${lastName}`, password, verificationToken, 'pharmacy_admin')
       .then(() => logger.info(`Pharmacy welcome email sent to ${email}`))
       .catch((emailError) => logger.error('Failed to send pharmacy welcome email:', emailError));
 

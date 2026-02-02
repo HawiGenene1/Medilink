@@ -1,8 +1,5 @@
-<<<<<<< HEAD
-const TempPharmacy = require('../models/TempPharmacy'); // Added for registration handling
-=======
+const TempPharmacy = require('../models/TempPharmacy');
 const User = require('../models/User');
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 const Pharmacy = require('../models/Pharmacy');
 const PendingPharmacy = require('../models/PendingPharmacy');
 const DeliveryProfile = require('../models/DeliveryProfile');
@@ -17,15 +14,6 @@ const { sendEmail } = require('../utils/emailService');
 // @access  Private/Admin
 const getPendingRegistrations = async (req, res) => {
   try {
-<<<<<<< HEAD
-    const { status = 'pending', page = 1, limit = 10 } = req.query;
-    // CRITICAL: Changed from Pharmacy to TempPharmacy to match registration flow
-    const registrations = await TempPharmacy.find({ status })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const count = await TempPharmacy.countDocuments({ status });
-=======
     const { role, page = 1, limit = 20 } = req.query;
 
     const query = { status: 'pending' };
@@ -42,23 +30,23 @@ const getPendingRegistrations = async (req, res) => {
     const fs = require('fs');
     const logMsg = `[${new Date().toISOString()}] Query: ${JSON.stringify(query)} | Found: ${pendingUsers.length}\n`;
     try {
-      fs.appendFileSync('debug-logs.txt', logMsg);
-      pendingUsers.forEach(u => {
-        fs.appendFileSync('debug-logs.txt', ` - ${u.firstName} ${u.lastName} (${u.email}) [${u.role}]\n`);
-      });
+      if (fs.existsSync('debug-logs.txt')) {
+        fs.appendFileSync('debug-logs.txt', logMsg);
+        pendingUsers.forEach(u => {
+          fs.appendFileSync('debug-logs.txt', ` - ${u.firstName} ${u.lastName} (${u.email}) [${u.role}]\n`);
+        });
+      }
     } catch (e) { console.error(e); }
 
     console.log('[Admin] Fetching pending. Query:', query);
     console.log('[Admin] Found users:', pendingUsers.length);
-    pendingUsers.forEach(u => console.log(` - ${u.firstName} ${u.lastName} (${u.email}) [${u.role}]`));
 
     const data = await Promise.all(pendingUsers.map(async (user) => {
       let details = null;
       if (user.role === 'pharmacy_admin') {
-        details = await PendingPharmacy.findOne({ userId: user._id });
+        details = await PendingPharmacy.findOne({ userId: user._id }) || await TempPharmacy.findOne({ email: user.email });
       } else if (user.role === 'delivery') {
         details = await DeliveryProfile.findOne({ userId: user._id });
-        // Show all pending delivery users, even if they haven't finished onboarding
         if (!details) {
           details = { onboardingStatus: 'not_started' };
         }
@@ -69,11 +57,8 @@ const getPendingRegistrations = async (req, res) => {
       };
     }));
 
-    // Filter out nulls from skipped delivery users
     const filteredData = data.filter(item => item !== null);
-
     const count = await User.countDocuments(query);
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 
     res.json({
       success: true,
@@ -93,13 +78,10 @@ const getPendingRegistrations = async (req, res) => {
 // @access  Private/Admin
 const getRegistrationDetails = async (req, res) => {
   try {
-<<<<<<< HEAD
-    // CRITICAL: Changed from Pharmacy to TempPharmacy
-    const registration = await TempPharmacy.findById(req.params.id);
-=======
-    const registration = await PendingPharmacy.findById(req.params.id);
-
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
+    let registration = await PendingPharmacy.findById(req.params.id);
+    if (!registration) {
+      registration = await TempPharmacy.findById(req.params.id);
+    }
     if (!registration) {
       return res.status(404).json({ success: false, message: 'Registration not found' });
     }
@@ -116,21 +98,20 @@ const getRegistrationDetails = async (req, res) => {
 // @access  Private/Admin
 const approveRegistration = async (req, res) => {
   try {
-<<<<<<< HEAD
-    // Stage 1: Update TempPharmacy status
-    const registration = await TempPharmacy.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: 'approved',
-        approvalStatus: 'APPROVED', // Keep in sync
-        isActive: true
-      },
-      { new: true, runValidators: true }
-    );
-=======
     const { reason } = req.body;
+
+    // Check if it's a TempPharmacy approval first if ID matches
+    const tempReg = await TempPharmacy.findById(req.params.id);
+    if (tempReg) {
+      tempReg.status = 'approved';
+      tempReg.approvalStatus = 'APPROVED';
+      tempReg.isActive = true;
+      await tempReg.save();
+      // If there's no user yet for this TempPharmacy, we might need more logic, 
+      // but usually the user is created during registration.
+    }
+
     const user = await User.findById(req.params.id);
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -307,10 +288,6 @@ const getAllSubscriptions = async (req, res) => {
     const { status, page = 1, limit = 20 } = req.query;
 
     const query = {};
-<<<<<<< HEAD
-
-=======
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
     if (status) {
       query.status = status;
     }
@@ -404,23 +381,8 @@ const deactivateSubscription = async (req, res) => {
 // @access  Private/Admin
 const renewSubscription = async (req, res) => {
   try {
-<<<<<<< HEAD
-    const { durationMonths } = req.body;
-
-    if (!durationMonths || isNaN(durationMonths) || durationMonths < 1) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a valid duration in months (minimum 1 month)'
-      });
-    }
-
-    const subscription = await Subscription.findById(req.params.id);
-
-    if (!subscription) {
-      return res.status(404).json({ success: false, message: 'Subscription not found' });
-    }
-=======
-    const { duration, plan } = req.body;
+    const { duration, plan, durationMonths } = req.body;
+    const finalDuration = duration || durationMonths || 12;
 
     const pharmacy = await Pharmacy.findById(req.params.id);
 
@@ -429,10 +391,9 @@ const renewSubscription = async (req, res) => {
     }
 
     // Calculate new expiry date
-    const currentExpiry = pharmacy.subscription.expiresAt || new Date();
+    const currentExpiry = pharmacy.subscription?.expiresAt || new Date();
     const newExpiry = new Date(currentExpiry);
-    newExpiry.setMonth(newExpiry.getMonth() + (duration || 12));
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
+    newExpiry.setMonth(newExpiry.getMonth() + finalDuration);
 
     pharmacy.subscription = {
       ...pharmacy.subscription,
@@ -443,20 +404,7 @@ const renewSubscription = async (req, res) => {
       renewedBy: req.user.userId
     };
 
-<<<<<<< HEAD
-    const updatedSubscription = await Subscription.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: 'active',
-        startDate: currentDate,
-        endDate: newEndDate,
-        isActive: true
-      },
-      { new: true, runValidators: true }
-    ).populate('pharmacy', 'pharmacyName email');
-=======
     await pharmacy.save();
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
 
     res.json({
       success: true,

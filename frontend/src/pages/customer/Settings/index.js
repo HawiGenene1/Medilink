@@ -60,7 +60,6 @@ const Settings = () => {
         }
     };
 
-<<<<<<< HEAD
     const ProfileSettings = () => (
         <div className="settings-section fade-in">
             <div className="avatar-upload-wrapper">
@@ -70,7 +69,11 @@ const Settings = () => {
                 <div className="avatar-info">
                     <Title level={4} style={{ margin: 0 }}>{user?.firstName} {user?.lastName}</Title>
                     <Text type="secondary">Customer</Text>
-=======
+                </div>
+            </div>
+        </div>
+    );
+
     const handleDeleteFinal = async () => {
         setIsDeleting(true);
         try {
@@ -116,7 +119,6 @@ const Settings = () => {
                     <Paragraph>
                         In a production environment, this would navigate to a dedicated page or open a detailed document.
                     </Paragraph>
->>>>>>> a66ca820b925672e200b3182594ec5642d8f8df1
                 </div>
             ),
             onOk() { },

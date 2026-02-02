@@ -45,13 +45,8 @@ const Register = () => {
       const result = await register(userData);
 
       if (result.success) {
-        if (activeRole === 'customer') {
-          message.success('Registration successful! Welcome to MediLink.');
-          navigate('/customer/home');
-        } else {
-          message.success('Registration submitted! Your account is pending admin approval.');
-          navigate('/auth/login');
-        }
+        message.success(result.message || 'Registration successful! Please check your email for your password and activation link.');
+        navigate('/auth/login');
       } else {
         if (result.errors && Array.isArray(result.errors)) {
           result.errors.forEach(err => {
