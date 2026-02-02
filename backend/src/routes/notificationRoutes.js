@@ -15,25 +15,25 @@ router.use(protect);
 // Routes accessible by pharmacy owner and staff
 router.get(
     '/',
-    authorize('PHARMACY_OWNER', 'staff', 'pharmacy_staff', 'pharmacist'),
+    authorize('pharmacy_owner', 'staff', 'pharmacy_staff', 'pharmacist', 'technician', 'assistant', 'cashier'),
     getPharmacyNotifications
 );
 
 router.put(
     '/:id/read',
-    authorize('PHARMACY_OWNER', 'staff', 'pharmacy_staff', 'pharmacist'),
+    authorize('pharmacy_owner', 'staff', 'pharmacy_staff', 'pharmacist', 'technician', 'assistant', 'cashier'),
     markAsRead
 );
 
 router.put(
     '/read-all',
-    authorize('PHARMACY_OWNER', 'staff', 'pharmacy_staff', 'pharmacist'),
+    authorize('pharmacy_owner', 'staff', 'pharmacy_staff', 'pharmacist', 'technician', 'assistant', 'cashier'),
     markAllAsRead
 );
 
 router.delete(
     '/:id',
-    authorize('PHARMACY_OWNER', 'staff', 'pharmacy_staff', 'pharmacist'),
+    authorize('pharmacy_owner', 'staff', 'pharmacy_staff', 'pharmacist', 'technician', 'assistant', 'cashier'),
     deleteNotification
 );
 

@@ -87,7 +87,7 @@ const getProfile = asyncHandler(async (req, res, next) => {
             fullName: owner.fullName,
             email: owner.email,
             phone: owner.phone,
-            role: 'PHARMACY_OWNER',
+            role: 'pharmacy_owner',
             permissions: owner.permissions,
             operationalPermissions: owner.operationalPermissions,
             subscriptionPlan: owner.subscriptionPlan,
@@ -145,7 +145,7 @@ const updateProfile = asyncHandler(async (req, res, next) => {
             email: owner.email,
             phone: owner.phone,
             phone: owner.phone,
-            role: 'PHARMACY_OWNER',
+            role: 'pharmacy_owner',
             operationalPermissions: owner.operationalPermissions
         }
     });

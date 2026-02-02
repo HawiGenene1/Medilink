@@ -10,7 +10,7 @@ const { checkSubscription } = require('../middleware/subscriptionMiddleware');
 
 // All order processing routes require authentication and staff/owner role
 router.use(authenticate);
-router.use(authorize('staff', 'PHARMACY_OWNER', 'admin', 'pharmacist', 'cashier'));
+router.use(authorize('staff', 'pharmacy_owner', 'admin', 'pharmacist', 'technician', 'assistant', 'cashier'));
 router.use(checkSubscription);
 
 // Routes

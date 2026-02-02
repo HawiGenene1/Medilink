@@ -1,0 +1,70 @@
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ??? audit secrets and track compliance: https://dotenvx.com/ops
+node : C:\Users\pc\Downl
+oads\Medilink\backend\no
+de_modules\router\index.
+js:392
+At line:1 char:1
++ node src/server.js 
+2>&1 | Out-File 
+-FilePath full_crash_log
+_with_stde ...
++ 
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo      
+        : NotSpecified  
+  : (C:\Users\pc\Dow.   
+ ..er\index.js:392:S    
+tring) [], RemoteEx    
+ception
+    + FullyQualifiedErr 
+   orId : NativeComman  
+  dError
+ 
+      throw new 
+TypeError('argument 
+handler must be a 
+function')
+      ^
+
+TypeError: argument 
+handler must be a 
+function
+    at Function.use (C:\
+Users\pc\Downloads\Medil
+ink\backend\node_modules
+\router\index.js:392:13)
+    at 
+Function.<anonymous> (C:
+\Users\pc\Downloads\Medi
+link\backend\node_module
+s\express\lib\applicatio
+n.js:222:21)
+    at Array.forEach 
+(<anonymous>)
+    at Function.use (C:\
+Users\pc\Downloads\Medil
+ink\backend\node_modules
+\express\lib\application
+.js:219:7)
+    at 
+Object.<anonymous> (C:\U
+sers\pc\Downloads\Medili
+nk\backend\src\server.js
+:104:5)
+    at Module._compile (
+node:internal/modules/cj
+s/loader:1730:14)
+    at Object..js (node:
+internal/modules/cjs/loa
+der:1895:10)
+    at Module.load (node
+:internal/modules/cjs/lo
+ader:1465:32)
+    at Function._load (n
+ode:internal/modules/cjs
+/loader:1282:12)
+    at TracingChannel.tr
+aceSync (node:diagnostic
+s_channel:322:14)
+
+Node.js v22.17.0

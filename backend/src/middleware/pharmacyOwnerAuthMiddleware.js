@@ -37,7 +37,7 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
                     const payloadJson = Buffer.from(parts[1], 'base64').toString();
                     const decoded = JSON.parse(payloadJson);
 
-                    if (decoded.role === 'PHARMACY_OWNER') {
+                    if (decoded.role?.toLowerCase() === 'pharmacy_owner' || decoded.role?.toLowerCase() === 'pharmacy_admin') {
                         // 1. Ensure Mock Pharmacy exists first (referenced by owner)
                         let pharmacy = await Pharmacy.findById(STABLE_MOCK_PHARMACY_ID);
                         if (!pharmacy) {
@@ -74,7 +74,7 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
                                 _id: new mongoose.Types.ObjectId(STABLE_MOCK_OWNER_ID),
                                 fullName: 'Demo Owner',
                                 email: decoded.email,
-                                role: 'PHARMACY_OWNER',
+                                role: 'pharmacy_owner',
                                 phone: '0900000000',
                                 password: 'password123',
                                 permissions: ['dashboard', 'inventory', 'orders', 'staff'],
@@ -152,7 +152,8 @@ module.exports = {
 const checkOperationalPermission = (permissionKey) => {
     return (req, res, next) => {
         // Staff granular permission check
-        if (req.user && ['staff', 'cashier', 'pharmacist'].includes(req.user.role)) {
+        const role = req.user?.role?.toLowerCase();
+        if (req.user && ['staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff'].includes(role)) {
             const perms = req.user.permissions;
             if (!perms) return next(new ErrorResponse('Staff permissions not found', 403));
 
@@ -174,7 +175,8 @@ const checkOperationalPermission = (permissionKey) => {
         }
 
         // If user is neither owner nor staff (should not happen if authorized correctly)
-        if (req.user && !req.user.isOwner && !req.owner && !['staff', 'cashier', 'pharmacist'].includes(req.user?.role)) {
+        const checkRole = req.user?.role?.toLowerCase();
+        if (req.user && !req.user.isOwner && !req.owner && !['staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff'].includes(checkRole)) {
             return next();
         }
 

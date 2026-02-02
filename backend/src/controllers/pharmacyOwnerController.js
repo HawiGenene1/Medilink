@@ -30,7 +30,7 @@ const register = asyncHandler(async (req, res, next) => {
     const token = generateToken({
         ownerId: owner._id,
         email: owner.email,
-        role: 'PHARMACY_OWNER'
+        role: 'pharmacy_owner'
     });
 
     res.status(201).json({
@@ -42,7 +42,7 @@ const register = asyncHandler(async (req, res, next) => {
             fullName: owner.fullName,
             email: owner.email,
             phone: owner.phone,
-            role: 'PHARMACY_OWNER',
+            role: 'pharmacy_owner',
             permissions: owner.permissions,
             subscriptionPlan: owner.subscriptionPlan,
             subscriptionStatus: owner.subscriptionStatus
@@ -78,7 +78,7 @@ const login = asyncHandler(async (req, res, next) => {
     const token = generateToken({
         ownerId: owner._id,
         email: owner.email,
-        role: 'PHARMACY_OWNER'
+        role: 'pharmacy_owner'
     });
 
     res.json({
@@ -89,7 +89,7 @@ const login = asyncHandler(async (req, res, next) => {
             id: owner._id,
             fullName: owner.fullName,
             email: owner.email,
-            role: 'PHARMACY_OWNER',
+            role: 'pharmacy_owner',
             permissions: owner.permissions,
             subscriptionPlan: owner.subscriptionPlan,
             subscriptionStatus: owner.subscriptionStatus,

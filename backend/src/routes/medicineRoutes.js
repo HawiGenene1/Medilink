@@ -14,7 +14,7 @@ router.get('/', medicineController.getMedicines);
 router.get(
     '/alerts',
     authenticate,
-    authorize('admin', 'PHARMACY_OWNER', 'staff'),
+    authorize('admin', 'pharmacy_owner', 'staff', 'pharmacist', 'technician', 'assistant', 'cashier'),
     medicineController.getInventoryAlerts
 );
 
@@ -24,7 +24,7 @@ router.get('/:id', medicineController.getMedicineById);
 router.post(
     '/',
     authenticate,
-    authorize('admin', 'PHARMACY_OWNER', 'staff'),
+    authorize('admin', 'pharmacy_owner', 'staff', 'pharmacist', 'technician', 'assistant', 'cashier'),
     checkSubscription,
     checkOperationalPermission('manageInventory'),
     medicineController.addMedicine
@@ -33,7 +33,7 @@ router.post(
 router.put(
     '/:id',
     authenticate,
-    authorize('admin', 'PHARMACY_OWNER', 'staff'),
+    authorize('admin', 'pharmacy_owner', 'staff', 'pharmacist', 'technician', 'assistant', 'cashier'),
     checkSubscription,
     checkOperationalPermission('manageInventory'),
     medicineController.updateMedicine
@@ -42,7 +42,7 @@ router.put(
 router.delete(
     '/:id',
     authenticate,
-    authorize('admin', 'PHARMACY_OWNER', 'staff'),
+    authorize('admin', 'pharmacy_owner', 'staff', 'pharmacist', 'technician', 'assistant', 'cashier'),
     checkSubscription,
     checkOperationalPermission('manageInventory'),
     medicineController.deleteMedicine
@@ -51,7 +51,7 @@ router.delete(
 router.patch(
     '/:id/stock',
     authenticate,
-    authorize('admin', 'PHARMACY_OWNER', 'staff'), // Stock updates
+    authorize('admin', 'pharmacy_owner', 'staff', 'pharmacist', 'technician', 'assistant', 'cashier'), // Stock updates
     checkSubscription,
     checkOperationalPermission('manageInventory'),
     medicineController.updateStock

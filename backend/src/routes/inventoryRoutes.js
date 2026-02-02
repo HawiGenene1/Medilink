@@ -15,7 +15,7 @@ const { checkSubscription } = require('../middleware/subscriptionMiddleware');
 router.use(authenticate);
 
 // Restrict to Staff, Owner, or Admin
-router.use(authorize('staff', 'PHARMACY_OWNER', 'admin', 'pharmacist', 'cashier'));
+router.use(authorize('staff', 'pharmacy_owner', 'admin', 'pharmacist', 'technician', 'assistant', 'cashier'));
 
 // Inventory Routes
 router.route('/')

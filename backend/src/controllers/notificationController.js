@@ -17,9 +17,11 @@ exports.getPharmacyNotifications = asyncHandler(async (req, res, next) => {
 
     // Determine roleTarget based on user role
     let roleTarget;
-    if (role === 'PHARMACY_OWNER' || role === 'pharmacy_owner') {
+    const normalizedRole = role?.toLowerCase();
+
+    if (normalizedRole === 'pharmacy_owner' || normalizedRole === 'pharmacy_admin') {
         roleTarget = 'OWNER';
-    } else if (['pharmacy_staff', 'staff', 'pharmacist', 'cashier'].includes(role)) {
+    } else if (['pharmacy_staff', 'staff', 'pharmacist', 'cashier', 'technician', 'assistant'].includes(normalizedRole)) {
         roleTarget = 'STAFF';
     } else {
         return next(new ErrorResponse(`Invalid role for notifications: ${role}`, 403));
@@ -108,9 +110,11 @@ exports.markAllAsRead = asyncHandler(async (req, res, next) => {
 
     // Determine roleTarget
     let roleTarget;
-    if (role === 'PHARMACY_OWNER' || role === 'pharmacy_owner') {
+    const normalizedRole = role?.toLowerCase();
+
+    if (normalizedRole === 'pharmacy_owner' || normalizedRole === 'pharmacy_admin') {
         roleTarget = 'OWNER';
-    } else if (['pharmacy_staff', 'staff', 'pharmacist', 'cashier'].includes(role)) {
+    } else if (['pharmacy_staff', 'staff', 'pharmacist', 'cashier', 'technician', 'assistant'].includes(normalizedRole)) {
         roleTarget = 'STAFF';
     } else {
         return next(new ErrorResponse(`Invalid role for notifications: ${role}`, 403));

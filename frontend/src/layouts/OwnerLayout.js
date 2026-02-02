@@ -43,11 +43,23 @@ const OwnerLayout = () => {
 
         // 3. Owner visibility logic (Strict Permission-Based Access / Oversight Mode)
         if (isOwner) {
-            // HIDE Inventory if the owner has explicitly disabled their own inventory view (Oversight Mode)
-            const isOversightMode = user?.operationalPermissions?.prepareOrders === true && user?.operationalPermissions?.manageInventory === false;
-            if (isOversightMode && (item.key === '/owner/inventory')) {
-                return false;
+            const ops = user?.operationalPermissions || {};
+
+            // Inventory Management Mode: manageInventory = true
+            // - Show both Inventory and Order Processing
+
+            // Order Oversight Mode: prepareOrders = true, manageInventory = false
+            // - Hide both Inventory and Order Processing
+
+            const isOrderOversightMode = ops.prepareOrders === true && ops.manageInventory === false;
+
+            if (isOrderOversightMode) {
+                // Hide both Inventory and Orders in Order Oversight mode
+                if (item.key === '/owner/inventory' || item.key === '/owner/orders') {
+                    return false;
+                }
             }
+
             return true;
         }
 

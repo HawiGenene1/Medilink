@@ -1,0 +1,8 @@
+Setting up route: /api/auth
+Setting up route: /api/users
+Setting up route: /api/medicines
+Setting up route: /api/prescriptions
+Setting up route: /api/orders
+Setting up route: /api/admin
+Setting up route: /api/pharmacy
+[32minfo[39m: Email server is ready to take our messages {"service":"medilink-backend","timestamp":"2026-01-30 23:31:22"}

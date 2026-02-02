@@ -58,8 +58,8 @@ const pharmacyOwnerSchema = new mongoose.Schema({
         default: ['dashboard', 'inventory', 'orders', 'staff']
     },
     operationalPermissions: {
-        manageInventory: { type: Boolean, default: false },
-        prepareOrders: { type: Boolean, default: false }
+        manageInventory: { type: Boolean, default: true },
+        prepareOrders: { type: Boolean, default: true }
     },
     isActive: {
         type: Boolean,

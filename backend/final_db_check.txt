@@ -1,0 +1,6 @@
+[dotenv@17.2.3] injecting env (9) from .env -- tip: ??? audit secrets and track compliance: https://dotenvx.com/ops
+Connecting to MongoDB: mongodb://localhost:27017/medilink
+Server running on port 5000
+Environment: development
+MongoDB Connected: localhost
+[32minfo[39m: Email server is ready to take our messages {"service":"medilink-backend","timestamp":"2026-01-30 23:38:10"}

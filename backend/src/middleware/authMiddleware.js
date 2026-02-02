@@ -32,7 +32,8 @@ const protect = async (req, res, next) => {
         const user = await User.findOne({ email: decoded.email });
 
         // Force all pharmacy-related roles to the same stable pharmacy ID in dev mode
-        const isPharmacyRole = ['pharmacy_owner', 'staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_admin'].includes(decoded.role);
+        const role = decoded.role?.toLowerCase();
+        const isPharmacyRole = ['pharmacy_owner', 'staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff', 'pharmacy_admin'].includes(role);
         const forcedPharmacyId = isPharmacyRole ? new mongoose.Types.ObjectId(STABLE_MOCK_PHARMACY_ID) : (user?.pharmacyId || null);
 
         req.user = {
@@ -44,7 +45,7 @@ const protect = async (req, res, next) => {
           isMock: true
         };
 
-        if (decoded.role === 'pharmacy_owner') {
+        if (role === 'pharmacy_owner' || role === 'pharmacy_admin') {
           req.owner = {
             _id: req.user._id,
             pharmacyId: req.user.pharmacyId,
@@ -54,7 +55,7 @@ const protect = async (req, res, next) => {
         }
 
         // If staff in mock mode, also try to fetch real details for permissions sync
-        if (['staff', 'cashier', 'pharmacist', 'technician', 'assistant'].includes(decoded.role) && user) {
+        if (['staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff'].includes(role) && user) {
           const staffDetails = await PharmacyStaff.findOne({ user: user._id });
           if (staffDetails) {
             req.user.permissions = staffDetails.permissions;
@@ -77,8 +78,9 @@ const protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Check for Pharmacy Owner (handles both 'PHARMACY_OWNER' and legacy 'pharmacy_admin')
-      if (decoded.role === 'pharmacy_owner' || decoded.role === 'pharmacy_admin') {
+      // Check for Pharmacy Owner (handles both casing and legacy 'pharmacy_admin')
+      const decodedRole = decoded.role?.toLowerCase();
+      if (decodedRole === 'pharmacy_owner' || decodedRole === 'pharmacy_admin') {
         const owner = await PharmacyOwner.findById(decoded.ownerId || decoded.id);
         if (!owner) {
           // Try to find in User model if not in PharmacyOwner (if migrated)
@@ -137,11 +139,13 @@ const protect = async (req, res, next) => {
         userId: user._id,
         email: user.email,
         role: user.role,
-        pharmacyId: user.pharmacyId
+        pharmacyId: user.pharmacyId,
+        isOwner: user.role.toLowerCase() === 'pharmacy_owner'
       };
 
-      // If user is staff (handles both 'staff' and 'pharmacy_staff'), attach detailed permissions
-      if (['staff', 'pharmacy_staff', 'cashier', 'pharmacist', 'technician', 'assistant'].includes(user.role)) {
+      // If user is staff, attach detailed permissions
+      const userRole = user.role?.toLowerCase();
+      if (['staff', 'pharmacy_staff', 'cashier', 'pharmacist', 'technician', 'assistant'].includes(userRole)) {
         const staffDetails = await PharmacyStaff.findOne({ user: user._id });
         if (staffDetails) {
           req.user.permissions = staffDetails.permissions;
@@ -156,7 +160,10 @@ const protect = async (req, res, next) => {
 
       next();
     } catch (error) {
-      console.error('Token verification failed:', error);
+      console.error('[Auth] Token verification failed:', error.message);
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({ success: false, message: 'Invalid token format' });
+      }
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired token.'
