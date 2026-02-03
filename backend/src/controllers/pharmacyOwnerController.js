@@ -67,7 +67,57 @@ const register = asyncHandler(async (req, res, next) => {
 const login = asyncHandler(async (req, res, next) => {
     const { email, password } = req.body;
 
-    // Find owner and include password
+    // Try finding in User model first (New Flow)
+    const user = await require('../models/User').findOne({ email }).select('+password');
+
+    if (user) {
+        // Check allowed roles
+        const allowedRoles = ['pharmacy_admin', 'pharmacy_owner', 'system_admin'];
+        if (!allowedRoles.includes(user.role)) {
+            return next(new ErrorResponse('Access denied. Not a pharmacy admin.', 403));
+        }
+
+        // Check password
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return next(new ErrorResponse('Invalid credentials', 401));
+        }
+
+        if (!user.isActive) {
+            return next(new ErrorResponse('Account is deactivated. Please contact support.', 403));
+        }
+
+        // Handle pending status
+        if (user.status !== 'active') {
+            return next(new ErrorResponse(`Account is ${user.status}. Please wait for approval.`, 403));
+        }
+
+        const token = generateToken({
+            userId: user._id,
+            role: user.role,
+            email: user.email
+        });
+
+        // Generate response object compatible with frontend expectations
+        res.json({
+            success: true,
+            message: 'Login successful',
+            token,
+            owner: {
+                id: user._id,
+                fullName: `${user.firstName} ${user.lastName}`,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                permissions: user.permissions,
+                // Subscription info usually on Pharmacy, might be undefined here but dashboard fetches it
+                pharmacyId: user.pharmacyId
+            }
+        });
+        return;
+    }
+
+    // Fallback: Try PharmacyOwner (Legacy)
     const owner = await PharmacyOwner.findOne({ email }).select('+password');
     if (!owner) {
         return next(new ErrorResponse('Invalid credentials', 401));

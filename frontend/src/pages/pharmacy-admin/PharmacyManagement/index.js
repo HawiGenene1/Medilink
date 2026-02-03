@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Button, Space, Card, Typography, Modal, Descriptions, Input, Form, message, List, Spin, Alert, Row, Col, Statistic, Select } from 'antd';
 import { SearchOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, FileTextOutlined } from '@ant-design/icons';
 import pharmacyAdminService from '../../../services/pharmacyAdminService';
@@ -19,12 +19,9 @@ const PharmacyRegistration = () => {
   const [selectedPlan, setSelectedPlan] = useState('basic');
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    fetchRegistrations();
-    fetchStats();
-  }, [pagination.current, searchText]);
+  const { current: currentPage, pageSize } = pagination;
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await pharmacyAdminService.getDashboardStats();
       // Map backend response to our needs
@@ -38,15 +35,15 @@ const PharmacyRegistration = () => {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, []);
 
-  const fetchRegistrations = async () => {
+  const fetchRegistrations = useCallback(async () => {
     try {
       setLoading(true);
       const response = await pharmacyAdminService.getRegistrations({
         status: 'pending',
-        page: pagination.current,
-        limit: pagination.pageSize,
+        page: currentPage,
+        limit: pageSize,
         search: searchText
       });
 
@@ -61,7 +58,12 @@ const PharmacyRegistration = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, searchText]);
+
+  useEffect(() => {
+    fetchRegistrations();
+    fetchStats();
+  }, [fetchRegistrations, fetchStats]);
 
   const showDetails = async (record) => {
     try {

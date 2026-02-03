@@ -14,6 +14,7 @@ const STABLE_MOCK_OWNER_ID = '507f191e810c19729de160e1';
 /**
  * Middleware to protect pharmacy owner routes
  */
+// ... imports
 const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
     let token;
 
@@ -35,15 +36,28 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
             return next(new ErrorResponse('Invalid token', 401));
         }
 
-        const ownerId = decoded.ownerId || decoded.id;
-        const owner = await PharmacyOwner.findById(ownerId);
+        const id = decoded.userId || decoded.ownerId || decoded.id; // Support both userId and ownerId
+
+        // Try to find as PharmacyOwner (Legacy)
+        let owner = await PharmacyOwner.findById(id);
+
+        // If not found, try as User (New Flow)
+        if (!owner) {
+            const user = await User.findById(id);
+            if (user && ['pharmacy_owner', 'pharmacy_admin', 'system_admin'].includes(user.role)) {
+                // Normalize User to look like Owner for backward compatibility where possible
+                // Note: Controllers that re-fetch using PharmacyOwner model will need updates
+                user.isUserParams = true; // Flag for controllers
+                owner = user;
+            }
+        }
 
         if (!owner) {
-            console.error(`[Auth] Owner not found for ID: ${ownerId}`);
+            console.error(`[Auth] Owner/User not found for ID: ${id}`);
             return next(new ErrorResponse('Owner not found', 401));
         }
 
-        if (!owner.isActive) {
+        if (owner.isActive === false) { // Check specific false, assuming true if undefined or true
             return next(new ErrorResponse('Account is deactivated', 403));
         }
 
