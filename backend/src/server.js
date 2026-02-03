@@ -38,6 +38,10 @@ const { authenticate, authorize } = require('./middleware/authMiddleware');
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
+// Delivery Routes
+app.use('/api/delivery', require('./routes/deliveryRoutes'));
+app.use('/api/delivery/onboarding', require('./routes/deliveryOnboardingRoutes'));
+
 // Pharmacy Routes (for pharmacy owners/staff)
 app.use('/api/pharmacy', pharmacyRoutes);
 

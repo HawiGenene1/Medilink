@@ -324,7 +324,13 @@ const verifyEmail = async (req, res) => {
     }
 
     user.isEmailVerified = true;
-    user.status = 'active';
+
+    // Only set status to active if the role doesn't require manual approval
+    const manualApprovalRoles = ['delivery', 'pharmacy_admin'];
+    if (!manualApprovalRoles.includes(user.role)) {
+      user.status = 'active';
+    }
+
     user.verificationToken = undefined;
     user.verificationTokenExpires = undefined;
     await user.save();

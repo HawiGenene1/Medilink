@@ -9,6 +9,7 @@ const Category = require('./models/Category');
 const Medicine = require('./models/Medicine');
 const Order = require('./models/Order');
 const Role = require('./models/Role');
+const DeliveryProfile = require('./models/DeliveryProfile');
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/medilink';
 
@@ -19,15 +20,10 @@ const seedData = async () => {
     await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB\n');
 
-    // Clear existing data
-    console.log('🧹 Clearing existing data...');
-    await User.deleteMany({});
-    await Pharmacy.deleteMany({});
-    await Category.deleteMany({});
-    await Medicine.deleteMany({});
-    await Order.deleteMany({});
-    await Role.deleteMany({});
-    console.log('✅ Existing data cleared\n');
+    // Clear existing data and indexes
+    console.log('🧹 Dropping database to ensure clean state...');
+    await mongoose.connection.db.dropDatabase();
+    console.log('✅ Database dropped\n');
 
     // Create Roles
     console.log('🏷️ Creating roles...');
@@ -39,91 +35,10 @@ const seedData = async () => {
     const cashierRole = await Role.create({ name: 'cashier', permissions: ['view_orders', 'verify_payments', 'process_refunds', 'generate_invoices'] });
     console.log('✅ Roles created\n');
 
-    // Create Users
-    console.log('👥 Creating users...');
-    
-    const admin = await User.create({
-      firstName: 'Admin',
-      lastName: 'User',
-      email: 'admin@medilink.com',
-      password: 'Admin123', // Will be hashed by pre-save hook
-      username: 'admin',
-      phone: '+251911111111',
-      role: adminRole._id,
-      isActive: true,
-      isEmailVerified: true
-    });
-
-    // Create pharmacy owner as customer first (will update role after pharmacy is created)
-    const pharmacyOwner = await User.create({
-      firstName: 'John',
-      lastName: 'Pharmacy',
-      email: 'pharmacy@medilink.com',
-      password: 'Test123', // Will be hashed by pre-save hook
-      username: 'pharmacy_owner',
-      phone: '+251922222222',
-      role: customerRole._id, // Temporary role, will update after pharmacy is created
-      isActive: true,
-      address: {
-        street: '123 Main St',
-        city: 'Addis Ababa',
-        state: 'Addis Ababa',
-        zipCode: '1000',
-        country: 'Ethiopia'
-      }
-    });
-
-    const customer = await User.create({
-      firstName: 'Jane',
-      lastName: 'Customer',
-      email: 'customer@medilink.com',
-      password: 'Test123', // Will be hashed by pre-save hook
-      username: 'customer',
-      phone: '+251933333333',
-      role: customerRole._id,
-      isActive: true,
-      address: {
-        street: '456 Customer Ave',
-        city: 'Addis Ababa',
-        state: 'Addis Ababa',
-        zipCode: '1001',
-        country: 'Ethiopia'
-      }
-    });
-
-    const deliveryPerson = await User.create({
-      firstName: 'Mike',
-      lastName: 'Delivery',
-      email: 'delivery@medilink.com',
-      password: 'Test123', // Will be hashed by pre-save hook
-      username: 'delivery',
-      phone: '+251944444444',
-      role: deliveryRole._id,
-      isActive: true,
-      vehicleInfo: {
-        type: 'motorcycle',
-        licensePlate: 'AA-123-456'
-      }
-    });
-
-    // Create cashier user
-    const cashier = await User.create({
-      firstName: 'Cashier',
-      lastName: 'User',
-      email: 'cashier@medilink.com',
-      password: 'Cashier123', // Will be hashed by pre-save hook
-      username: 'cashier',
-      role: cashierRole._id,
-      isActive: true,
-      isEmailVerified: true
-    });
-
-    console.log(`✅ Created ${5} users including cashier\n`);
-
-    // Create Pharmacy
     console.log('🏥 Creating pharmacies...');
     const pharmacy1 = await Pharmacy.create({
       name: 'MediCare Pharmacy',
+      ownerName: 'John Pharmacy',
       licenseNumber: 'PH-2024-001',
       email: 'contact@medicare.com',
       phone: '+251911234567',
@@ -132,13 +47,12 @@ const seedData = async () => {
         city: 'Addis Ababa',
         state: 'Addis Ababa',
         zipCode: '1002',
-        country: 'Ethiopia'
+        country: 'Ethiopia' // Retaining original country field
       },
-      location: {
+      location: { // This is the correct location field, outside of address
         type: 'Point',
         coordinates: [38.7469, 9.0320] // [longitude, latitude] for Addis Ababa
       },
-      owner: pharmacyOwner._id,
       description: 'Your trusted neighborhood pharmacy providing quality medicines and healthcare products.',
       openingHours: {
         monday: { open: '08:00', close: '20:00', isClosed: false },
@@ -157,6 +71,7 @@ const seedData = async () => {
 
     const pharmacy2 = await Pharmacy.create({
       name: 'HealthPlus Pharmacy',
+      ownerName: 'John Pharmacy',
       licenseNumber: 'PH-2024-002',
       email: 'info@healthplus.com',
       phone: '+251917654321',
@@ -171,7 +86,6 @@ const seedData = async () => {
         type: 'Point',
         coordinates: [38.7577, 9.0354]
       },
-      owner: pharmacyOwner._id,
       description: 'Modern pharmacy with a wide range of medicines and healthcare services.',
       openingHours: {
         monday: { open: '07:00', close: '22:00', isClosed: false },
@@ -189,12 +103,6 @@ const seedData = async () => {
     });
 
     console.log(`✅ Created ${2} pharmacies\n`);
-
-    // Update pharmacy owner with pharmacyId and role
-    await User.findByIdAndUpdate(pharmacyOwner._id, { 
-      pharmacyId: pharmacy1._id,
-      role: 'pharmacy_admin'
-    });
 
     // Create Categories
     console.log('📁 Creating categories...');
@@ -232,6 +140,125 @@ const seedData = async () => {
 
     console.log(`✅ Created ${4} categories\n`);
 
+    // Create Users
+    console.log('👥 Creating users...');
+
+    const admin = await User.create({
+      firstName: 'Admin',
+      lastName: 'User',
+      email: 'admin@medilink.com',
+      password: 'AdminPassword123!',
+      username: 'admin',
+      phone: '+251911111111',
+      role: 'admin',
+      status: 'active',
+      isActive: true,
+      isEmailVerified: true
+    });
+
+    const pharmacyOwner = await User.create({
+      firstName: 'John',
+      lastName: 'Pharmacy',
+      email: 'pharmacy@medilink.com',
+      password: 'TestPassword123!',
+      username: 'pharmacy_owner',
+      phone: '+251922222222',
+      role: 'pharmacy_admin',
+      pharmacyId: pharmacy1._id,
+      isActive: true,
+      address: {
+        street: '123 Main St',
+        city: 'Addis Ababa',
+        state: 'Addis Ababa',
+        zipCode: '1000',
+        country: 'Ethiopia'
+      }
+    });
+
+    // Update Pharmacy with owner
+    await Pharmacy.findByIdAndUpdate(pharmacy1._id, { owner: pharmacyOwner._id });
+    await Pharmacy.findByIdAndUpdate(pharmacy2._id, { owner: pharmacyOwner._id });
+
+    const customer = await User.create({
+      firstName: 'Jane',
+      lastName: 'Customer',
+      email: 'customer@medilink.com',
+      password: 'TestPassword123!',
+      username: 'customer',
+      phone: '+251933333333',
+      role: 'customer',
+      isActive: true,
+      address: {
+        street: '456 Customer Ave',
+        city: 'Addis Ababa',
+        state: 'Addis Ababa',
+        zipCode: '1001',
+        country: 'Ethiopia'
+      }
+    });
+
+    const deliveryPerson = await User.create({
+      firstName: 'Mike',
+      lastName: 'Delivery',
+      email: 'delivery@medilink.com',
+      password: 'TestPassword123!',
+      username: 'delivery',
+      phone: '+251944444444',
+      role: 'delivery',
+      isActive: true,
+      vehicleInfo: {
+        vehicleType: 'motorcycle',
+        licensePlate: 'AA-123-456'
+      }
+    });
+
+    // Create a pending delivery application profile
+    const deliveryProfile = await DeliveryProfile.create({
+      userId: deliveryPerson._id,
+      onboardingStatus: 'pending_review',
+      currentStep: 7,
+      personalDetails: {
+        firstName: 'Mike',
+        lastName: 'Delivery',
+        email: 'delivery@medilink.com',
+        phoneNumber: '+251944444444',
+        residentialAddress: {
+          street: 'Residential Area',
+          city: 'Addis Ababa',
+          state: 'Addis Ababa',
+          zipCode: '1000'
+        },
+        preferredLanguage: 'English'
+      },
+      vehicleDetails: {
+        vehicleType: 'motorcycle',
+        make: 'Honda',
+        model: 'CB750',
+        year: '2022',
+        color: 'Black',
+        licensePlate: 'AA-123-456'
+      },
+      documents: {
+        governmentId: 'uploads/onboarding/sample-id.pdf',
+        driversLicense: 'uploads/onboarding/sample-license.pdf'
+      },
+      submittedAt: new Date()
+    });
+
+    const cashier = await User.create({
+      firstName: 'Cashier',
+      lastName: 'User',
+      email: 'cashier@medilink.com',
+      password: 'Cashier123',
+      username: 'cashier',
+      phone: '+251955555555',
+      role: 'cashier',
+      pharmacyId: pharmacy1._id,
+      status: 'active',
+      isActive: true,
+      isEmailVerified: true
+    });
+
     // Create Medicines
     console.log('💊 Creating medicines...');
     const medicines = await Medicine.create([
@@ -242,22 +269,26 @@ const seedData = async () => {
         category: painRelief._id,
         description: 'Effective pain reliever and fever reducer',
         price: 50,
+        type: 'tablet',
         quantity: 500,
-        unit: 'tablet',
-        dosage: '500mg',
+        unit: 'mg',
+        strength: '500',
         manufacturer: 'Johnson & Johnson',
         expiryDate: new Date('2026-12-31'),
         manufactureDate: new Date('2024-01-15'),
         batchNumber: 'BATCH-2024-001',
-        requiresPrescription: false,
-        pharmacyId: pharmacy1._id,
+        location: {
+          type: 'Point',
+          coordinates: [38.7469, 9.0320]
+        },
+        prescriptionRequired: false,
+        pharmacy: pharmacy1._id,
         usageInstructions: 'Take 1-2 tablets every 4-6 hours as needed. Do not exceed 8 tablets in 24 hours.',
         warnings: ['Do not use with other acetaminophen-containing products', 'Consult doctor if symptoms persist'],
         storage: 'Store at room temperature away from moisture and heat',
         isActive: true,
-        rating: 4.6,
-        reviewCount: 234,
-        soldCount: 1250
+        rating: { average: 4.6, count: 234 },
+        salesData: { totalSold: 1250 }
       },
       {
         name: 'Amoxicillin',
@@ -266,23 +297,27 @@ const seedData = async () => {
         category: antibiotics._id,
         description: 'Broad-spectrum antibiotic for bacterial infections',
         price: 120,
+        type: 'capsule',
         quantity: 300,
-        unit: 'capsule',
-        dosage: '500mg',
+        unit: 'mg',
+        strength: '500',
         manufacturer: 'GlaxoSmithKline',
         expiryDate: new Date('2026-06-30'),
         manufactureDate: new Date('2024-02-01'),
         batchNumber: 'BATCH-2024-002',
-        requiresPrescription: true,
-        pharmacyId: pharmacy1._id,
+        location: {
+          type: 'Point',
+          coordinates: [38.7469, 9.0320]
+        },
+        prescriptionRequired: true,
+        pharmacy: pharmacy1._id,
         usageInstructions: 'Take as prescribed by your doctor. Complete the full course even if you feel better.',
         warnings: ['May cause allergic reactions', 'Inform doctor if you have penicillin allergy'],
         sideEffects: ['Nausea', 'Diarrhea', 'Skin rash'],
         storage: 'Store at room temperature, away from light and moisture',
         isActive: true,
-        rating: 4.5,
-        reviewCount: 156,
-        soldCount: 890
+        rating: { average: 4.5, count: 156 },
+        salesData: { totalSold: 890 }
       },
       {
         name: 'Vitamin C',
@@ -291,22 +326,26 @@ const seedData = async () => {
         category: vitamins._id,
         description: 'Essential vitamin for immune system support',
         price: 80,
+        type: 'tablet',
         quantity: 600,
-        unit: 'tablet',
-        dosage: '1000mg',
+        unit: 'mg',
+        strength: '1000',
         manufacturer: 'Nature Made',
         expiryDate: new Date('2027-03-31'),
         manufactureDate: new Date('2024-03-15'),
         batchNumber: 'BATCH-2024-003',
-        requiresPrescription: false,
-        pharmacyId: pharmacy2._id,
+        location: {
+          type: 'Point',
+          coordinates: [38.7577, 9.0354]
+        },
+        prescriptionRequired: false,
+        pharmacy: pharmacy2._id,
         usageInstructions: 'Take 1 tablet daily with food',
         warnings: ['High doses may cause stomach upset'],
         storage: 'Store in a cool, dry place',
         isActive: true,
-        rating: 4.8,
-        reviewCount: 421,
-        soldCount: 2100
+        rating: { average: 4.8, count: 421 },
+        salesData: { totalSold: 2100 }
       },
       {
         name: 'Ibuprofen',
@@ -315,23 +354,27 @@ const seedData = async () => {
         category: painRelief._id,
         description: 'Anti-inflammatory pain reliever',
         price: 65,
+        type: 'tablet',
         quantity: 450,
-        unit: 'tablet',
-        dosage: '200mg',
+        unit: 'mg',
+        strength: '200',
         manufacturer: 'Pfizer',
         expiryDate: new Date('2026-09-30'),
         manufactureDate: new Date('2024-01-20'),
         batchNumber: 'BATCH-2024-004',
-        requiresPrescription: false,
-        pharmacyId: pharmacy2._id,
+        location: {
+          type: 'Point',
+          coordinates: [38.7577, 9.0354]
+        },
+        prescriptionRequired: false,
+        pharmacy: pharmacy2._id,
         usageInstructions: 'Take 1-2 tablets every 4-6 hours as needed with food or milk',
         warnings: ['May increase risk of heart attack or stroke', 'Not for children under 12'],
         sideEffects: ['Stomach upset', 'Heartburn', 'Dizziness'],
         storage: 'Store at room temperature',
         isActive: true,
-        rating: 4.7,
-        reviewCount: 312,
-        soldCount: 1680
+        rating: { average: 4.7, count: 312 },
+        salesData: { totalSold: 1680 }
       },
       {
         name: 'Cough Syrup',
@@ -340,25 +383,28 @@ const seedData = async () => {
         category: coldFlu._id,
         description: 'Cough suppressant for dry cough',
         price: 95,
+        type: 'liquid',
         quantity: 200,
-        unit: 'bottle',
-        dosage: '10mg/5ml',
+        unit: 'ml',
+        strength: '10mg/5ml',
         manufacturer: 'Pfizer',
         expiryDate: new Date('2026-08-31'),
         manufactureDate: new Date('2024-02-10'),
         batchNumber: 'BATCH-2024-005',
-        requiresPrescription: false,
-        pharmacyId: pharmacy1._id,
+        location: {
+          type: 'Point',
+          coordinates: [38.7469, 9.0320]
+        },
+        prescriptionRequired: false,
+        pharmacy: pharmacy1._id,
         usageInstructions: 'Take 10ml every 4 hours as needed. Do not exceed 6 doses in 24 hours.',
         warnings: ['Do not use with other cough medicines', 'Not for children under 4'],
         storage: 'Store at room temperature, do not refrigerate',
         isActive: true,
-        rating: 4.4,
-        reviewCount: 178,
-        soldCount: 567
+        rating: { average: 4.4, count: 178 },
+        salesData: { totalSold: 567 }
       }
     ]);
-
     console.log(`✅ Created ${medicines.length} medicines\n`);
 
     // Create Sample Orders
@@ -395,14 +441,18 @@ const seedData = async () => {
         transactionId: 'TXN-2024-001',
         paidAt: new Date('2024-11-10')
       },
-      deliveryAddress: {
+      address: {
         street: '456 Customer Ave',
         city: 'Addis Ababa',
         state: 'Addis Ababa',
         zipCode: '1001',
-        country: 'Ethiopia'
+        country: 'Ethiopia',
+        geojson: {
+          type: 'Point',
+          coordinates: [38.7469, 9.0320]
+        }
       },
-      deliveryPerson: deliveryPerson._id,
+      courier: deliveryPerson._id,
       statusHistory: [
         { status: 'pending', timestamp: new Date('2024-11-10T08:00:00'), note: 'Order placed' },
         { status: 'confirmed', timestamp: new Date('2024-11-10T08:15:00'), note: 'Order confirmed by pharmacy' },
@@ -441,14 +491,18 @@ const seedData = async () => {
         transactionId: 'TXN-2024-002',
         paidAt: new Date()
       },
-      deliveryAddress: {
+      address: {
         street: '456 Customer Ave',
         city: 'Addis Ababa',
         state: 'Addis Ababa',
         zipCode: '1001',
-        country: 'Ethiopia'
+        country: 'Ethiopia',
+        geojson: {
+          type: 'Point',
+          coordinates: [38.7577, 9.0354]
+        }
       },
-      deliveryPerson: deliveryPerson._id,
+      courier: deliveryPerson._id,
       statusHistory: [
         { status: 'pending', timestamp: new Date(), note: 'Order placed' },
         { status: 'confirmed', timestamp: new Date(), note: 'Order confirmed' },
@@ -471,7 +525,17 @@ const seedData = async () => {
     console.log(`   Connection: ${MONGO_URI}\n`);
 
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('❌ Error seeding database:');
+    if (error.name === 'ValidationError') {
+      Object.keys(error.errors).forEach(key => {
+        console.error(`Field: ${key}`);
+        console.error(`Message: ${error.errors[key].message}`);
+        console.error(`Value: ${error.errors[key].value}`);
+      });
+    } else {
+      console.error(error);
+    }
+    process.exit(1);
   } finally {
     await mongoose.connection.close();
     console.log('👋 Database connection closed');

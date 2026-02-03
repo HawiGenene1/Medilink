@@ -34,9 +34,27 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   // Check if user has required role
   if (allowedRoles) {
     const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-    if (!roles.includes(user?.role?.toLowerCase())) {
+    const userRole = user?.role?.toLowerCase();
+
+    if (!roles.includes(userRole)) {
       // Redirect to unauthorized page or home
       return <Navigate to="/" replace />;
+    }
+
+    // Special handling for Delivery Partners: 
+    // If they are pending, they MUST go to onboarding. 
+    // If they are active, they MUST NOT go to onboarding (handled in component or here).
+    if (userRole === 'delivery') {
+      const isPending = user.status === 'pending';
+      const isAccessingOnboarding = window.location.pathname.includes('/auth/delivery/onboarding');
+
+      if (isPending && !isAccessingOnboarding) {
+        return <Navigate to="/auth/delivery/onboarding" replace />;
+      }
+
+      if (!isPending && isAccessingOnboarding) {
+        return <Navigate to="/delivery/dashboard" replace />;
+      }
     }
   }
 

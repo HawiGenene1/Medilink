@@ -93,7 +93,7 @@ const PendingRegistrations = () => {
             dataIndex: 'applicationDetails',
             key: 'vehicleType',
             render: (details) => {
-                const type = details?.vehicleDetails?.type || 'N/A';
+                const type = details?.vehicleDetails?.vehicleType || 'N/A';
                 let color = 'blue';
                 if (type === 'bicycle') color = 'green';
                 if (type === 'motorcycle') color = 'orange';
@@ -131,9 +131,9 @@ const PendingRegistrations = () => {
                 {/* Vehicle Section */}
                 <Descriptions title="Vehicle Information" bordered column={2} size="small">
                     <Descriptions.Item label="Vehicle Type">
-                        <Tag color="blue">{details.vehicleDetails?.type?.toUpperCase()}</Tag>
+                        <Tag color="blue">{details.vehicleDetails?.vehicleType?.toUpperCase() || 'N/A'}</Tag>
                     </Descriptions.Item>
-                    {details.vehicleDetails?.type !== 'bicycle' && (
+                    {details.vehicleDetails?.vehicleType !== 'bicycle' && (
                         <>
                             <Descriptions.Item label="Model">{details.vehicleDetails?.make} {details.vehicleDetails?.model} ({details.vehicleDetails?.year})</Descriptions.Item>
                             <Descriptions.Item label="License Plate">{details.vehicleDetails?.licensePlate}</Descriptions.Item>

@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+const pointSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['Point'],
+    required: true
+  },
+  coordinates: {
+    type: [Number],
+    required: true
+  }
+}, { _id: false });
+
 const supplierSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -58,15 +70,9 @@ const supplierSchema = new mongoose.Schema({
       default: 'Ethiopia'
     },
     location: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point'
-      },
-      coordinates: {
-        type: [Number], // [longitude, latitude]
-        index: '2dsphere'
-      }
+      type: pointSchema,
+      required: false,
+      default: undefined
     }
   },
   contactDetails: {
@@ -138,7 +144,7 @@ const supplierSchema = new mongoose.Schema({
 
 // Indexes
 supplierSchema.index({ name: 'text', 'company.name': 'text' });
-supplierSchema.index({ 'address.location': '2dsphere' });
+supplierSchema.index({ 'address.location': '2dsphere' }, { sparse: true });
 
 // Virtual for supplier's products
 supplierSchema.virtual('products', {
@@ -155,9 +161,9 @@ supplierSchema.virtual('purchaseOrders', {
 });
 
 // Method to get supplier's performance metrics
-supplierSchema.methods.getPerformanceMetrics = async function() {
+supplierSchema.methods.getPerformanceMetrics = async function () {
   const PurchaseOrder = this.model('PurchaseOrder');
-  
+
   const stats = await PurchaseOrder.aggregate([
     { $match: { supplier: this._id } },
     {
@@ -192,18 +198,18 @@ supplierSchema.methods.getPerformanceMetrics = async function() {
     metrics.totalOrders += stat.count;
     metrics.totalAmount += stat.totalAmount || 0;
     metrics.orderStatus[stat._id] = stat.count;
-    
+
     if (stat.averageDeliveryTime) {
       metrics.averageDeliveryTime = stat.averageDeliveryTime;
     }
-    
+
     if (stat.onTimeDeliveries) {
       metrics.onTimeDeliveryRate = (stat.onTimeDeliveries / stat.count) * 100;
     }
   });
 
-  metrics.averageOrderValue = metrics.totalOrders > 0 
-    ? metrics.totalAmount / metrics.totalOrders 
+  metrics.averageOrderValue = metrics.totalOrders > 0
+    ? metrics.totalAmount / metrics.totalOrders
     : 0;
 
   return metrics;

@@ -88,10 +88,7 @@ const userSchema = new mongoose.Schema({
   twoFactorCodeExpires: Date,
   // For delivery personnel
   vehicleInfo: {
-    type: {
-      type: String,
-      enum: ['motorcycle', 'car', 'bicycle', 'scooter']
-    },
+    vehicleType: String,
     licensePlate: String
   },
   currentLocation: {

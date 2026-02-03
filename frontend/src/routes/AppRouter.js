@@ -6,6 +6,7 @@ import MainLayout from '../layouts/MainLayout';
 import AuthLayout from '../layouts/AuthLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
 import PharmacyAdminLayout from '../layouts/PharmacyAdminLayout';
+import AdminLayout from '../layouts/AdminLayout';
 
 // Components
 import ProtectedRoute from './ProtectedRoute';
@@ -59,8 +60,20 @@ import DeliveryProfile from '../pages/delivery/Profile';
 // Cashier Pages
 import CashierDashboard from '../pages/cashier/Dashboard';
 
-// User Management (if existing)
-// import UserManagement from '../pages/admin/UserManagement'; 
+// Admin Pages
+import AdminDashboard from '../pages/admin/Dashboard';
+import AdminUsers from '../pages/admin/Users';
+import AdminPharmacies from '../pages/admin/Pharmacies/PharmacyList';
+import AdminPharmacyDetail from '../pages/admin/Pharmacies/PharmacyDetail';
+import AdminDeliveryRegistrations from '../pages/admin/DeliveryApplications/DeliveryApplicationList';
+import AdminDeliveryRegistrationDetail from '../pages/admin/DeliveryApplications/DeliveryApplicationDetail';
+import AdminMonitoring from '../pages/admin/Monitoring/SystemMonitoring';
+import AdminAudit from '../pages/admin/Audit/AuditLogs';
+import AdminCommunication from '../pages/admin/Communication/Communication';
+import AdminData from '../pages/admin/Data/DataManagement';
+import AdminSecurity from '../pages/admin/Security/SecurityDashboard';
+import AdminAnalytics from '../pages/admin/Analytics/Analytics';
+import AdminSettings from '../pages/admin/Settings/Settings';
 
 const AppRouter = () => {
   return (
@@ -137,6 +150,25 @@ const AppRouter = () => {
           <Route path="/pharmacy-admin/reports" element={<PharmacyReports />} />
           <Route path="/pharmacy-admin/settings" element={<PharmacySettings />} />
           <Route path="/pharmacy-admin/profile" element={<PharmacyAdminProfile />} />
+        </Route>
+      </Route>
+
+      {/* Protected Routes - System Admin */}
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route element={<AdminLayout />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/pharmacies" element={<AdminPharmacies />} />
+          <Route path="/admin/pharmacies/:id" element={<AdminPharmacyDetail />} />
+          <Route path="/admin/registrations/pending" element={<AdminDeliveryRegistrations />} />
+          <Route path="/admin/registrations/:id" element={<AdminDeliveryRegistrationDetail />} />
+          <Route path="/admin/monitoring" element={<AdminMonitoring />} />
+          <Route path="/admin/audit" element={<AdminAudit />} />
+          <Route path="/admin/communication" element={<AdminCommunication />} />
+          <Route path="/admin/data" element={<AdminData />} />
+          <Route path="/admin/security" element={<AdminSecurity />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>
       </Route>
 

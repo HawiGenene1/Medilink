@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Descriptions, Button, Tag, Space, Typography, message, Modal, Input, Spin, Divider, Image } from 'antd';
 import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -19,10 +19,10 @@ const DeliveryApplicationDetail = () => {
     const fetchApplication = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const config = { headers: { Authorization: `Bearer ${token}` } };
-            const response = await axios.get(`http://localhost:5000/api/delivery/admin/applications/${id}`, config);
-            setApplication(response.data);
+            const response = await api.get(`/delivery/onboarding/admin/applications/${id}`);
+            if (response.data && response.data.success) {
+                setApplication(response.data.data);
+            }
         } catch (error) {
             console.error('Error fetching application details:', error);
             message.error('Failed to load application details');
@@ -38,9 +38,10 @@ const DeliveryApplicationDetail = () => {
     const handleApprove = async () => {
         setActionLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const config = { headers: { Authorization: `Bearer ${token}` } };
-            await axios.post(`http://localhost:5000/api/delivery/admin/applications/${id}/approve`, {}, config);
+            await api.patch(`/delivery/onboarding/admin/applications/${id}/status`, {
+                status: 'approved',
+                reason: 'Verified and approved'
+            });
             message.success('Application approved successfully');
             fetchApplication(); // Refresh to show updated status
         } catch (error) {
@@ -59,9 +60,10 @@ const DeliveryApplicationDetail = () => {
 
         setActionLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const config = { headers: { Authorization: `Bearer ${token}` } };
-            await axios.post(`http://localhost:5000/api/delivery/admin/applications/${id}/reject`, { reason: rejectionReason }, config);
+            await api.patch(`/delivery/onboarding/admin/applications/${id}/status`, {
+                status: 'rejected',
+                reason: rejectionReason
+            });
             message.success('Application rejected');
             setRejectModalVisible(false);
             fetchApplication();
@@ -81,13 +83,13 @@ const DeliveryApplicationDetail = () => {
         return <div style={{ padding: '24px' }}>Application not found</div>;
     }
 
-    const { personalInfo, vehicleInfo, documents, status } = application;
+    const { documents } = application;
 
     return (
         <div style={{ padding: '24px' }}>
             <Button
                 icon={<ArrowLeftOutlined />}
-                onClick={() => navigate('/admin/delivery-applications')}
+                onClick={() => navigate('/admin/registrations/pending')}
                 style={{ marginBottom: '16px' }}
             >
                 Back to List
@@ -97,14 +99,14 @@ const DeliveryApplicationDetail = () => {
                 <Title level={2} style={{ margin: 0 }}>
                     Application Details
                     <Tag
-                        color={status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'processing'}
+                        color={application.onboardingStatus === 'approved' ? 'success' : application.onboardingStatus === 'rejected' ? 'error' : 'processing'}
                         style={{ marginLeft: '12px', verticalAlign: 'middle', fontSize: '14px', padding: '4px 10px' }}
                     >
-                        {status.toUpperCase()}
+                        {(application.onboardingStatus || 'pending').toUpperCase()}
                     </Tag>
                 </Title>
 
-                {status === 'pending' && (
+                {application.onboardingStatus === 'pending_review' && (
                     <Space>
                         <Button
                             danger
@@ -129,48 +131,71 @@ const DeliveryApplicationDetail = () => {
 
             <Card title="Personal Information" bordered={false} style={{ marginBottom: '16px' }}>
                 <Descriptions bordered column={{ xxl: 4, xl: 3, lg: 3, md: 3, sm: 2, xs: 1 }}>
-                    <Descriptions.Item label="First Name">{personalInfo.firstName}</Descriptions.Item>
-                    <Descriptions.Item label="Last Name">{personalInfo.lastName}</Descriptions.Item>
-                    <Descriptions.Item label="Email">{personalInfo.email}</Descriptions.Item>
-                    <Descriptions.Item label="Phone">{personalInfo.phone}</Descriptions.Item>
+                    <Descriptions.Item label="First Name">{application.personalDetails?.firstName || application.userId?.firstName || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Last Name">{application.personalDetails?.lastName || application.userId?.lastName || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Email">{application.personalDetails?.email || application.userId?.email || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Phone">{application.personalDetails?.phoneNumber || application.userId?.phone || 'N/A'}</Descriptions.Item>
                     <Descriptions.Item label="Address" span={2}>
-                        {`${personalInfo.address?.street}, ${personalInfo.address?.city}, ${personalInfo.address?.state}, ${personalInfo.address?.country}`}
+                        {(() => {
+                            const addr = application.personalDetails?.residentialAddress;
+                            if (!addr) return 'N/A';
+                            if (typeof addr === 'string') return addr;
+                            return `${addr.street || ''}, ${addr.city || ''}, ${addr.state || ''} ${addr.zipCode || ''}`.replace(/^, |, $/, '').trim() || 'N/A';
+                        })()}
                     </Descriptions.Item>
                 </Descriptions>
             </Card>
 
             <Card title="Vehicle Information" bordered={false} style={{ marginBottom: '16px' }}>
                 <Descriptions bordered column={{ xxl: 4, xl: 3, lg: 3, md: 3, sm: 2, xs: 1 }}>
-                    <Descriptions.Item label="Type">{vehicleInfo.vehicleType.toUpperCase()}</Descriptions.Item>
-                    <Descriptions.Item label="License Plate">{vehicleInfo.licensePlate}</Descriptions.Item>
-                    <Descriptions.Item label="Model">{vehicleInfo.model || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label="Year">{vehicleInfo.year || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label="Color">{vehicleInfo.color || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Type">{(application.vehicleDetails?.vehicleType || 'N/A').toUpperCase()}</Descriptions.Item>
+                    <Descriptions.Item label="License Plate">{application.vehicleDetails?.licensePlate || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Model">{application.vehicleDetails?.model || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Year">{application.vehicleDetails?.year || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Color">{application.vehicleDetails?.color || 'N/A'}</Descriptions.Item>
                 </Descriptions>
             </Card>
 
             <Card title="Documents" bordered={false}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-                    {documents.map((doc, index) => (
-                        <Card
-                            key={index}
-                            type="inner"
-                            title={doc.documentType.replace('_', ' ').toUpperCase()}
-                            size="small"
-                        >
-                            <div style={{ textAlign: 'center', padding: '10px' }}>
-                                {/* Mockup image/icon since we don't have real URLs yet */}
-                                <SafetyCertificateOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '8px' }} />
-                                <div>
-                                    <Text type="secondary" ellipsis>{doc.documentName || 'Document.pdf'}</Text>
-                                </div>
-                                <Button type="link" href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
-                                    View Document
-                                </Button>
-                            </div>
-                        </Card>
-                    ))}
-                    {documents.length === 0 && <Text type="secondary">No documents uploaded</Text>}
+                    {application.documents && Object.entries(application.documents).map(([key, value], index) => {
+                        if (!value) return null;
+
+                        const renderDocumentCard = (docPath, docIndex = null) => {
+                            if (typeof docPath !== 'string') return null;
+                            const fileName = docPath.split('/').pop() || 'Document';
+                            const title = docIndex !== null ? `${key.replace(/([A-Z])/g, ' $1').toUpperCase()} - ${docIndex + 1}` : key.replace(/([A-Z])/g, ' $1').toUpperCase();
+
+                            return (
+                                <Card
+                                    key={docIndex !== null ? `${index}-${docIndex}` : index}
+                                    type="inner"
+                                    title={title}
+                                    size="small"
+                                >
+                                    <div style={{ textAlign: 'center', padding: '10px' }}>
+                                        <SafetyCertificateOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '8px' }} />
+                                        <div>
+                                            <Text type="secondary" ellipsis>{fileName}</Text>
+                                        </div>
+                                        <Button
+                                            type="link"
+                                            onClick={() => window.open(`http://localhost:5000/${docPath}`, '_blank')}
+                                        >
+                                            View Document
+                                        </Button>
+                                    </div>
+                                </Card>
+                            );
+                        };
+
+                        if (Array.isArray(value)) {
+                            return value.map((path, idx) => renderDocumentCard(path, idx));
+                        }
+
+                        return renderDocumentCard(value);
+                    })}
+                    {(!application.documents || Object.keys(application.documents).length === 0) && <Text type="secondary">No documents uploaded</Text>}
                 </div>
             </Card>
 

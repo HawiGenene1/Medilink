@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+const pointSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['Point'],
+    required: true
+  },
+  coordinates: {
+    type: [Number],
+    required: true
+  }
+}, { _id: false });
+
 const pharmacySchema = new mongoose.Schema({
   // Basic Information
   name: {
@@ -61,17 +73,9 @@ const pharmacySchema = new mongoose.Schema({
 
   // Location for geospatial queries
   location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      index: '2dsphere'
-    }
+    type: pointSchema,
+    required: false
   },
-
   // References
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -153,4 +157,3 @@ pharmacySchema.index({ name: 'text', description: 'text' });
 const Pharmacy = mongoose.model('Pharmacy', pharmacySchema);
 
 module.exports = Pharmacy;
-

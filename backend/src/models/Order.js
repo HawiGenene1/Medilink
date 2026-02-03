@@ -1,6 +1,17 @@
 const mongoose = require('mongoose');
 
-// Sub-schemas
+const pointSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['Point'],
+    required: true
+  },
+  coordinates: {
+    type: [Number],
+    required: true
+  }
+}, { _id: false });
+
 const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -88,15 +99,8 @@ const deliveryTrackingSchema = new mongoose.Schema({
   },
   locationUpdates: [{
     location: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point'
-      },
-      coordinates: {
-        type: [Number], // [longitude, latitude]
-        required: true
-      }
+      type: pointSchema,
+      required: true
     },
     timestamp: {
       type: Date,
@@ -199,8 +203,8 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
-    default: 'PENDING'
+    enum: ['pending', 'paid', 'failed', 'refunded'],
+    default: 'pending'
   },
   paymentMethod: {
     type: String,
@@ -230,15 +234,9 @@ const orderSchema = new mongoose.Schema({
       longitude: Number
     },
     geojson: {
-      type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point'
-      },
-      coordinates: {
-        type: [Number], // [longitude, latitude]
-        index: '2dsphere'
-      }
+      type: pointSchema,
+      required: false,
+      default: undefined
     }
   },
   courier: {

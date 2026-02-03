@@ -122,7 +122,7 @@ const DeliveryRegister = () => {
                     <Form.Item style={{ marginTop: '12px' }}>
                         <div className="info-message">
                             <InfoCircleOutlined />
-                            <span>Accounts are subject to verification. A secure password will be emailed to you after clinical review.</span>
+                            <span>A secure password will be emailed to you immediately so you can complete your clinical onboarding documents.</span>
                         </div>
                     </Form.Item>
 

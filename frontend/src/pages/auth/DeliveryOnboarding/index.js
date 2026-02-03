@@ -109,11 +109,28 @@ const DeliveryOnboarding = () => {
         }
     };
 
+    const isPendingReview = profile?.onboardingStatus === 'pending_review';
+
     const prev = () => {
         setCurrent(current - 1);
     };
 
     const renderStepContent = () => {
+        if (isPendingReview && current < 7) {
+            return (
+                <Result
+                    status="info"
+                    title="Application Under Review"
+                    subTitle="You have completed all onboarding steps. Our team is currently reviewing your documentation. We will notify you via email once your account is activated."
+                    extra={[
+                        <Button type="primary" key="home" onClick={() => navigate('/')}>
+                            Return to Home
+                        </Button>
+                    ]}
+                />
+            );
+        }
+
         switch (current) {
             case 0: // Step 1: Account Creation (Summary)
                 return (
@@ -341,26 +358,7 @@ const DeliveryOnboarding = () => {
                     </Form>
                 );
 
-            case 6: // Orientation
-                return (
-                    <div className="orientation-module">
-                        <Title level={4}>Partner Orientation</Title>
-                        <div className="video-placeholder">
-                            <BookOutlined className="module-icon" />
-                            <Paragraph>Watch our 5-minute partner safety and standards video.</Paragraph>
-                            <Button type="primary" ghost icon={<CheckCircleOutlined />}>Start Training</Button>
-                        </div>
-                        <Space direction="vertical" style={{ width: '100%', marginTop: '24px' }}>
-                            <Checkbox checked>I have watched the safety orientation.</Checkbox>
-                            <Checkbox checked>I understand the clinical handling requirements for medicines.</Checkbox>
-                        </Space>
-                        <Button type="primary" onClick={() => next({ completed: true })} size="large" block loading={loading} style={{ marginTop: '24px' }}>
-                            Complete Orientation
-                        </Button>
-                    </div>
-                );
-
-            case 6: // Vehicle Inspection (Renumbered from 7)
+            case 6: // Vehicle Inspection
                 return (
                     <Form layout="vertical" onFinish={next}>
                         <Title level={4}>Vehicle Inspection</Title>

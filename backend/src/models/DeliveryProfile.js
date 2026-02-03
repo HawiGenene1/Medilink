@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+const pointSchema = new mongoose.Schema({
+    type: {
+        type: String,
+        enum: ['Point'],
+        required: true
+    },
+    coordinates: {
+        type: [Number],
+        required: true
+    }
+}, { _id: false });
+
 const deliveryProfileSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -14,15 +26,9 @@ const deliveryProfileSchema = new mongoose.Schema({
         max: 9
     },
     currentLocation: {
-        type: {
-            type: String, // 'Point'
-            enum: ['Point'],
-            default: 'Point'
-        },
-        coordinates: {
-            type: [Number], // [longitude, latitude]
-            required: false
-        }
+        type: pointSchema,
+        required: false,
+        default: undefined
     },
     isAvailable: {
         type: Boolean,
@@ -52,10 +58,7 @@ const deliveryProfileSchema = new mongoose.Schema({
         }
     },
     vehicleDetails: {
-        type: {
-            type: String,
-            enum: ['car', 'motorcycle', 'bicycle', 'scooter', 'van', 'truck']
-        },
+        vehicleType: String,
         make: String,
         model: String,
         year: String,
@@ -125,5 +128,4 @@ const deliveryProfileSchema = new mongoose.Schema({
 module.exports = mongoose.model('DeliveryProfile', deliveryProfileSchema);
 
 // Index for geospatial queries
-deliveryProfileSchema.index({ currentLocation: '2dsphere' });
-
+deliveryProfileSchema.index({ currentLocation: '2dsphere' }, { sparse: true }); // Sparse index to allow empty locations
