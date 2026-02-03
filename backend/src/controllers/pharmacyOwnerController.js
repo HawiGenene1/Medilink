@@ -9,45 +9,54 @@ const ErrorResponse = require('../utils/errorResponse');
  * @access  Public
  */
 const register = asyncHandler(async (req, res, next) => {
+    console.log('[Owner Register] Request body:', req.body);
     const { fullName, email, phone, password, pharmacyId, subscriptionPlan } = req.body;
 
-    // Check if owner already exists
-    const existingOwner = await PharmacyOwner.findOne({ email });
-    if (existingOwner) {
-        return next(new ErrorResponse('A pharmacy owner with this email already exists', 400));
-    }
-
-    // Create new owner
-    const owner = await PharmacyOwner.create({
-        fullName,
-        email,
-        phone,
-        password,
-        pharmacyId,
-        subscriptionPlan
-    });
-
-    const token = generateToken({
-        ownerId: owner._id,
-        email: owner.email,
-        role: 'pharmacy_owner'
-    });
-
-    res.status(201).json({
-        success: true,
-        message: 'Pharmacy owner registered successfully',
-        token,
-        owner: {
-            id: owner._id,
-            fullName: owner.fullName,
-            email: owner.email,
-            phone: owner.phone,
-            role: 'pharmacy_owner',
-            permissions: owner.permissions,
-            subscriptionPlan: owner.subscriptionPlan,
-            subscriptionStatus: owner.subscriptionStatus
+    try {
+        // Check if owner already exists
+        const existingOwner = await PharmacyOwner.findOne({ email });
+        if (existingOwner) {
+            console.log('[Owner Register] Email already exists:', email);
+            return next(new ErrorResponse('A pharmacy owner with this email already exists', 400));
         }
-    });
+
+        console.log('[Owner Register] Creating new owner...');
+        // Create new owner
+        const owner = await PharmacyOwner.create({
+            fullName,
+            email,
+            phone,
+            password,
+            pharmacyId,
+            subscriptionPlan
+        });
+        console.log('[Owner Register] Owner created:', owner._id);
+
+        const token = generateToken({
+            ownerId: owner._id,
+            email: owner.email,
+            role: 'pharmacy_owner'
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Pharmacy owner registered successfully',
+            token,
+            owner: {
+                id: owner._id,
+                fullName: owner.fullName,
+                email: owner.email,
+                phone: owner.phone,
+                role: 'pharmacy_owner',
+                permissions: owner.permissions,
+                subscriptionPlan: owner.subscriptionPlan,
+                subscriptionStatus: owner.subscriptionStatus
+            }
+        });
+    } catch (error) {
+        console.error('[Owner Register] Error during registration:', error);
+        return next(new ErrorResponse(error.message, 500));
+    }
 });
 
 /**

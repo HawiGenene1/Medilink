@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['customer', 'cashier', 'delivery', 'admin', 'staff', 'pharmacy_owner', 'PHARMACY_OWNER', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff', 'pharmacy_admin'],
+    enum: ['customer', 'cashier', 'delivery', 'admin', 'system_admin', 'staff', 'pharmacy_owner', 'PHARMACY_OWNER', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff', 'pharmacy_admin'],
     default: 'customer'
   },
   username: {
@@ -43,9 +43,11 @@ const userSchema = new mongoose.Schema({
   },
 
   // Role Definitions & Boundaries:
+  // - system_admin: Platform-level ownership and technical oversight.
+  //   Responsibilities: Technical management, Creating/Managing PHARMACY_ADMIN users.
+  //   NON-ROLE: Does NOT manage pharmacies directly.
   // - pharmacy_admin: Platform-level governance, compliance, and business control.
-  //   Responsibilities: Registration Mgmt, License Verification (6-month threshold), Subscription Mgmt, 
-  //   Status Mgmt (Justified activation/suspension), Monitoring/Reporting.
+  //   Responsibilities: Registration Mgmt, License Verification, Subscription Mgmt, Status Mgmt, Monitoring.
   //   NON-ROLE: NO daily operations, medicines, inventory, orders, prescriptions, or payments.
   // - pharmacy_staff: Operational role for branch staff/operators.
   pharmacyId: {
@@ -137,6 +139,7 @@ const userSchema = new mongoose.Schema({
   },
   resetToken: { type: String, default: null },
   resetTokenExpire: { type: Date, default: null },
+  mustChangePassword: { type: Boolean, default: false },
 
   // Admin management fields
   createdBy: {

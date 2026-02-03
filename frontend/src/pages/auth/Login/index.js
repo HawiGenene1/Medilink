@@ -15,7 +15,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleRedirect = (user) => {
-    const role = user.role?.toLowerCase();
+    const role = user.role;
     const status = user.status;
 
     if (role === 'delivery' && status === 'pending') {
@@ -24,31 +24,16 @@ const Login = () => {
     }
 
     switch (role) {
-      case 'customer':
-        navigate('/customer/home');
-        break;
-      case 'cashier':
-        navigate('/cashier/dashboard');
-        break;
-      case 'delivery':
-        navigate('/delivery/dashboard');
-        break;
+      case 'customer': navigate('/customer/home'); break;
+      case 'pharmacy_staff': navigate('/pharmacy-staff/inventory'); break;
+      case 'pharmacy_admin': navigate('/pharmacy-admin/dashboard'); break;
+      case 'cashier': navigate('/cashier/dashboard'); break;
+      case 'delivery': navigate('/delivery/dashboard'); break;
       case 'admin':
+      case 'system_admin':
         navigate('/admin/dashboard');
         break;
-      case 'pharmacy_owner':
-      case 'pharmacist':
-      case 'technician':
-      case 'assistant':
-      case 'pharmacy_staff':
-      case 'staff':
-        navigate('/owner/dashboard');
-        break;
-      case 'pharmacy_admin':
-        navigate('/pharmacy-admin/dashboard');
-        break;
-      default:
-        navigate('/');
+      default: navigate('/');
     }
   };
 
@@ -66,7 +51,35 @@ const Login = () => {
           message.info('Security code sent to your recovery contacts');
         } else {
           message.success('Login successful!');
-          handleRedirect(result.user);
+
+          // Redirect based on user role
+          const user = result.user;
+          const role = user.role?.toLowerCase();
+          const status = user.status;
+
+          if (role === 'delivery' && status === 'pending') {
+            navigate('/auth/delivery/onboarding');
+          } else {
+            switch (role) {
+              case 'customer': navigate('/customer/home'); break;
+              case 'pharmacy_staff':
+              case 'staff':
+              case 'pharmacy_owner':
+              case 'pharmacist':
+              case 'technician':
+              case 'assistant':
+                navigate('/owner/dashboard');
+                break;
+              case 'pharmacy_admin': navigate('/pharmacy-admin/dashboard'); break;
+              case 'cashier': navigate('/cashier/dashboard'); break;
+              case 'delivery': navigate('/delivery/dashboard'); break;
+              case 'admin':
+              case 'system_admin':
+                navigate('/admin/dashboard');
+                break;
+              default: navigate('/');
+            }
+          }
         }
       } else {
         message.error(result.message || 'Login failed. Please check your credentials.');
@@ -186,6 +199,16 @@ const Login = () => {
             <Link to="/auth/register">
               Don't have an account? Register
             </Link>
+          </div>
+
+          {/* Dev Helper - Quick Login */}
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '16px' }}>
+            <p style={{ fontSize: '12px', color: '#888', textAlign: 'center' }}>Demo Quick Login:</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '16px' }}>
+              <Button size="small" onClick={() => onFinish({ email: 'customer@test.com', password: '123' })}>Customer</Button>
+              <Button size="small" onClick={() => onFinish({ email: 'pharmacy@test.com', password: '123' })}>Pharmacy</Button>
+              <Button size="small" onClick={() => onFinish({ email: 'sysadmin@medilink.com', password: 'SysAdmin@123' })}>System Admin</Button>
+            </div>
           </div>
 
           <div style={{ textAlign: 'center', padding: '12px', borderTop: '1px solid #f1f5f9' }}>

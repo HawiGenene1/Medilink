@@ -137,8 +137,8 @@ const Navbar = () => {
                   <Link to="/auth/register?role=customer" onClick={() => setMobileMenuOpen(false)}>
                     <Button type="primary" block>Sign Up</Button>
                   </Link>
-                  <Link to="/auth/register?role=pharmacy" onClick={() => setMobileMenuOpen(false)}>
-                    <Button block style={{ marginTop: '8px' }}>For Pharmacies</Button>
+                  <Link to="/auth/pharmacy/register" onClick={() => setMobileMenuOpen(false)}>
+                    <Button block style={{ marginTop: '8px' }}>Register Pharmacy</Button>
                   </Link>
                 </>
               )}

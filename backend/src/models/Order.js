@@ -182,13 +182,14 @@ const orderSchema = new mongoose.Schema({
       'pending',
       'verified',
       'confirmed',
-      'preparing', // remote had this
+      'processing',
       'prepared',
+      'preparing',
+      'ready',
       'awaiting_prescription',
       'ready_for_pickup',
-      'ready', // remote had this
-      'in_transit', // remote had this
       'out_for_delivery',
+      'in_transit',
       'delivered',
       'completed',
       'cancelled',
@@ -204,7 +205,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['CASH_ON_DELIVERY', 'CARD', 'cash', 'card', 'mobile_money', 'bank_transfer', 'telebirr', 'cbe'],
+    enum: ['cash', 'card', 'mobile_money', 'bank_transfer', 'telebirr', 'cbe', 'CASH_ON_DELIVERY', 'CARD'],
     default: 'cash'
   },
   payment: {
@@ -287,9 +288,6 @@ const orderSchema = new mongoose.Schema({
   metadata: {
     type: Map,
     of: mongoose.Schema.Types.Mixed
-  },
-  estimatedDeliveryTime: {
-    type: Date
   },
   estimatedArrivalTime: {
     type: Date

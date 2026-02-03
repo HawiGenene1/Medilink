@@ -69,8 +69,14 @@ const PharmacyRegister = () => {
       console.log('Server response:', response.data);
 
       if (response.data.success) {
-        message.success('Pharmacy registration submitted! (Auto-approved for DEV)');
-        navigate(`/auth/owner/register?pharmacyId=${response.data.data?.id || ''}`);
+        message.success({
+          content: 'Pharmacy registration submitted successfully! Your application is pending approval. You will receive an email with login credentials once approved.',
+          duration: 8
+        });
+        // Redirect to login page after 3 seconds
+        setTimeout(() => {
+          navigate('/auth/login');
+        }, 3000);
       } else {
         const errorMsg = response.data.errors ? `Validation failed: ${response.data.errors.join(', ')}` : (response.data.message || 'Registration failed.');
         message.error(errorMsg);

@@ -11,10 +11,6 @@ const checkSubscription = async (req, res, next) => {
         // Check both req.user (Staff) and req.owner (Owner)
         const pharmacyId = req.user?.pharmacyId || req.owner?.pharmacyId;
 
-        // Development bypass
-        if (process.env.NODE_ENV === 'development') {
-            return next();
-        }
 
         if (!pharmacyId) {
             // If user is admin (platform level), bypass check

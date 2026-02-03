@@ -84,7 +84,7 @@ const OwnerLogin = () => {
 
                     <div style={{ textAlign: 'center' }}>
                         <Text type="secondary">
-                            Don't have an owner account? <Link to="/auth/owner/register">Register Business</Link>
+                            Don't have an account? <Link to="/auth/pharmacy/register">Register Your Pharmacy</Link>
                         </Text>
                     </div>
 

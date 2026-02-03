@@ -1,45 +1,85 @@
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
-// Create reusable transporter object
-const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
-    rateDelta: 1000,
-    rateLimit: 5
-});
+let transporter = null;
+let emailPreviewUrl = null;
 
-// Verify connection configuration
-transporter.verify(function (error, success) {
-    if (error) {
-        logger.error('Email server connection error:', error);
+// Initialize transporter - use Ethereal for testing if no credentials
+async function initTransporter() {
+    if (transporter) return transporter;
+
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        // Use configured email service (Gmail, etc.)
+        transporter = nodemailer.createTransport({
+            service: process.env.EMAIL_SERVICE || 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+            pool: true,
+            maxConnections: 5,
+            maxMessages: 100,
+            rateDelta: 1000,
+            rateLimit: 5
+        });
+        logger.info('Email service configured with provided credentials');
     } else {
-        logger.info('Email server is ready to take our messages');
+        // Create Ethereal test account for development
+        try {
+            const testAccount = await nodemailer.createTestAccount();
+            transporter = nodemailer.createTransport({
+                host: 'smtp.ethereal.email',
+                port: 587,
+                secure: false,
+                auth: {
+                    user: testAccount.user,
+                    pass: testAccount.pass,
+                },
+            });
+            logger.info('=====================================');
+            logger.info('EMAIL TEST MODE - Using Ethereal');
+            logger.info(`View sent emails at: https://ethereal.email`);
+            logger.info(`Login: ${testAccount.user}`);
+            logger.info(`Password: ${testAccount.pass}`);
+            logger.info('=====================================');
+        } catch (error) {
+            logger.error('Failed to create Ethereal test account:', error);
+            // Create a dummy transporter that logs emails
+            transporter = {
+                sendMail: async (options) => {
+                    logger.info('=== EMAIL WOULD BE SENT ===');
+                    logger.info(`To: ${options.to}`);
+                    logger.info(`Subject: ${options.subject}`);
+                    logger.info(`Content preview: ${options.html?.substring(0, 200)}...`);
+                    return { messageId: 'dummy-' + Date.now() };
+                }
+            };
+        }
     }
-});
+
+    return transporter;
+}
+
+// Initialize immediately
+initTransporter();
 
 /**
  * Send email with retry logic
- * @param {string|object} to - Recipient email or options object
- * @param {string} [subject] - Email subject
- * @param {string} [content] - Email content (html or text)
- * @param {number} [retries] - Number of retry attempts (default: 3)
- * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function sendEmail(to, subject, content, retries = 3) {
+    // Ensure transporter is initialized
+    if (!transporter) {
+        await initTransporter();
+    }
+
     let mailOptions;
 
     if (typeof to === 'object' && to !== null) {
         // Handle object argument
         const options = to;
+        const fromEmail = process.env.EMAIL_USER || (transporter.options?.auth?.user) || 'noreply@medilink.com';
         mailOptions = {
-            from: `"Medilink" <${process.env.EMAIL_USER}>`,
+            from: `"Medilink" <${fromEmail}>`,
             to: options.to,
             subject: options.subject,
             html: options.html || (options.text ? options.text.replace(/\n/g, '<br>') : undefined),
@@ -48,8 +88,9 @@ async function sendEmail(to, subject, content, retries = 3) {
         retries = options.retries || 3;
     } else {
         // Handle positional arguments
+        const fromEmail = process.env.EMAIL_USER || (transporter.options?.auth?.user) || 'noreply@medilink.com';
         mailOptions = {
-            from: `"Medilink" <${process.env.EMAIL_USER}>`,
+            from: `"Medilink" <${fromEmail}>`,
             to,
             subject,
             html: content // Assuming html content is passed for backward compatibility

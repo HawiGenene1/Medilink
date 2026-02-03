@@ -16,7 +16,6 @@ const { Title, Text } = Typography;
 const { Step } = Steps;
 
 const OwnerRegister = () => {
-    const isDev = process.env.NODE_ENV === 'development';
     const [loading, setLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
     const [form] = Form.useForm();
@@ -29,11 +28,10 @@ const OwnerRegister = () => {
 
     const onFinish = async (values) => {
         setLoading(true);
-        console.log('Submitting owner registration with complete values:', values);
         try {
             const registrationData = {
                 ...values,
-                pharmacyId: values.pharmacyId || urlPharmacyId || '65a7d5c9f1a2b3c4d5e6f701',
+                pharmacyId: values.pharmacyId || urlPharmacyId,
                 subscriptionPlan: 'FREE'
             };
 
@@ -131,20 +129,6 @@ const OwnerRegister = () => {
                             <Input.Password prefix={<LockOutlined />} placeholder="******" />
                         </Form.Item>
 
-                        {isDev && (
-                            <Button
-                                type="dashed"
-                                block
-                                style={{ marginBottom: '16px' }}
-                                onClick={() => form.setFieldsValue({
-                                    fullName: 'Dev Owner',
-                                    email: `owner_${Math.floor(Math.random() * 1000)}@test.com`,
-                                    password: 'password123'
-                                })}
-                            >
-                                Dev: Auto-fill Step 1
-                            </Button>
-                        )}
 
                         <Button type="primary" block onClick={nextStep} style={{ height: '48px' }}>
                             Next Step
@@ -169,19 +153,6 @@ const OwnerRegister = () => {
                             <Input prefix={<ShopOutlined />} placeholder="Enter Pharmacy ID" />
                         </Form.Item>
 
-                        {isDev && (
-                            <Button
-                                type="dashed"
-                                block
-                                style={{ marginBottom: '16px' }}
-                                onClick={() => form.setFieldsValue({
-                                    phone: '0911223344',
-                                    pharmacyId: urlPharmacyId || '65a7d5c9f1a2b3c4d5e6f701'
-                                })}
-                            >
-                                Dev: Auto-fill Step 2
-                            </Button>
-                        )}
 
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <Button onClick={prevStep} style={{ flex: 1, height: '48px' }}>

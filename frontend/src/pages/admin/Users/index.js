@@ -1,8 +1,3 @@
-// TODO: Implement Users management page
-import React from 'react';
+import UsersList from './UsersList';
 
-const Users = () => {
-  return <div>Users Management Page</div>;
-};
-
-export default Users;
+export default UsersList;

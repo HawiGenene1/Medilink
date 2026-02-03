@@ -22,8 +22,8 @@ export const getRegistrationDetails = async (id) => {
     return response.data;
 };
 
-export const approveRegistration = async (id) => {
-    const response = await api.put(`/pharmacy-admin/registrations/${id}/approve`);
+export const approveRegistration = async (id, subscriptionPlan) => {
+    const response = await api.put(`/pharmacy-admin/registrations/${id}/approve`, { subscriptionPlan });
     return response.data;
 };
 

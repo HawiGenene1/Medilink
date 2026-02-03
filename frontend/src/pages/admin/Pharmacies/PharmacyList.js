@@ -12,46 +12,60 @@ import {
     EyeOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const PharmacyList = () => {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [pendingPharmacies, setPendingPharmacies] = useState([]);
+    const [activePharmacies, setActivePharmacies] = useState([]);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
 
-    // Mock Data for Pending Requests
-    const pendingData = [
-        { key: '1', name: 'New Age Pharmacy', owner: 'Kebede T.', submitted: '2023-11-20', documents: 'Verified' },
-        { key: '2', name: 'Bole Road Meds', owner: 'Almaz B.', submitted: '2023-11-19', documents: 'Missing License' },
-    ];
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [pendingRes, activeRes] = await Promise.all([
+                api.get('/admin/registrations/pending', { params: { role: 'pharmacy_admin' } }),
+                api.get('/admin/pharmacies', { params: { status: 'approved' } })
+            ]);
 
-    // Mock Data for Active Pharmacies
-    const activeData = Array.from({ length: 15 }).map((_, i) => ({
-        key: i + 10,
-        name: `Pharmacy ${i}`,
-        owner: `Owner ${i}`,
-        status: i % 5 === 0 ? 'Suspended' : 'Active',
-        orders: Math.floor(Math.random() * 1000),
-        rating: (3 + Math.random() * 2).toFixed(1)
-    }));
+            if (pendingRes.data.success) {
+                setPendingPharmacies(pendingRes.data.data);
+            }
+            if (activeRes.data.success) {
+                setActivePharmacies(activeRes.data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch pharmacies:', error);
+            message.error('Failed to load pharmacy data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
 
     const pendingColumns = [
-        { title: 'Pharmacy Name', dataIndex: 'name', key: 'name', render: text => <b>{text}</b> },
-        { title: 'Owner Name', dataIndex: 'owner', key: 'owner' },
-        { title: 'Submitted Date', dataIndex: 'submitted', key: 'submitted' },
+        { title: 'Pharmacy Name', dataIndex: 'pharmacyName', key: 'name', render: text => <b>{text}</b> },
+        { title: 'Owner Name', dataIndex: 'ownerName', key: 'owner' },
+        { title: 'Submitted Date', dataIndex: 'createdAt', key: 'submitted', render: date => new Date(date).toLocaleDateString() },
         {
             title: 'Doc Status',
-            dataIndex: 'documents',
+            dataIndex: 'status',
             key: 'documents',
-            render: status => <Tag color={status === 'Verified' ? 'blue' : 'orange'}>{status}</Tag>
+            render: status => <Tag color="blue">{status.toUpperCase()}</Tag>
         },
         {
             title: 'Action',
             key: 'action',
             render: (_, record) => (
                 <Space>
-                    <Button type="primary" size="small" onClick={() => navigate(`/admin/pharmacies/${record.key}`)}>Review</Button>
+                    <Button type="primary" size="small" onClick={() => navigate(`/admin/pharmacies/${record._id}`)}>Review</Button>
                 </Space>
             )
         }
@@ -67,27 +81,31 @@ const PharmacyList = () => {
                     <Avatar shape="square" icon={<ShopOutlined />} />
                     <div>
                         <div style={{ fontWeight: 500 }}>{text}</div>
-                        <div style={{ fontSize: 12, color: '#999' }}>ID: PH-{record.key}</div>
+                        <div style={{ fontSize: 12, color: '#999' }}>ID: PH-{record._id.substring(record._id.length - 6)}</div>
                     </div>
                 </Space>
             )
         },
-        { title: 'Owner', dataIndex: 'owner', key: 'owner' },
+        {
+            title: 'Owner',
+            dataIndex: 'owner',
+            key: 'owner',
+            render: owner => owner ? `${owner.firstName} ${owner.lastName}` : 'N/A'
+        },
         {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
             render: status => (
-                <Badge status={status === 'Active' ? 'success' : 'error'} text={status} />
+                <Badge status={status === 'approved' || status === 'Active' ? 'success' : 'error'} text={status.toUpperCase()} />
             )
         },
-        { title: 'Total Orders', dataIndex: 'orders', key: 'orders' },
-        { title: 'Rating', dataIndex: 'rating', key: 'rating' },
+        { title: 'License', dataIndex: 'licenseNumber', key: 'license' },
         {
             title: 'Action',
             key: 'action',
             render: (_, record) => (
-                <Button size="small" onClick={() => navigate(`/admin/pharmacies/${record.key}`)}>Manage</Button>
+                <Button size="small" onClick={() => navigate(`/admin/pharmacies/${record._id}`)}>Manage</Button>
             )
         }
     ];
@@ -105,7 +123,7 @@ const PharmacyList = () => {
                             label: (
                                 <span>
                                     Pending Requests
-                                    <Badge count={pendingData.length} style={{ marginLeft: 8, backgroundColor: '#f5222d' }} />
+                                    <Badge count={pendingPharmacies.length} style={{ marginLeft: 8, backgroundColor: '#f5222d' }} />
                                 </span>
                             ),
                             children: (
@@ -113,7 +131,7 @@ const PharmacyList = () => {
                                     <div style={{ marginBottom: 16 }}>
                                         <Text type="secondary">Review registration requests from new pharmacies.</Text>
                                     </div>
-                                    <Table columns={pendingColumns} dataSource={pendingData} />
+                                    <Table columns={pendingColumns} dataSource={pendingPharmacies} loading={loading} rowKey="_id" />
                                 </>
                             )
                         },
@@ -125,7 +143,7 @@ const PharmacyList = () => {
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
                                         <Input prefix={<SearchOutlined />} placeholder="Search pharmacy..." style={{ width: 300 }} />
                                     </div>
-                                    <Table columns={activeColumns} dataSource={activeData} />
+                                    <Table columns={activeColumns} dataSource={activePharmacies} loading={loading} rowKey="_id" />
                                 </>
                             )
                         }

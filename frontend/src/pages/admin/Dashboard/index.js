@@ -67,11 +67,7 @@ const AdminDashboard = () => {
     { name: 'Today', value: stats.ordersToday },
   ];
 
-  // Mock Data for Alerts (Static for now)
-  const securityAlerts = [
-    { type: 'info', message: 'System performing within normal parameters.', time: 'Just now' },
-    { type: 'info', message: 'Database backup completed successfully.', time: '1 hour ago' },
-  ];
+  const securityAlerts = [];
 
   return (
     <div className="admin-dashboard">

@@ -6,6 +6,8 @@ import MainLayout from '../layouts/MainLayout';
 import AuthLayout from '../layouts/AuthLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
 import PharmacyAdminLayout from '../layouts/PharmacyAdminLayout';
+import OwnerLayout from '../layouts/OwnerLayout';
+import AdminLayout from '../layouts/AdminLayout';
 
 // Components
 import ProtectedRoute from './ProtectedRoute';
@@ -16,6 +18,8 @@ import Register from '../pages/auth/Register';
 import DeliveryRegister from '../pages/auth/DeliveryRegister';
 import DeliveryOnboarding from '../pages/auth/DeliveryOnboarding';
 import PharmacyRegister from '../pages/auth/PharmacyRegister';
+import OwnerLogin from '../pages/auth/OwnerLogin';
+import OwnerRegister from '../pages/auth/OwnerRegister';
 import VerifyEmail from '../pages/auth/VerifyEmail';
 
 // Page Imports
@@ -59,7 +63,34 @@ import DeliveryProfile from '../pages/delivery/Profile';
 // Cashier Pages
 import CashierDashboard from '../pages/cashier/Dashboard';
 
-// User Management (if existing)
+// Owner Pages
+import OwnerDashboard from '../pages/owner/Dashboard';
+import PharmacyDetails from '../pages/owner/PharmacyDetails';
+import Inventory from '../pages/owner/Inventory'; // Fixed name
+import Orders from '../pages/owner/Orders'; // Fixed name
+import StaffManagement from '../pages/owner/StaffManagement';
+import OwnerSubscription from '../pages/owner/Subscription';
+import OwnerReports from '../pages/owner/Reports';
+import OwnerAnalytics from '../pages/owner/Analytics';
+import OwnerSettings from '../pages/owner/Settings';
+import OwnerProfile from '../pages/owner/Profile';
+
+// Admin Pages
+import AdminDashboard from '../pages/admin/Dashboard';
+import UsersManagement from '../pages/admin/Users';
+import PendingRegistrations from '../pages/admin/Users/PendingRegistrations';
+import PharmaciesManagement from '../pages/admin/Pharmacies/PharmacyList';
+import AdminSettings from '../pages/admin/Settings/Settings';
+import UserDetails from '../pages/admin/Users/UserDetails';
+import PharmacyDetail from '../pages/admin/Pharmacies/PharmacyDetail';
+import SystemMonitoring from '../pages/admin/Monitoring/SystemMonitoring';
+import AuditLogs from '../pages/admin/Audit/AuditLogs';
+import Communication from '../pages/admin/Communication/Communication';
+import DataManagement from '../pages/admin/Data/DataManagement';
+import SecurityDashboard from '../pages/admin/Security/SecurityDashboard';
+import Analytics from '../pages/admin/Analytics/Analytics';
+import OrdersManagement from '../pages/admin/Orders/OrdersList';
+
 // import UserManagement from '../pages/admin/UserManagement'; 
 
 const AppRouter = () => {
@@ -79,6 +110,8 @@ const AppRouter = () => {
         <Route path="/auth/delivery/register" element={<DeliveryRegister />} />
         <Route path="/auth/delivery/onboarding" element={<DeliveryOnboarding />} />
         <Route path="/auth/pharmacy/register" element={<PharmacyRegister />} />
+        <Route path="/auth/owner/login" element={<OwnerLogin />} />
+        <Route path="/auth/owner/register" element={<OwnerRegister />} />
         <Route path="/auth/verify" element={<VerifyEmail />} />
       </Route>
 
@@ -123,7 +156,7 @@ const AppRouter = () => {
             CashierDashboard usually has its own sidebar/layout logic inside or needs a layout.
             Let's use MainLayout for consistency if CashierLayout doesn't exist yet, 
             or better: specific layout implies Sidebar. 
-            I will use MainLayout as a safe default for now. */}
+            Let's use MainLayout as a safe default for now. */}
         <Route path="/cashier/dashboard" element={<CashierDashboard />} />
       </Route>
 
@@ -137,6 +170,42 @@ const AppRouter = () => {
           <Route path="/pharmacy-admin/reports" element={<PharmacyReports />} />
           <Route path="/pharmacy-admin/settings" element={<PharmacySettings />} />
           <Route path="/pharmacy-admin/profile" element={<PharmacyAdminProfile />} />
+        </Route>
+      </Route>
+
+      {/* Protected Routes - System Admin */}
+      <Route element={<ProtectedRoute allowedRoles={['admin', 'system_admin']} />}>
+        <Route element={<AdminLayout />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<UsersManagement />} />
+          <Route path="/admin/users/:id" element={<UserDetails />} />
+          <Route path="/admin/registrations/pending" element={<PendingRegistrations />} />
+          <Route path="/admin/pharmacies" element={<PharmaciesManagement />} />
+          <Route path="/admin/pharmacies/:id" element={<PharmacyDetail />} />
+          <Route path="/admin/orders" element={<OrdersManagement />} />
+          <Route path="/admin/monitoring" element={<SystemMonitoring />} />
+          <Route path="/admin/audit" element={<AuditLogs />} />
+          <Route path="/admin/communication" element={<Communication />} />
+          <Route path="/admin/data" element={<DataManagement />} />
+          <Route path="/admin/security" element={<SecurityDashboard />} />
+          <Route path="/admin/analytics" element={<Analytics />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+        </Route>
+      </Route>
+
+      {/* Protected Routes - Pharmacy Owner */}
+      <Route element={<ProtectedRoute allowedRoles={['pharmacy_owner']} />}>
+        <Route element={<OwnerLayout />}>
+          <Route path="/owner/dashboard" element={<OwnerDashboard />} />
+          <Route path="/owner/pharmacy" element={<PharmacyDetails />} />
+          <Route path="/owner/inventory" element={<Inventory />} />
+          <Route path="/owner/orders" element={<Orders />} />
+          <Route path="/owner/staff" element={<StaffManagement />} />
+          <Route path="/owner/subscription" element={<OwnerSubscription />} />
+          <Route path="/owner/reports" element={<OwnerReports />} />
+          <Route path="/owner/analytics" element={<OwnerAnalytics />} />
+          <Route path="/owner/settings" element={<OwnerSettings />} />
+          <Route path="/owner/profile" element={<OwnerProfile />} />
         </Route>
       </Route>
 
