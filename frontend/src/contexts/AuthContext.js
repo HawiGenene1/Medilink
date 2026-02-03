@@ -59,6 +59,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Pharmacy Owner Login
+  const ownerLogin = async (email, password) => {
+    try {
+      const response = await api.post('/pharmacy-owner/login', { email, password });
+      const { token, owner } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(owner));
+      setUser(owner);
+      setIsAuthenticated(true);
+      return { success: true, user: owner };
+    } catch (error) {
+      console.error('Owner login failed:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+      return { success: false, message: errorMessage };
+    }
+  };
+
   // Registration function
   const register = async (userData) => {
     try {
@@ -122,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     loading,
     login,
+    ownerLogin,
     register,
     logout,
     refreshUser,

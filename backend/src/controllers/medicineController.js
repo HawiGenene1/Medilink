@@ -12,6 +12,7 @@ let redisDisabledMessageShown = false;
 // Initialize Redis client only when URL is provided; otherwise stay silent
 if (useRedis) {
   try {
+    // Redis initialization logic (from hawi)
     redisClient = createClient({
       url: process.env.REDIS_URL,
       socket: {
@@ -49,6 +50,7 @@ if (useRedis) {
   }
 }
 
+// Fallback no-op client
 if (!redisClient) {
   redisClient = {
     get: () => Promise.resolve(null),
@@ -59,6 +61,7 @@ if (!redisClient) {
   };
 }
 
+// Improved cache middleware
 const cacheMiddleware = async (req, res, next) => {
   if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
     return next();
@@ -545,6 +548,14 @@ const getMedicineById = async (req, res) => {
  */
 const addMedicine = async (req, res) => {
   try {
+    // Block system_admin from operational tasks
+    if (req.user.role === 'system_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'System Admins cannot perform pharmacy operations.'
+      });
+    }
+
     const {
       name,
       brand, // From frontend
@@ -628,6 +639,14 @@ const addMedicine = async (req, res) => {
  */
 const updateMedicine = async (req, res) => {
   try {
+    // Block system_admin from operational tasks
+    if (req.user.role === 'system_admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'System Admins cannot perform pharmacy operations.'
+      });
+    }
+
     const { id } = req.params;
     const updateData = req.body;
 

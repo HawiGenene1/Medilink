@@ -11,34 +11,37 @@ const seedAdmin = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('MongoDB connected for seeding...');
 
-        const adminEmail = 'admin@medilink.com';
-        const hashedPassword = await bcrypt.hash('Admin@123', 10);
+        const adminEmail = 'sysadmin@medilink.com';
+        const plainPassword = 'SysAdmin@123';
 
         let admin = await User.findOne({ email: adminEmail });
 
         if (admin) {
-            console.log('Admin exists, updating password...');
-            admin.password = hashedPassword;
+            console.log('System Admin exists, updating password and role...');
+            admin.password = plainPassword; // Model will hash it on save
+            admin.role = 'system_admin';
+            admin.status = 'active';
             await admin.save();
-            console.log('Admin password updated.');
+            console.log('System Admin updated.');
         } else {
-            // Create new Admin
+            // Create new System Admin
             admin = new User({
-                firstName: 'Super',
+                firstName: 'System',
                 lastName: 'Admin',
                 email: adminEmail,
-                password: hashedPassword,
-                role: 'admin',
-                phone: '0911000000',
+                password: plainPassword, // Model will hash it on save
+                role: 'system_admin',
+                phone: '0900000000',
                 isEmailVerified: true,
-                username: 'superadmin'
+                status: 'active',
+                username: 'systemadmin'
             });
             await admin.save();
-            console.log('Super Admin created successfully');
+            console.log('System Admin created successfully');
         }
 
-        console.log('Email: admin@medilink.com');
-        console.log('Password: Admin@123');
+        console.log('Email: sysadmin@medilink.com');
+        console.log('Password: SysAdmin@123');
         process.exit(0);
     } catch (error) {
         console.error('Seeding error:', error);

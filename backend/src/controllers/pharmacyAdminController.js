@@ -179,47 +179,103 @@ const approveRegistration = async (req, res) => {
             });
         }
 
-        // Create pharmacy owner user account
+        const { subscriptionPlan } = req.body;
+
+        if (!subscriptionPlan || !SUBSCRIPTION_PLANS[subscriptionPlan]) {
+            return res.status(400).json({
+                success: false,
+                message: 'A valid subscription plan is required for approval'
+            });
+        }
+
+        const planData = SUBSCRIPTION_PLANS[subscriptionPlan];
+
+        // Check if user already exists
+        let user = await User.findOne({ email: tempPharmacy.email });
         const generatePassword = require('../utils/passwordGenerator').generatePassword;
         const generatedPassword = generatePassword(12);
 
-        const user = new User({
-            firstName: tempPharmacy.ownerName.split(' ')[0],
-            lastName: tempPharmacy.ownerName.split(' ').slice(1).join(' ') || 'Owner',
-            email: tempPharmacy.email,
-            phone: tempPharmacy.phone,
-            role: 'pharmacy_staff', // Operational role for the pharmacy
-            password: generatedPassword,
-            status: 'active',
-            isEmailVerified: true
-        });
+        if (!user) {
+            user = new User({
+                firstName: tempPharmacy.ownerName.split(' ')[0],
+                lastName: tempPharmacy.ownerName.split(' ').slice(1).join(' ') || 'Owner',
+                email: tempPharmacy.email,
+                phone: tempPharmacy.phone,
+                role: 'pharmacy_owner',
+                status: 'active',
+                isEmailVerified: true
+            });
+        }
 
-        await user.save();
+        // Always reset password on approval to ensure consistency
+        user.password = generatedPassword;
+        user.status = 'active';
+        user.isEmailVerified = true;
 
-        // Create pharmacy record
-        const pharmacy = new Pharmacy({
-            name: tempPharmacy.pharmacyName,
-            ownerName: tempPharmacy.ownerName,
-            licenseNumber: tempPharmacy.licenseNumber,
-            licenseExpiryDate: tempPharmacy.licenseExpiryDate,
-            email: tempPharmacy.email,
-            phone: tempPharmacy.phone,
-            address: tempPharmacy.address,
-            owner: user._id,
-            status: 'approved',
-            isActive: true,
-            isVerified: true
-        });
+        // Check if pharmacy already exists
+        let pharmacy = await Pharmacy.findOne({ email: tempPharmacy.email });
 
-        await pharmacy.save();
+        if (!pharmacy) {
+            const pharmacyAddress = {
+                street: tempPharmacy.address?.street || '',
+                city: tempPharmacy.address?.city || '',
+                state: tempPharmacy.address?.state || '',
+                zipCode: tempPharmacy.address?.postalCode || tempPharmacy.address?.zipCode || '0000',
+                country: tempPharmacy.address?.country || 'Ethiopia'
+            };
 
-        // Update user with pharmacyId
+            pharmacy = new Pharmacy({
+                name: tempPharmacy.pharmacyName,
+                ownerName: tempPharmacy.ownerName,
+                licenseNumber: tempPharmacy.licenseNumber,
+                licenseExpiryDate: tempPharmacy.licenseExpiryDate,
+                email: tempPharmacy.email,
+                phone: tempPharmacy.phone,
+                address: pharmacyAddress,
+                location: {
+                    type: 'Point',
+                    coordinates: [38.7578, 9.0227]
+                },
+                owner: user._id,
+                status: 'approved',
+                isActive: true,
+                isVerified: true
+            });
+            await pharmacy.save();
+        }
+
+        // Link user to pharmacy and save ONCE
         user.pharmacyId = pharmacy._id;
         await user.save();
 
         // Update temp pharmacy status
         tempPharmacy.status = 'approved';
         await tempPharmacy.save();
+
+        // Create subscription record
+        const subscription = new Subscription({
+            pharmacy: pharmacy._id,
+            plan: subscriptionPlan,
+            price: planData.price,
+            currency: planData.currency || 'ETB',
+            features: planData.features,
+            maxStaff: planData.maxStaff,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year
+            status: 'active',
+            isActive: true,
+            payment: {
+                status: 'completed',
+                method: 'cash',
+                paidDate: new Date()
+            }
+        });
+
+        await subscription.save();
+
+        // Update pharmacy with subscription reference
+        pharmacy.subscription = subscription._id;
+        await pharmacy.save();
 
         // Send approval email with credentials
         const sendWelcomeEmail = require('../services/emailService').sendWelcomeEmail;
@@ -229,9 +285,10 @@ const approveRegistration = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Pharmacy registration approved successfully',
+            message: `Pharmacy approved successfully with ${planData.name} plan`,
             data: {
                 pharmacy,
+                subscription,
                 user: {
                     id: user._id,
                     email: user.email,

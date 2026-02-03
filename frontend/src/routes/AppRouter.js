@@ -6,6 +6,7 @@ import MainLayout from '../layouts/MainLayout';
 import AuthLayout from '../layouts/AuthLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
 import PharmacyAdminLayout from '../layouts/PharmacyAdminLayout';
+import OwnerLayout from '../layouts/OwnerLayout';
 import AdminLayout from '../layouts/AdminLayout';
 
 // Components
@@ -17,6 +18,8 @@ import Register from '../pages/auth/Register';
 import DeliveryRegister from '../pages/auth/DeliveryRegister';
 import DeliveryOnboarding from '../pages/auth/DeliveryOnboarding';
 import PharmacyRegister from '../pages/auth/PharmacyRegister';
+import OwnerLogin from '../pages/auth/OwnerLogin';
+import OwnerRegister from '../pages/auth/OwnerRegister';
 import VerifyEmail from '../pages/auth/VerifyEmail';
 
 // Page Imports
@@ -60,6 +63,18 @@ import DeliveryProfile from '../pages/delivery/Profile';
 // Cashier Pages
 import CashierDashboard from '../pages/cashier/Dashboard';
 
+// Owner Pages
+import OwnerDashboard from '../pages/owner/Dashboard';
+import PharmacyDetails from '../pages/owner/PharmacyDetails';
+import Inventory from '../pages/owner/Inventory'; // Fixed name
+import Orders from '../pages/owner/Orders'; // Fixed name
+import StaffManagement from '../pages/owner/StaffManagement';
+import OwnerSubscription from '../pages/owner/Subscription';
+import OwnerReports from '../pages/owner/Reports';
+import OwnerAnalytics from '../pages/owner/Analytics';
+import OwnerSettings from '../pages/owner/Settings';
+import OwnerProfile from '../pages/owner/Profile';
+
 // Admin Pages
 import AdminDashboard from '../pages/admin/Dashboard';
 import AdminUsers from '../pages/admin/Users';
@@ -74,6 +89,7 @@ import AdminData from '../pages/admin/Data/DataManagement';
 import AdminSecurity from '../pages/admin/Security/SecurityDashboard';
 import AdminAnalytics from '../pages/admin/Analytics/Analytics';
 import AdminSettings from '../pages/admin/Settings/Settings';
+import OrdersManagement from '../pages/admin/Orders/OrdersList';
 
 const AppRouter = () => {
   return (
@@ -92,6 +108,8 @@ const AppRouter = () => {
         <Route path="/auth/delivery/register" element={<DeliveryRegister />} />
         <Route path="/auth/delivery/onboarding" element={<DeliveryOnboarding />} />
         <Route path="/auth/pharmacy/register" element={<PharmacyRegister />} />
+        <Route path="/auth/owner/login" element={<OwnerLogin />} />
+        <Route path="/auth/owner/register" element={<OwnerRegister />} />
         <Route path="/auth/verify" element={<VerifyEmail />} />
       </Route>
 
@@ -131,12 +149,7 @@ const AppRouter = () => {
 
       {/* Protected Routes - Cashier */}
       <Route element={<ProtectedRoute allowedRoles={['cashier']} />}>
-        {/* Using MainLayout or creating a specific CashierLayout if needed. 
-            For now assuming MainLayout or direct component rendering. 
-            CashierDashboard usually has its own sidebar/layout logic inside or needs a layout.
-            Let's use MainLayout for consistency if CashierLayout doesn't exist yet, 
-            or better: specific layout implies Sidebar. 
-            I will use MainLayout as a safe default for now. */}
+        {/* Using MainLayout or creating a specific CashierLayout if needed. */}
         <Route path="/cashier/dashboard" element={<CashierDashboard />} />
       </Route>
 
@@ -154,7 +167,7 @@ const AppRouter = () => {
       </Route>
 
       {/* Protected Routes - System Admin */}
-      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['admin', 'system_admin']} />}>
         <Route element={<AdminLayout />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<AdminUsers />} />
@@ -162,6 +175,7 @@ const AppRouter = () => {
           <Route path="/admin/pharmacies/:id" element={<AdminPharmacyDetail />} />
           <Route path="/admin/registrations/pending" element={<AdminDeliveryRegistrations />} />
           <Route path="/admin/registrations/:id" element={<AdminDeliveryRegistrationDetail />} />
+          <Route path="/admin/orders" element={<OrdersManagement />} />
           <Route path="/admin/monitoring" element={<AdminMonitoring />} />
           <Route path="/admin/audit" element={<AdminAudit />} />
           <Route path="/admin/communication" element={<AdminCommunication />} />
@@ -169,6 +183,22 @@ const AppRouter = () => {
           <Route path="/admin/security" element={<AdminSecurity />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+        </Route>
+      </Route>
+
+      {/* Protected Routes - Pharmacy Owner */}
+      <Route element={<ProtectedRoute allowedRoles={['pharmacy_owner']} />}>
+        <Route element={<OwnerLayout />}>
+          <Route path="/owner/dashboard" element={<OwnerDashboard />} />
+          <Route path="/owner/pharmacy" element={<PharmacyDetails />} />
+          <Route path="/owner/inventory" element={<Inventory />} />
+          <Route path="/owner/orders" element={<Orders />} />
+          <Route path="/owner/staff" element={<StaffManagement />} />
+          <Route path="/owner/subscription" element={<OwnerSubscription />} />
+          <Route path="/owner/reports" element={<OwnerReports />} />
+          <Route path="/owner/analytics" element={<OwnerAnalytics />} />
+          <Route path="/owner/settings" element={<OwnerSettings />} />
+          <Route path="/owner/profile" element={<OwnerProfile />} />
         </Route>
       </Route>
 

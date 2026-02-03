@@ -22,9 +22,29 @@ const protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Find user by ID from token
-      // NOTE: User.role is a STRING, not a reference to Role collection
-      const user = await User.findById(decoded.userId).select('-password');
+      // Find user or owner by ID from token
+      let user;
+      const targetId = decoded.userId || decoded.ownerId || decoded.id;
+
+      // Try User collection first
+      user = await User.findById(targetId).select('-password');
+
+      // If not found in User, try PharmacyOwner collection
+      if (!user) {
+        const PharmacyOwner = require("../models/PharmacyOwner");
+        const owner = await PharmacyOwner.findById(targetId).select('-password');
+
+        if (owner) {
+          user = {
+            _id: owner._id,
+            email: owner.email,
+            role: 'pharmacy_owner',
+            pharmacyId: owner.pharmacyId,
+            status: owner.isActive ? 'active' : 'suspended',
+            isActive: owner.isActive
+          };
+        }
+      }
 
       if (!user) {
         return res.status(401).json({

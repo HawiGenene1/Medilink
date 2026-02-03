@@ -9,7 +9,13 @@ const logger = require('../utils/logger');
  * @access  Public
  */
 const registerPharmacy = async (req, res) => {
+  console.log('=== REGISTER PHARMACY START ===');
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Body:', JSON.stringify(req.body, null, 2));
+  console.log('Files:', req.files);
+
   try {
+    console.log('Entered try block');
     const {
       pharmacyName,
       licenseNumber,
@@ -17,11 +23,34 @@ const registerPharmacy = async (req, res) => {
       ownerName,
       email,
       phone,
-      address,
-      tinNumber,
-      licenseDocument,
-      tinDocument
+      tinNumber
     } = req.body;
+
+    // Handle nested address object if sent as address[key]
+    let address = req.body.address;
+    if (!address && req.body['address[street]']) {
+      address = {
+        street: req.body['address[street]'],
+        city: req.body['address[city]'],
+        state: req.body['address[state]'],
+        postalCode: req.body['address[postalCode]'],
+        country: req.body['address[country]'] || 'Ethiopia'
+      };
+    }
+
+    // Get file paths
+    const licenseFile = req.files?.licenseDocument ? req.files.licenseDocument[0] : null;
+    const tinFile = req.files?.tinDocument ? req.files.tinDocument[0] : null;
+
+    if (!licenseFile || !tinFile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Both License and TIN documents are required'
+      });
+    }
+
+    const licenseDocument = `/uploads/documents/${licenseFile.filename}`;
+    const tinDocument = `/uploads/documents/${tinFile.filename}`;
 
     // Check if pharmacy with same email or license already exists
     const existingPharmacy = await TempPharmacy.findOne({

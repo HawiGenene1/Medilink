@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import CommonDashboardLayout from './CommonDashboardLayout';
+import { useAuth } from '../contexts/AuthContext';
 import {
     DashboardOutlined,
     TeamOutlined,
@@ -13,10 +14,13 @@ import {
     LockOutlined,
     BarChartOutlined,
     SettingOutlined,
-    CarOutlined
+    ShoppingCartOutlined
 } from '@ant-design/icons';
 
 const AdminLayout = () => {
+    const { user } = useAuth();
+    const role = user?.role || 'admin';
+
     const menuItems = [
         {
             key: '/admin/dashboard',
@@ -37,6 +41,11 @@ const AdminLayout = () => {
             key: '/admin/pharmacies',
             icon: <ShopOutlined />,
             label: 'Pharmacies',
+        },
+        {
+            key: '/admin/orders',
+            icon: <ShoppingCartOutlined />,
+            label: 'Orders',
         },
         {
             key: '/admin/monitoring',
@@ -78,7 +87,7 @@ const AdminLayout = () => {
     return (
         <CommonDashboardLayout
             menuItems={menuItems}
-            role="admin"
+            role={role}
         >
             <Outlet />
         </CommonDashboardLayout>

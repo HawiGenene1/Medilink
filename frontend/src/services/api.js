@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -92,6 +92,42 @@ export const cartAPI = {
     api.patch(`/cart/items/${itemId}`, { quantity }),
   removeItem: (itemId) => api.delete(`/cart/items/${itemId}`),
   clearCart: () => api.delete('/cart'),
+};
+
+// Pharmacy Owner API
+export const pharmacyOwnerAPI = {
+  register: (data) => api.post('/pharmacy-owner/register', data),
+  login: (credentials) => api.post('/pharmacy-owner/login', credentials),
+  getDashboard: () => api.get('/pharmacy-owner/dashboard'),
+  getProfile: () => api.get('/pharmacy-owner/profile'),
+  updateProfile: (data) => api.put('/pharmacy-owner/profile', data),
+  updatePassword: (data) => api.put('/pharmacy-owner/profile/password', data),
+  getStaff: () => api.get('/pharmacy-owner/staff'),
+  createStaff: (data) => api.post('/pharmacy-owner/staff', data),
+  updateStaff: (id, data) => api.put(`/pharmacy-owner/staff/${id}`, data),
+  deleteStaff: (id) => api.delete(`/pharmacy-owner/staff/${id}`),
+  getPharmacy: () => api.get('/pharmacy-owner/pharmacy'),
+  updatePharmacy: (data) => api.put('/pharmacy-owner/pharmacy', data),
+  getSubscription: () => api.get('/pharmacy-owner/subscription'),
+  getReports: () => api.get('/pharmacy-owner/reports'),
+  getAnalytics: () => api.get('/pharmacy-owner/analytics')
+};
+
+// Inventory API
+export const inventoryAPI = {
+  get: (params) => api.get('/inventory', { params }),
+  add: (data) => api.post('/inventory', data),
+  getAlerts: () => api.get('/inventory/alerts'),
+  checkAlerts: () => api.post('/inventory/check-alerts'),
+  update: (id, data) => api.put(`/inventory/${id}`, data),
+  delete: (id) => api.delete(`/inventory/${id}`)
+};
+
+// Order Processing API
+export const orderProcessingAPI = {
+  getOrders: () => api.get('/order-processing'),
+  updateStatus: (id, data) => api.put(`/order-processing/${id}/status`, data),
+  verifyPrescription: (id) => api.put(`/order-processing/${id}/verify-prescription`)
 };
 
 export default api;

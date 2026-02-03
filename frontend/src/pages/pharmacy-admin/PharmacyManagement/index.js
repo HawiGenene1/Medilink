@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Button, Space, Card, Typography, Modal, Descriptions, Input, Form, message, List, Spin, Alert, Row, Col, Statistic } from 'antd';
+import { Table, Tag, Button, Space, Card, Typography, Modal, Descriptions, Input, Form, message, List, Spin, Alert, Row, Col, Statistic, Select } from 'antd';
 import { SearchOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, FileTextOutlined } from '@ant-design/icons';
 import pharmacyAdminService from '../../../services/pharmacyAdminService';
 
@@ -16,6 +16,7 @@ const PharmacyRegistration = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('basic');
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -78,8 +79,8 @@ const PharmacyRegistration = () => {
 
     try {
       setActionLoading(true);
-      await pharmacyAdminService.approveRegistration(selectedRequest._id);
-      message.success(`Pharmacy ${selectedRequest.pharmacyName} has been approved!`);
+      await pharmacyAdminService.approveRegistration(selectedRequest._id, selectedPlan);
+      message.success(`Pharmacy ${selectedRequest.pharmacyName} has been approved with ${selectedPlan.toUpperCase()} plan!`);
       setIsModalOpen(false);
       fetchRegistrations(); // Refresh list
     } catch (error) {
@@ -295,7 +296,11 @@ const PharmacyRegistration = () => {
               <Descriptions.Item label="License Number">{selectedRequest.licenseNumber}</Descriptions.Item>
               <Descriptions.Item label="Email">{selectedRequest.email}</Descriptions.Item>
               <Descriptions.Item label="Phone">{selectedRequest.phone}</Descriptions.Item>
-              <Descriptions.Item label="Address" span={2}>{selectedRequest.address}</Descriptions.Item>
+              <Descriptions.Item label="Address" span={2}>
+                {selectedRequest.address
+                  ? `${selectedRequest.address.street || ''}, ${selectedRequest.address.city || ''}, ${selectedRequest.address.state || ''} ${selectedRequest.address.postalCode || ''}, ${selectedRequest.address.country || ''}`.replace(/,\s*,/g, ',').replace(/^,|,$/g, '').trim()
+                  : 'N/A'}
+              </Descriptions.Item>
               <Descriptions.Item label="TIN Number">{selectedRequest.tinNumber || 'N/A'}</Descriptions.Item>
               <Descriptions.Item label="Status">
                 <Tag color={selectedRequest.status === 'pending' ? 'orange' : 'green'}>
@@ -323,6 +328,24 @@ const PharmacyRegistration = () => {
                 />
               </div>
             )}
+
+            <div style={{ marginTop: 24, padding: '16px', background: '#f9f9f9', borderRadius: '8px', border: '1px solid #e8e8e8' }}>
+              <Title level={5}>Subscription Plan Assignment</Title>
+              <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+                Select a subscription plan to activate for this pharmacy upon approval.
+              </Text>
+              <Select
+                style={{ width: '100%' }}
+                placeholder="Select a subscription plan"
+                value={selectedPlan}
+                onChange={setSelectedPlan}
+                size="large"
+              >
+                <Select.Option value="basic">Basic (Free)</Select.Option>
+                <Select.Option value="standard">Standard (500 ETB/mo)</Select.Option>
+                <Select.Option value="premium">Premium (1200 ETB/mo)</Select.Option>
+              </Select>
+            </div>
           </div>
         )}
       </Modal>

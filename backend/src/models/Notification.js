@@ -12,18 +12,15 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
   pharmacyId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Pharmacy'
+    ref: 'Pharmacy',
+    required: true
   },
   roleTarget: {
     type: String,
-    enum: ['OWNER', 'STAFF', 'USER'],
-    default: 'USER'
+    enum: ['OWNER', 'STAFF'],
+    required: true
   },
   isRead: {
     type: Boolean,
@@ -31,7 +28,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['new_order', 'low_stock', 'expired_medicine', 'near_expiry', 'out_of_stock', 'system', 'order_update', 'delivery_update'],
+    enum: ['new_order', 'low_stock', 'expired_medicine', 'near_expiry', 'out_of_stock', 'system'],
     default: 'system'
   },
   metadata: {
@@ -43,9 +40,9 @@ const notificationSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Indexes for faster querying
-notificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
+// Index for faster querying
 notificationSchema.index({ pharmacyId: 1, roleTarget: 1, isRead: 1, createdAt: -1 });
+
 // TTL index to auto-delete notifications after 30 days
 notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 

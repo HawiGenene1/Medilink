@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Row, Col, Card, Button, Descriptions, Tag, Divider,
-    Steps, Modal, Image, Typography, Space, Alert
+    Steps, Modal, Image, Typography, Space, Alert, message
 } from 'antd';
 import {
     CheckCircleOutlined,
@@ -12,6 +12,7 @@ import {
     StopOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
+import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
@@ -19,20 +20,53 @@ const { Step } = Steps;
 const PharmacyDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [pharmacy, setPharmacy] = useState(null);
+    const [isPending, setIsPending] = useState(false);
 
-    // Mock: Check if reviewing pending or managing active (based on ID convention or status)
-    // For demo, let's assume id > 10 is active, else is pending
-    const isPending = parseInt(id) < 10;
-
-    const pharmacy = {
-        name: isPending ? 'New Age Pharmacy' : 'Existing Mega Pharma',
-        owner: 'Kebede T.',
-        email: 'kebede@pharmacy.com',
-        phone: '0911223344',
-        address: 'Bole, near Edna Mall',
-        license: 'LIC-2023-001',
-        status: isPending ? 'Pending Review' : 'Active'
+    const fetchDetails = async () => {
+        setLoading(true);
+        try {
+            // Try fetching from approved pharmacies first
+            let response;
+            try {
+                response = await api.get(`/admin/pharmacies/${id}`);
+                if (response.data.success) {
+                    setPharmacy(response.data.data);
+                    setIsPending(false);
+                }
+            } catch (e) {
+                // If not found, try fetching from pending registrations
+                response = await api.get(`/admin/registrations/pending/${id}`);
+                if (response.data.success) {
+                    const regData = response.data.data;
+                    setPharmacy({
+                        name: regData.pharmacyName,
+                        owner: regData.ownerName,
+                        email: regData.email,
+                        phone: regData.phone,
+                        address: regData.address,
+                        license: regData.licenseNumber,
+                        status: 'Pending Review',
+                        createdAt: regData.createdAt
+                    });
+                    setIsPending(true);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch details:', error);
+            message.error('Failed to load details');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    React.useEffect(() => {
+        fetchDetails();
+    }, [id]);
+
+    if (loading) return <Card loading />;
+    if (!pharmacy) return <Alert message="Not Found" type="error" />;
 
     return (
         <div className="pharmacy-detail">
@@ -52,7 +86,7 @@ const PharmacyDetail = () => {
             {isPending && (
                 <Card style={{ marginBottom: 24 }}>
                     <Steps current={1}>
-                        <Step title="Submitted" description="2023-11-20" />
+                        <Step title="Submitted" description={pharmacy.createdAt ? new Date(pharmacy.createdAt).toLocaleDateString() : ''} />
                         <Step title="Under Review" description="Current Stage" />
                         <Step title="Decision" />
                     </Steps>
@@ -67,7 +101,9 @@ const PharmacyDetail = () => {
                             <Descriptions.Item label="License Number">{pharmacy.license}</Descriptions.Item>
                             <Descriptions.Item label="Email">{pharmacy.email}</Descriptions.Item>
                             <Descriptions.Item label="Phone">{pharmacy.phone}</Descriptions.Item>
-                            <Descriptions.Item label="Address" span={2}>{pharmacy.address}</Descriptions.Item>
+                            <Descriptions.Item label="Address" span={2}>
+                                {pharmacy.address ? `${pharmacy.address.street || ''}, ${pharmacy.address.city || ''}, ${pharmacy.address.state || ''} ${pharmacy.address.postalCode || ''}, ${pharmacy.address.country || ''}` : 'N/A'}
+                            </Descriptions.Item>
                         </Descriptions>
                     </Card>
 

@@ -116,7 +116,15 @@ const login = async (req, res) => {
     }
 
     // Check status
-    console.log('LOGIN DEBUG: Checking status. Role:', user.role, 'Status:', user.status);
+    console.log('LOGIN DEBUG: Checking status. Role:', user.role, 'Status:', user.status, 'isActive:', user.isActive);
+
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been disabled. Please contact support.',
+      });
+    }
+
     if (user.status !== 'active' && !(user.status === 'pending' && (user.role === 'delivery' || user.role === 'pharmacy_admin'))) {
       let statusMessage = 'Your account is pending approval.';
       if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
@@ -161,7 +169,8 @@ const login = async (req, res) => {
         role: safeUser.role,
         phone: safeUser.phone,
         status: safeUser.status,
-        avatar: safeUser.avatar
+        avatar: safeUser.avatar,
+        mustChangePassword: safeUser.mustChangePassword
       },
     });
   } catch (error) {

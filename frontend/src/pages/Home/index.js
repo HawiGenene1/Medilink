@@ -51,12 +51,12 @@ const Home = () => {
                     Start Shopping
                   </Button>
                   <Button
+                    type="primary"
                     size="large"
                     icon={<ShopOutlined />}
-                    onClick={() => navigate('/auth/owner/register')}
-                    className="btn-hero-secondary"
+                    onClick={() => navigate('/auth/pharmacy/register')}
                   >
-                    For Pharmacies
+                    Register Your Pharmacy
                   </Button>
                 </Space>
 
@@ -206,8 +206,8 @@ const Home = () => {
                 </div>
               </Space>
 
-              <Button type="primary" size="large" style={{ marginTop: '40px' }} onClick={() => navigate('/auth/owner/register')}>
-                Get Your Pharmacy Online
+              <Button type="primary" size="large" style={{ marginTop: '40px' }} onClick={() => navigate('/auth/pharmacy/register')}>
+                Get Started
               </Button>
             </Col>
           </Row>

@@ -9,7 +9,6 @@ const { TabPane } = Tabs;
 
 const Register = () => {
   const [loading, setLoading] = useState(false);
-  const [activeRole, setActiveRole] = useState('customer');
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -27,26 +26,14 @@ const Register = () => {
         lastName,
         email: values.email,
         phone: values.phone,
-        role: activeRole,
-        additionalData: activeRole === 'customer' ? null : {
-          ...(activeRole === 'pharmacy_admin' && {
-            pharmacyName: values.pharmacyName,
-            licenseNumber: values.licenseNumber,
-            address: {
-              street: values.street,
-              city: values.city,
-              state: values.state,
-              zipCode: values.zipCode
-            }
-          })
-        }
+        role: 'customer'
       };
 
       const result = await register(userData);
 
       if (result.success) {
-        message.success(result.message || 'Registration successful! Please check your email for your password and activation link.');
-        navigate('/auth/login');
+        message.success('Registration successful! Welcome to MediLink.');
+        navigate('/customer/home');
       } else {
         if (result.errors && Array.isArray(result.errors)) {
           result.errors.forEach(err => {
@@ -110,55 +97,13 @@ const Register = () => {
     </>
   );
 
-  const renderAddressFields = () => (
-    <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <Form.Item
-          label="Street Address"
-          name="street"
-          rules={[{ required: true, message: 'Street is required' }]}
-        >
-          <Input placeholder="Street" />
-        </Form.Item>
-        <Form.Item
-          label="City"
-          name="city"
-          rules={[{ required: true, message: 'City is required' }]}
-        >
-          <Input placeholder="City" />
-        </Form.Item>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        <Form.Item
-          label="State"
-          name="state"
-          rules={[{ required: true, message: 'State is required' }]}
-        >
-          <Input placeholder="State" />
-        </Form.Item>
-        <Form.Item
-          label="Zip Code"
-          name="zipCode"
-          rules={[{ required: true, message: 'Zip Code is required' }]}
-        >
-          <Input placeholder="Zip Code" />
-        </Form.Item>
-      </div>
-    </>
-  );
-
   return (
     <div className="register-container">
       <Card
         title="Join MediLink"
         className="register-card"
-        style={{ width: '100%', maxWidth: activeRole === 'customer' ? '450px' : '600px' }}
+        style={{ width: '100%', maxWidth: '450px' }}
       >
-        <Tabs activeKey={activeRole} onChange={setActiveRole} centered>
-          <TabPane tab={<span><UserOutlined />Customer</span>} key="customer" />
-          <TabPane tab={<span><ShopOutlined />Pharmacy</span>} key="pharmacy_admin" />
-        </Tabs>
-
         <Form
           name="register"
           onFinish={onFinish}
@@ -168,34 +113,11 @@ const Register = () => {
         >
           {renderPersonalFields()}
 
-          {activeRole === 'pharmacy_admin' && (
-            <>
-              <Form.Item
-                label="Pharmacy Name"
-                name="pharmacyName"
-                rules={[{ required: true, message: 'Pharmacy name is required' }]}
-              >
-                <Input prefix={<ShopOutlined />} placeholder="Enter pharmacy name" />
-              </Form.Item>
-              <Form.Item
-                label="License Number"
-                name="licenseNumber"
-                rules={[{ required: true, message: 'License number is required' }]}
-              >
-                <Input placeholder="Enter license number" />
-              </Form.Item>
-              {renderAddressFields()}
-            </>
-          )}
-
-
           <Form.Item>
             <div className="info-message">
               <InfoCircleOutlined />
               <span>
-                {activeRole === 'customer'
-                  ? 'A secure password will be generated and sent to your email.'
-                  : 'Your application will be reviewed by our admin team.'}
+                A secure password will be generated and sent to your email.
               </span>
             </div>
           </Form.Item>
@@ -208,7 +130,7 @@ const Register = () => {
               block
               size="large"
             >
-              {activeRole === 'customer' ? 'Register' : 'Submit Application'}
+              Register
             </Button>
           </Form.Item>
 

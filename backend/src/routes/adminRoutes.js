@@ -7,11 +7,17 @@ const {
   disableUser,
   enableUser,
   getPendingRegistrations,
+  getRegistrationDetails,
   approveRegistration,
   rejectRegistration,
   bulkExportData,
   createDeliveryPerson,
-  getDashboardStats
+  getDashboardStats,
+  createAdminUser,
+  getAllPharmacies,
+  getPharmacyById,
+  adminResetPassword,
+  getAllOrders
 } = require('../controllers/adminController');
 const { logAdminAction } = require('../middleware/auditMiddleware');
 
@@ -35,14 +41,25 @@ router.get('/dashboard/stats', getDashboardStats);
 router.get('/users', getAllUsers);
 router.get('/users/:id', getUserById); // Mapped getUserDetail -> getUserById
 router.patch('/users/:id/role', logAdminAction('UPDATE_USER_ROLE', 'User'), updateUserRole);
-// router.patch('/users/:id/status', logAdminAction('UPDATE_USER_STATUS', 'User'), updateUserStatus); // TODO: Implement updateUserStatus or map to disable/enable
+router.patch('/users/:id/enable', logAdminAction('ENABLE_USER', 'User'), enableUser);
+router.patch('/users/:id/disable', logAdminAction('DISABLE_USER', 'User'), disableUser);
+router.patch('/users/:id/reset-password', logAdminAction('RESET_PASSWORD', 'User'), adminResetPassword);
+router.get('/orders', getAllOrders);
+
+// Pharmacy Admin Management (SYSTEM_ADMIN role creates platform admins)
+// Create Admin User (Pharmacy Admin or System Admin)
+router.post('/create-admin', logAdminAction('CREATE_ADMIN_USER', 'User'), createAdminUser);
 
 // Pharmacy Management
-// router.get('/pharmacies', getAllPharmacies); // TODO: Implement getAllPharmacies
+router.get('/pharmacies', getAllPharmacies);
+router.get('/pharmacies/:id', getPharmacyById);
+
 // Registration Management
 router.get('/registrations/pending', getPendingRegistrations);
-router.post('/registrations/approve/:id', logAdminAction('APPROVE', 'USER'), approveRegistration);
-router.post('/registrations/reject/:id', logAdminAction('REJECT', 'USER'), rejectRegistration);
+router.get('/registrations/pending/:id', getRegistrationDetails);
+router.post('/registrations/:id/approve', logAdminAction('APPROVE_REGISTRATION', 'Pharmacy'), approveRegistration);
+router.post('/registrations/:id/reject', logAdminAction('REJECT_REGISTRATION', 'Pharmacy'), rejectRegistration);
+
 router.post('/delivery-person', logAdminAction('CREATE_DELIVERY_PERSON', 'User'), createDeliveryPerson);
 
 // Medicine Repository Management (TODO: Implement Medicine Controller)

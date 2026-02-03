@@ -14,9 +14,9 @@ const { sendEmail } = require('../utils/emailService');
 // @access  Private/Admin
 const getPendingRegistrations = async (req, res) => {
   try {
-    const { role, page = 1, limit = 20 } = req.query;
+    const { role, page = 1, limit = 20, status = 'pending' } = req.query;
 
-    const query = { status: 'pending' };
+    const query = { status };
     if (role) {
       query.role = role;
     }
@@ -27,24 +27,12 @@ const getPendingRegistrations = async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const fs = require('fs');
-    const logMsg = `[${new Date().toISOString()}] Query: ${JSON.stringify(query)} | Found: ${pendingUsers.length}\n`;
-    try {
-      if (fs.existsSync('debug-logs.txt')) {
-        fs.appendFileSync('debug-logs.txt', logMsg);
-        pendingUsers.forEach(u => {
-          fs.appendFileSync('debug-logs.txt', ` - ${u.firstName} ${u.lastName} (${u.email}) [${u.role}]\n`);
-        });
-      }
-    } catch (e) { console.error(e); }
-
-    console.log('[Admin] Fetching pending. Query:', query);
-    console.log('[Admin] Found users:', pendingUsers.length);
+    console.log('[Admin] Fetching registrations. Query:', query);
 
     const data = await Promise.all(pendingUsers.map(async (user) => {
       let details = null;
-      if (user.role === 'pharmacy_admin') {
-        details = await PendingPharmacy.findOne({ userId: user._id }) || await TempPharmacy.findOne({ email: user.email });
+      if (user.role === 'pharmacy_admin' || user.role === 'pharmacy_owner') {
+        details = await PendingPharmacy.findOne({ userId: user._id }) || await TempPharmacy.findOne({ userId: user._id });
       } else if (user.role === 'delivery') {
         details = await DeliveryProfile.findOne({ userId: user._id });
         if (!details) {
@@ -78,10 +66,7 @@ const getPendingRegistrations = async (req, res) => {
 // @access  Private/Admin
 const getRegistrationDetails = async (req, res) => {
   try {
-    let registration = await PendingPharmacy.findById(req.params.id);
-    if (!registration) {
-      registration = await TempPharmacy.findById(req.params.id);
-    }
+    const registration = await PendingPharmacy.findById(req.params.id) || await TempPharmacy.findById(req.params.id);
     if (!registration) {
       return res.status(404).json({ success: false, message: 'Registration not found' });
     }
@@ -99,18 +84,6 @@ const getRegistrationDetails = async (req, res) => {
 const approveRegistration = async (req, res) => {
   try {
     const { reason } = req.body;
-
-    // Check if it's a TempPharmacy approval first if ID matches
-    const tempReg = await TempPharmacy.findById(req.params.id);
-    if (tempReg) {
-      tempReg.status = 'approved';
-      tempReg.approvalStatus = 'APPROVED';
-      tempReg.isActive = true;
-      await tempReg.save();
-      // If there's no user yet for this TempPharmacy, we might need more logic, 
-      // but usually the user is created during registration.
-    }
-
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -278,6 +251,69 @@ const rejectRegistration = async (req, res) => {
   }
 };
 
+// @desc    Get all pharmacies with filtering
+// @route   GET /api/admin/pharmacies
+// @access  Private/Admin
+const getAllPharmacies = async (req, res) => {
+  try {
+    const { status, search, page = 1, limit = 20 } = req.query;
+    const query = {};
+
+    if (status) query.status = status;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { licenseNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const pharmacies = await Pharmacy.find(query)
+      .populate('owner', 'firstName lastName email')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Pharmacy.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: pharmacies,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching pharmacies:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Get pharmacy details by ID
+// @route   GET /api/admin/pharmacies/:id
+// @access  Private/Admin
+const getPharmacyById = async (req, res) => {
+  try {
+    const pharmacy = await Pharmacy.findById(req.params.id)
+      .populate('owner', 'firstName lastName email phone');
+
+    if (!pharmacy) {
+      return res.status(404).json({ success: false, message: 'Pharmacy not found' });
+    }
+
+    res.json({
+      success: true,
+      data: pharmacy
+    });
+  } catch (error) {
+    console.error('Error fetching pharmacy details:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 // ============ SUBSCRIPTION MANAGEMENT ============
 
 // @desc    Get all subscriptions
@@ -288,6 +324,7 @@ const getAllSubscriptions = async (req, res) => {
     const { status, page = 1, limit = 20 } = req.query;
 
     const query = {};
+
     if (status) {
       query.status = status;
     }
@@ -381,8 +418,7 @@ const deactivateSubscription = async (req, res) => {
 // @access  Private/Admin
 const renewSubscription = async (req, res) => {
   try {
-    const { duration, plan, durationMonths } = req.body;
-    const finalDuration = duration || durationMonths || 12;
+    const { duration, plan } = req.body;
 
     const pharmacy = await Pharmacy.findById(req.params.id);
 
@@ -393,12 +429,13 @@ const renewSubscription = async (req, res) => {
     // Calculate new expiry date
     const currentExpiry = pharmacy.subscription?.expiresAt || new Date();
     const newExpiry = new Date(currentExpiry);
-    newExpiry.setMonth(newExpiry.getMonth() + finalDuration);
+    const months = duration || 12;
+    newExpiry.setMonth(newExpiry.getMonth() + months);
 
     pharmacy.subscription = {
       ...pharmacy.subscription,
       status: 'active',
-      plan: plan || pharmacy.subscription.plan,
+      plan: plan || pharmacy.subscription?.plan || 'PRO',
       expiresAt: newExpiry,
       renewedAt: new Date(),
       renewedBy: req.user.userId
@@ -423,6 +460,9 @@ const renewSubscription = async (req, res) => {
 // @route   POST /api/admin/users/create-admin
 // @access  Private/Admin
 const createAdminUser = async (req, res) => {
+  console.log('[CreateAdmin] Request received:', JSON.stringify(req.body, null, 2));
+  console.log('[CreateAdmin] User:', req.user ? req.user.email : 'No user');
+
   try {
     const {
       firstName,
@@ -443,7 +483,7 @@ const createAdminUser = async (req, res) => {
     }
 
     // Validate role
-    const allowedRoles = ['admin', 'pharmacy_admin', 'cashier'];
+    const allowedRoles = ['system_admin', 'pharmacy_admin'];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({
         success: false,
@@ -460,19 +500,16 @@ const createAdminUser = async (req, res) => {
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
     // Create new admin user
     const newAdmin = new User({
       firstName,
       lastName,
       email,
-      password: hashedPassword,
+      password, // Model will hash it on save
       role,
       phone,
       isActive: true,
+      status: 'active',
       isEmailVerified: true,
       permissions,
       createdBy: req.user.userId
@@ -484,12 +521,17 @@ const createAdminUser = async (req, res) => {
     const userResponse = newAdmin.toObject();
     delete userResponse.password;
 
-    // Send welcome email
-    await sendEmail({
-      to: email,
-      subject: 'Your Admin Account Has Been Created',
-      text: `Dear ${firstName} ${lastName},\n\nYour admin account has been created successfully.\n\nEmail: ${email}\nRole: ${role}\n\nYou can now log in to admin panel.\n\nBest regards,\nThe MediLink Team`
-    });
+    // Send welcome email (non-blocking)
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Your Admin Account Has Been Created',
+        text: `Dear ${firstName} ${lastName},\n\nYour admin account has been created successfully.\n\nEmail: ${email}\nRole: ${role}\n\nYou can now log in to admin panel.\n\nBest regards,\nThe MediLink Team`
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Continue without failing the request
+    }
 
     res.status(201).json({
       success: true,
@@ -498,7 +540,10 @@ const createAdminUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating admin user:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error creating admin user'
+    });
   }
 };
 
@@ -525,7 +570,7 @@ const getAllUsers = async (req, res) => {
     if (status) {
       query.status = status;
     } else {
-      // By default, don't show rejected users in the main user list
+      // Show all users except rejected ones by default (includes pending)
       query.status = { $ne: 'rejected' };
     }
 
@@ -699,13 +744,6 @@ const updateUserRole = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Send notification email
-    await sendEmail({
-      to: user.email,
-      subject: 'Your Role Has Been Updated',
-      text: `Dear ${user.firstName} ${user.lastName},\n\nYour role has been updated to: ${role}\n\n${reason ? `Reason: ${reason}` : ''}\n\nYou can now log in with your new permissions.\n\nBest regards,\nThe MediLink Team`
-    });
-
     res.json({
       success: true,
       message: 'User role updated successfully',
@@ -713,6 +751,40 @@ const updateUserRole = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating user role:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Admin reset user password
+// @route   PATCH /api/admin/users/:id/reset-password
+// @access  Private/Admin
+const adminResetPassword = async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ success: false, message: 'Please provide a new password' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update password (model hook will hash it)
+    user.password = newPassword;
+    user.passwordResetBy = req.user.userId;
+    user.passwordResetAt = new Date();
+    user.mustChangePassword = true; // Enforce policy: change on next login
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully. User will be prompted to change it on next login.'
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -1143,13 +1215,13 @@ const bulkExportData = async (req, res) => {
         filename = `pharmacies_export_${new Date().toISOString().split('T')[0]}`;
         break;
       case 'orders':
-        // Add Order model import and export logic
-        data = [];
+        const Order = require('../models/Order');
+        data = await Order.find(filters).populate('customer', 'firstName lastName').populate('pharmacy', 'name');
         filename = `orders_export_${new Date().toISOString().split('T')[0]}`;
         break;
       case 'medicines':
-        // Add Medicine model import and export logic
-        data = [];
+        const Medicine = require('../models/Medicine');
+        data = await Medicine.find(filters).populate('pharmacy', 'name');
         filename = `medicines_export_${new Date().toISOString().split('T')[0]}`;
         break;
       case 'audit_logs':
@@ -1182,6 +1254,65 @@ const bulkExportData = async (req, res) => {
     }
   } catch (error) {
     console.error('Error in bulk data export:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Get all platform orders
+// @route   GET /api/admin/orders
+// @access  Private/Admin
+const getAllOrders = async (req, res) => {
+  try {
+    const Order = require('../models/Order');
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      search,
+      pharmacyId
+    } = req.query;
+
+    const query = {};
+    if (status) query.status = status;
+    if (pharmacyId) query.pharmacy = pharmacyId;
+
+    if (search) {
+      query.$or = [
+        { orderNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: { createdAt: -1 },
+      populate: [
+        { path: 'customer', select: 'firstName lastName email' },
+        { path: 'pharmacy', select: 'name' }
+      ]
+    };
+
+    const orders = await Order.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate('customer', 'firstName lastName email')
+      .populate('pharmacy', 'name');
+
+    const total = await Order.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: orders,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all orders:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -1245,6 +1376,8 @@ module.exports = {
   getRegistrationDetails,
   approveRegistration,
   rejectRegistration,
+  getAllPharmacies,
+  getPharmacyById,
 
   // Subscription management
   getAllSubscriptions,
@@ -1259,6 +1392,7 @@ module.exports = {
   disableUser,
   enableUser,
   updateUserRole,
+  adminResetPassword,
 
   // Bulk operations
   bulkCreateUsers,
@@ -1268,5 +1402,6 @@ module.exports = {
   bulkApprovePharmacies,
   bulkExportData,
   createDeliveryPerson,
-  getDashboardStats
+  getDashboardStats,
+  getAllOrders
 };

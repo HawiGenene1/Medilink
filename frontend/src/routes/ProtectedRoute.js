@@ -26,6 +26,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
 
+
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;

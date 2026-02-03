@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Table, Card, Button, Input, Select, Tag,
+    Table, Card, Button, Input, Select, Tag, Form,
     Space, Tooltip, Dropdown, Modal, message, Typography
 } from 'antd';
 import {
@@ -11,7 +11,8 @@ import {
     ExportOutlined,
     StopOutlined,
     CheckCircleOutlined,
-    EditOutlined
+    EditOutlined,
+    KeyOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
@@ -26,8 +27,13 @@ const UsersList = () => {
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('active');
+    const [statusFilter, setStatusFilter] = useState('');
     const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+
+    // Create User Modal State
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [createLoading, setCreateLoading] = useState(false);
+    const [form] = Form.useForm();
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -61,6 +67,25 @@ const UsersList = () => {
         fetchUsers();
     };
 
+    const handleCreateUser = async (values) => {
+        setCreateLoading(true);
+        try {
+            const response = await api.post('/admin/create-admin', values);
+            if (response.data.success) {
+                message.success('Pharmacy Admin created successfully');
+                setIsModalVisible(false);
+                form.resetFields();
+                fetchUsers();
+            }
+        } catch (error) {
+            console.error('Create User Error:', error);
+            const errorMsg = error.response?.data?.message || error.message || 'Failed to create user';
+            message.error(`Error: ${errorMsg}`);
+        } finally {
+            setCreateLoading(false);
+        }
+    };
+
     const columns = [
         {
             title: 'Name',
@@ -69,7 +94,7 @@ const UsersList = () => {
             render: (text, record) => (
                 <Space>
                     <div style={{ width: 32, height: 32, background: '#f0f0f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', textTransform: 'uppercase' }}>
-                        {record.firstName.charAt(0)}{record.lastName.charAt(0)}
+                        {record.firstName?.charAt(0)}{record.lastName?.charAt(0)}
                     </div>
                     <div>
                         <div style={{ fontWeight: 500 }}>{record.firstName} {record.lastName}</div>
@@ -86,9 +111,10 @@ const UsersList = () => {
                 let color = 'blue';
                 let label = role.toUpperCase();
                 if (role === 'admin') color = 'purple';
+                if (role === 'system_admin') color = 'gold';
                 if (role === 'pharmacy_admin') {
                     color = 'green';
-                    label = 'PHARMACY OWNER';
+                    label = 'PHARMACY ADMIN';
                 }
                 if (role === 'delivery') color = 'volcano';
                 return <Tag color={color}>{label}</Tag>;
@@ -99,13 +125,13 @@ const UsersList = () => {
             dataIndex: 'status',
             key: 'status',
             render: (status, record) => {
-                const isActive = record.isActive;
+                const isActive = record.isActive !== false;
                 return (
                     <Tag
-                        color={isActive ? 'success' : 'error'}
-                        icon={isActive ? <CheckCircleOutlined /> : <StopOutlined />}
+                        color={status === 'active' || isActive ? 'success' : 'error'}
+                        icon={(status === 'active' || isActive) ? <CheckCircleOutlined /> : <StopOutlined />}
                     >
-                        {isActive ? 'ACTIVE' : 'DISABLED'}
+                        {(status === 'active' || isActive) ? 'ACTIVE' : 'DISABLED'}
                     </Tag>
                 );
             }
@@ -133,8 +159,10 @@ const UsersList = () => {
                         menu={{
                             items: [
                                 { key: 'edit', label: 'Edit Role', icon: <EditOutlined /> },
-                                { key: 'disable', label: record.isActive ? 'Disable Account' : 'Enable Account', icon: <StopOutlined />, danger: record.isActive },
-                            ]
+                                { key: 'status', label: record.isActive !== false ? 'Disable Account' : 'Enable Account', icon: <StopOutlined />, danger: record.isActive !== false },
+                                { key: 'reset', label: 'Reset Password', icon: <KeyOutlined /> },
+                            ],
+                            onClick: ({ key }) => handleUserAction(key, record)
                         }}
                     >
                         <Button type="text" icon={<MoreOutlined />} size="small" />
@@ -143,6 +171,47 @@ const UsersList = () => {
             ),
         }
     ];
+
+    const handleUserAction = async (action, user) => {
+        try {
+            if (action === 'status') {
+                const endpoint = user.isActive !== false ? 'disable' : 'enable';
+                const res = await api.patch(`/admin/users/${user._id}/${endpoint}`);
+                if (res.data.success) {
+                    message.success(`User ${endpoint}d successfully`);
+                    fetchUsers();
+                }
+            } else if (action === 'reset') {
+                Modal.confirm({
+                    title: 'Reset Password',
+                    content: (
+                        <div>
+                            <p>Are you sure you want to reset the password for {user.firstName}?</p>
+                            <p>This will set a temporary password and force the user to change it on their next login.</p>
+                            <Input.Password id="new-temp-password" placeholder="Temporary Password" style={{ marginTop: 10 }} />
+                        </div>
+                    ),
+                    onOk: async () => {
+                        const newPassword = document.getElementById('new-temp-password')?.value;
+                        if (!newPassword) {
+                            message.error('Please provide a temporary password');
+                            return Promise.reject();
+                        }
+                        const res = await api.patch(`/admin/users/${user._id}/reset-password`, { newPassword });
+                        if (res.data.success) {
+                            message.success('Password reset successfully');
+                        }
+                    }
+                });
+            } else if (action === 'edit') {
+                // TODO: Open edit role modal
+                message.info('Edit role functionality coming soon');
+            }
+        } catch (error) {
+            console.error('Action error:', error);
+            message.error(error.response?.data?.message || 'Action failed');
+        }
+    };
 
     const onSelectChange = (newSelectedRowKeys) => {
         setSelectedRowKeys(newSelectedRowKeys);
@@ -162,8 +231,96 @@ const UsersList = () => {
         <div className="users-list-page">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
                 <Title level={2}>User Management</Title>
-                <Button type="primary" icon={<UserAddOutlined />}>Create User</Button>
+                <Button
+                    type="primary"
+                    icon={<UserAddOutlined />}
+                    onClick={() => setIsModalVisible(true)}
+                >
+                    Create Administrator
+                </Button>
             </div>
+
+            <Modal
+                title="Create New Administrator"
+                open={isModalVisible}
+                onCancel={() => setIsModalVisible(false)}
+                footer={null}
+                destroyOnClose
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleCreateUser}
+                    initialValues={{ role: 'pharmacy_admin' }}
+                >
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <Form.Item
+                            name="firstName"
+                            label="First Name"
+                            rules={[{ required: true, message: 'Please input first name!' }]}
+                        >
+                            <Input placeholder="First Name" />
+                        </Form.Item>
+                        <Form.Item
+                            name="lastName"
+                            label="Last Name"
+                            rules={[{ required: true, message: 'Please input last name!' }]}
+                        >
+                            <Input placeholder="Last Name" />
+                        </Form.Item>
+                    </div>
+
+                    <Form.Item
+                        name="email"
+                        label="Email Address"
+                        rules={[
+                            { required: true, message: 'Please input email!' },
+                            { type: 'email', message: 'Please enter a valid email!' }
+                        ]}
+                    >
+                        <Input placeholder="email@example.com" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="phone"
+                        label="Phone Number"
+                        rules={[{ required: true, message: 'Please input phone number!' }]}
+                    >
+                        <Input placeholder="09XXXXXXXX" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="password"
+                        label="Temporary Password"
+                        rules={[
+                            { required: true, message: 'Please input password!' },
+                            { min: 6, message: 'Password must be at least 6 characters' }
+                        ]}
+                    >
+                        <Input.Password placeholder="Min 6 characters" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="role"
+                        label="Account Role"
+                        rules={[{ required: true, message: 'Please select a role!' }]}
+                    >
+                        <Select placeholder="Select role">
+                            <Option value="pharmacy_admin">Pharmacy Admin</Option>
+                            <Option value="system_admin">System Admin</Option>
+                        </Select>
+                    </Form.Item>
+
+                    <div style={{ textAlign: 'right', marginTop: '24px' }}>
+                        <Space>
+                            <Button onClick={() => setIsModalVisible(false)}>Cancel</Button>
+                            <Button type="primary" htmlType="submit" loading={createLoading}>
+                                Create Administrator
+                            </Button>
+                        </Space>
+                    </div>
+                </Form>
+            </Modal>
 
             <Card bordered={false}>
                 {/* Filters Bar */}
@@ -179,15 +336,16 @@ const UsersList = () => {
                         />
                         <Select
                             placeholder="All Roles"
-                            style={{ width: 150 }}
+                            style={{ width: 170 }}
                             allowClear
                             value={roleFilter || undefined}
                             onChange={value => setRoleFilter(value || '')}
                         >
                             <Option value="customer">Customer</Option>
                             <Option value="delivery">Delivery</Option>
-                            <Option value="pharmacy_admin">Pharmacy Owner</Option>
+                            <Option value="pharmacy_admin">Pharmacy Admin</Option>
                             <Option value="admin">Admin</Option>
+                            <Option value="system_admin">System Admin</Option>
                         </Select>
                         <Select
                             placeholder="Filter by Status"
@@ -197,7 +355,8 @@ const UsersList = () => {
                             onChange={value => setStatusFilter(value || '')}
                         >
                             <Option value="active">Active</Option>
-                            <Option value="inactive">Disabled</Option>
+                            <Option value="pending">Pending</Option>
+                            <Option value="suspended">Suspended</Option>
                         </Select>
                         <Button type="primary" onClick={handleSearch}>Apply</Button>
                     </Space>

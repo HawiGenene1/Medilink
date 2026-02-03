@@ -12,7 +12,6 @@ app.use(cors());
 app.use(express.json()); // parse JSON requests
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use("/api/test", require("./routes/testRoutes"));
 
 // Connect to MongoDB
 const MONGO_URI = process.env.MONGODB_URI;
@@ -48,9 +47,18 @@ app.use('/api/pharmacy', pharmacyRoutes);
 // Pharmacy Admin Routes (platform-level administration)
 app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
 
-// Admin Routes
+// Pharmacy Owner Routes
+app.use('/api/pharmacy-owner', require('./routes/pharmacyOwnerRoutes'));
+
+// Inventory Routes
+app.use('/api/inventory', require('./routes/inventoryRoutes'));
+
+// Order Processing Routes
+app.use('/api/order-processing', require('./routes/orderProcessingRoutes'));
+
+// Admin Routes (System-level management)
 try {
-  app.use('/api/admin', authenticate, authorize('admin'), adminRoutes);
+  app.use('/api/admin', authenticate, authorize('system_admin'), adminRoutes);
 } catch (e) {
   console.warn('Admin routes not mounted:', e.message);
 }
@@ -78,11 +86,11 @@ app.use((req, res) => {
 
 // Error Handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  console.error('[Global Error Handler]', err);
+  res.status(err.statusCode || 500).json({
     success: false,
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    message: err.message || 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 

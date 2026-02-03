@@ -15,13 +15,12 @@ const PendingRegistrations = () => {
     const [actionModalVisible, setActionModalVisible] = useState(false);
     const [actionType, setActionType] = useState(''); // 'approve' or 'reject'
     const [reason, setReason] = useState('');
-    // Remove activeTab state as we only show delivery now
+    const [activeTab, setActiveTab] = useState('delivery'); // 'delivery' or 'pharmacy_admin'
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Always fetch delivery registrations
-            const response = await api.get('/admin/registrations/pending?role=delivery');
+            const response = await api.get(`/admin/registrations/pending`, { params: { role: activeTab } });
             if (response.data.success) {
                 setData(response.data.data);
             }
@@ -35,7 +34,7 @@ const PendingRegistrations = () => {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [activeTab]);
 
     const handleAction = async () => {
         if (!reason && actionType === 'reject') {
@@ -45,14 +44,13 @@ const PendingRegistrations = () => {
 
         setLoading(true);
         try {
-            const url = `/admin/registrations/${actionType}/${selectedUser._id}`;
+            const url = `/admin/registrations/${selectedUser._id}/${actionType}`;
             const response = await api.post(url, { reason });
 
             if (response.data.success) {
                 message.success(`User ${actionType}ed successfully`);
                 setActionModalVisible(false);
                 setDetailsVisible(false);
-                setReason('');
                 setReason('');
                 fetchData();
             }
@@ -76,7 +74,7 @@ const PendingRegistrations = () => {
         setActionModalVisible(true);
     };
 
-    const columns = [
+    const deliveryColumns = [
         {
             title: 'Name',
             dataIndex: 'name',
@@ -120,71 +118,118 @@ const PendingRegistrations = () => {
         },
     ];
 
+    const pharmacyColumns = [
+        {
+            title: 'Pharmacy Name',
+            dataIndex: 'applicationDetails',
+            key: 'pharmacyName',
+            render: (details) => details?.name || 'N/A'
+        },
+        {
+            title: 'Owner',
+            key: 'owner',
+            render: (_, record) => `${record.firstName} ${record.lastName}`
+        },
+        {
+            title: 'License Number',
+            dataIndex: 'applicationDetails',
+            key: 'license',
+            render: (details) => details?.licenseNumber || 'N/A'
+        },
+        {
+            title: 'Submitted At',
+            dataIndex: 'createdAt',
+            key: 'createdAt',
+            render: (date) => new Date(date).toLocaleDateString()
+        },
+        {
+            title: 'Action',
+            key: 'action',
+            width: 150,
+            render: (_, record) => (
+                <Space size="small">
+                    <Button type="text" icon={<EyeOutlined />} onClick={() => showDetails(record)} />
+                    <Button type="text" style={{ color: 'green' }} icon={<CheckOutlined />} onClick={() => openActionModal(record, 'approve')} />
+                    <Button type="text" danger icon={<CloseOutlined />} onClick={() => openActionModal(record, 'reject')} />
+                </Space>
+            ),
+        },
+    ];
+
     const renderApplicationDetails = (user) => {
-        if (!user || user.role !== 'delivery') return <Text type="secondary">Invalid application data</Text>;
+        if (!user) return <Text type="secondary">No application data selected</Text>;
 
         const details = user.applicationDetails;
-        if (!details) return <Text type="secondary">Incomplete onboarding data</Text>;
+        if (!details) return <Text type="secondary">Details pending completion by user</Text>;
 
-        return (
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                {/* Vehicle Section */}
-                <Descriptions title="Vehicle Information" bordered column={2} size="small">
-                    <Descriptions.Item label="Vehicle Type">
-                        <Tag color="blue">{details.vehicleDetails?.vehicleType?.toUpperCase() || 'N/A'}</Tag>
-                    </Descriptions.Item>
-                    {details.vehicleDetails?.vehicleType !== 'bicycle' && (
-                        <>
-                            <Descriptions.Item label="Model">{details.vehicleDetails?.make} {details.vehicleDetails?.model} ({details.vehicleDetails?.year})</Descriptions.Item>
-                            <Descriptions.Item label="License Plate">{details.vehicleDetails?.licensePlate}</Descriptions.Item>
-                            <Descriptions.Item label="Color">{details.vehicleDetails?.color}</Descriptions.Item>
-                        </>
+        if (user.role === 'delivery') {
+            return (
+                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                    <Descriptions title="Vehicle Information" bordered column={2} size="small">
+                        <Descriptions.Item label="Vehicle Type">
+                            <Tag color="blue">{details.vehicleDetails?.vehicleType?.toUpperCase() || 'N/A'}</Tag>
+                        </Descriptions.Item>
+                        {details.vehicleDetails?.vehicleType !== 'bicycle' && (
+                            <>
+                                <Descriptions.Item label="Model">{details.vehicleDetails?.make} {details.vehicleDetails?.model} ({details.vehicleDetails?.year})</Descriptions.Item>
+                                <Descriptions.Item label="License Plate">{details.vehicleDetails?.licensePlate}</Descriptions.Item>
+                                <Descriptions.Item label="Color">{details.vehicleDetails?.color}</Descriptions.Item>
+                            </>
+                        )}
+                    </Descriptions>
+
+                    <Descriptions title="Background & Legal" bordered column={2} size="small">
+                        <Descriptions.Item label="Consent">
+                            {details.backgroundCheck?.consented ? <Tag color="success">Consented</Tag> : <Tag color="error">No Consent</Tag>}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Consent Date">
+                            {details.backgroundCheck?.consentedAt ? new Date(details.backgroundCheck.consentedAt).toLocaleDateString() : 'N/A'}
+                        </Descriptions.Item>
+                    </Descriptions>
+
+                    <Descriptions title="Payment & Banking" bordered column={1} size="small">
+                        <Descriptions.Item label="Bank">{details.paymentInfo?.bankName}</Descriptions.Item>
+                        <Descriptions.Item label="Account Number">{details.paymentInfo?.accountNumber}</Descriptions.Item>
+                        <Descriptions.Item label="Payout Preference">
+                            <Tag color="purple">{details.paymentInfo?.preference?.toUpperCase()}</Tag>
+                        </Descriptions.Item>
+                    </Descriptions>
+
+                    {details.documents && (
+                        <Card size="small" title="Uploaded Documents">
+                            <Space wrap>
+                                {details.documents.governmentId && <Button size="small" type="link">Government ID</Button>}
+                                {details.documents.driversLicense && <Button size="small" type="link">Driver's License</Button>}
+                                {details.documents.vehicleRegistration && <Button size="small" type="link">Vehicle Registration</Button>}
+                                {details.documents.insuranceProof && <Button size="small" type="link">Insurance Proof</Button>}
+                            </Space>
+                        </Card>
                     )}
-                </Descriptions>
+                </Space>
+            );
+        } else if (user.role === 'pharmacy_admin') {
+            return (
+                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                    <Descriptions title="Pharmacy Information" bordered column={1} size="small">
+                        <Descriptions.Item label="Pharmacy Name">{details.name}</Descriptions.Item>
+                        <Descriptions.Item label="Pharmacy Email">{details.email}</Descriptions.Item>
+                        <Descriptions.Item label="Pharmacy Phone">{details.phone}</Descriptions.Item>
+                        <Descriptions.Item label="Business License">{details.licenseNumber}</Descriptions.Item>
+                        <Descriptions.Item label="Address">
+                            {details.address ? `${details.address.street || ''}, ${details.address.city || ''}, ${details.address.state || ''} ${details.address.postalCode || ''}, ${details.address.country || ''}` : 'N/A'}
+                        </Descriptions.Item>
+                    </Descriptions>
 
-                <Descriptions title="Background & Legal" bordered column={2} size="small">
-                    <Descriptions.Item label="Consent">
-                        {details.backgroundCheck?.consented ? <Tag color="success">Consented</Tag> : <Tag color="error">No Consent</Tag>}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Consent Date">
-                        {details.backgroundCheck?.consentedAt ? new Date(details.backgroundCheck.consentedAt).toLocaleDateString() : 'N/A'}
-                    </Descriptions.Item>
-                </Descriptions>
+                    {details.licenseFile && (
+                        <Card size="small" title="Registration Documents">
+                            <Button type="link" onClick={() => window.open(details.licenseFile)}>View Business License (PDF)</Button>
+                        </Card>
+                    )}
+                </Space>
+            );
+        }
 
-                <Descriptions title="Payment & Banking" bordered column={1} size="small">
-                    <Descriptions.Item label="Bank">{details.paymentInfo?.bankName}</Descriptions.Item>
-                    <Descriptions.Item label="Account Number">{details.paymentInfo?.accountNumber}</Descriptions.Item>
-                    <Descriptions.Item label="Payout Preference">
-                        <Tag color="purple">{details.paymentInfo?.preference?.toUpperCase()}</Tag>
-                    </Descriptions.Item>
-                </Descriptions>
-
-                <Descriptions title="Onboarding Progress" bordered column={2} size="small">
-                    <Descriptions.Item label="Training Completed">
-                        {details.training?.completed ? <Tag color="success">YES</Tag> : <Tag color="warning">NO</Tag>}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Training Date">
-                        {details.training?.completedAt ? new Date(details.training.completedAt).toLocaleDateString() : 'N/A'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Inspection Status">
-                        <Tag color={details.inspection?.status === 'passed' ? 'success' : 'processing'}>
-                            {details.inspection?.status?.toUpperCase()}
-                        </Tag>
-                    </Descriptions.Item>
-                </Descriptions>
-
-                {details.documents && (
-                    <Card size="small" title="Uploaded Documents">
-                        <Space wrap>
-                            {details.documents.governmentId && <Button size="small" type="link" onClick={() => window.open(details.documents.governmentId)}>Government ID</Button>}
-                            {details.documents.driversLicense && <Button size="small" type="link" onClick={() => window.open(details.documents.driversLicense)}>Driver's License</Button>}
-                            {details.documents.vehicleRegistration && <Button size="small" type="link" onClick={() => window.open(details.documents.vehicleRegistration)}>Vehicle Registration</Button>}
-                            {details.documents.insuranceProof && <Button size="small" type="link" onClick={() => window.open(details.documents.insuranceProof)}>Insurance Proof</Button>}
-                        </Space>
-                    </Card>
-                )}
-            </Space>
-        );
+        return <Text type="secondary">Invalid application role</Text>;
     };
 
     return (
@@ -192,21 +237,39 @@ const PendingRegistrations = () => {
             <Card bordered={false} className="shadow-sm">
                 <Space direction="vertical" style={{ width: '100%' }} size="large">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Title level={2} style={{ margin: 0 }}>Pending Delivery Applications</Title>
+                        <Title level={2} style={{ margin: 0 }}>Registration Approvals</Title>
                         <Button type="primary" onClick={fetchData}>Refresh List</Button>
                     </div>
 
-                    <Table
-                        columns={columns}
-                        dataSource={data}
-                        loading={loading}
-                        rowKey="_id"
-                        pagination={{ pageSize: 10 }}
-                    />
+                    <Tabs activeKey={activeTab} onChange={setActiveTab}>
+                        <TabPane
+                            tab={<span><CarOutlined />Delivery Partners</span>}
+                            key="delivery"
+                        >
+                            <Table
+                                columns={deliveryColumns}
+                                dataSource={data}
+                                loading={loading}
+                                rowKey="_id"
+                                pagination={{ pageSize: 10 }}
+                            />
+                        </TabPane>
+                        <TabPane
+                            tab={<span><ShopOutlined />Pharmacies</span>}
+                            key="pharmacy_admin"
+                        >
+                            <Table
+                                columns={pharmacyColumns}
+                                dataSource={data}
+                                loading={loading}
+                                rowKey="_id"
+                                pagination={{ pageSize: 10 }}
+                            />
+                        </TabPane>
+                    </Tabs>
                 </Space>
             </Card>
 
-            {/* Details Drawer/Modal */}
             <Modal
                 title="Application Details"
                 visible={detailsVisible}
@@ -217,14 +280,15 @@ const PendingRegistrations = () => {
                     <Button key="submit" type="primary" onClick={() => openActionModal(selectedUser, 'approve')}>Approve</Button>,
                 ]}
                 width={800}
+                destroyOnClose
             >
                 {selectedUser && (
                     <div>
                         <Descriptions title="User Information" bordered column={2} size="small">
-                            <Descriptions.Item label="First Name">{selectedUser.firstName}</Descriptions.Item>
-                            <Descriptions.Item label="Last Name">{selectedUser.lastName}</Descriptions.Item>
+                            <Descriptions.Item label="Full Name">{selectedUser.firstName} {selectedUser.lastName}</Descriptions.Item>
                             <Descriptions.Item label="Email">{selectedUser.email}</Descriptions.Item>
-                            <Descriptions.Item label="Phone">{selectedUser.phone}</Descriptions.Item>
+                            <Descriptions.Item label="Phone">{selectedUser.phone || 'N/A'}</Descriptions.Item>
+                            <Descriptions.Item label="Applied For">{selectedUser.role.replace('_', ' ').toUpperCase()}</Descriptions.Item>
                         </Descriptions>
                         <Divider />
                         {renderApplicationDetails(selectedUser)}
@@ -232,7 +296,6 @@ const PendingRegistrations = () => {
                 )}
             </Modal>
 
-            {/* Action Modal (Approve/Reject Reason) */}
             <Modal
                 title={`${actionType === 'approve' ? 'Approve' : 'Reject'} Application`}
                 visible={actionModalVisible}

@@ -109,9 +109,8 @@ const tempPharmacySchema = new mongoose.Schema({
 tempPharmacySchema.index({ status: 1 });
 
 // Pre-save hook to update updatedAt
-tempPharmacySchema.pre('save', function (next) {
+tempPharmacySchema.pre('save', function () {
   this.updatedAt = new Date();
-  next();
 });
 
 module.exports = mongoose.model("TempPharmacy", tempPharmacySchema);
