@@ -27,7 +27,7 @@ const paymentSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['CASH_ON_DELIVERY', 'CARD'],
+        enum: ['CASH_ON_DELIVERY', 'CARD', 'MOBILE_MONEY'],
         required: true
     },
     paymentStatus: {
@@ -62,6 +62,16 @@ const paymentSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+// Method to add history
+paymentSchema.methods.addHistory = function (status, note, updatedBy) {
+    this.history.push({
+        status,
+        note,
+        timestamp: new Date()
+    });
+    return this.save();
+};
 
 // Index for quick lookups
 paymentSchema.index({ order: 1 });

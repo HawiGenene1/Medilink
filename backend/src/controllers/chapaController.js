@@ -2,7 +2,7 @@ const asyncHandler = require('express-async-handler');
 const ChapaService = require('../services/chapaService');
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 // @desc    Initialize Chapa Payment
 // @route   POST /api/payments/chapa/initialize
@@ -18,16 +18,16 @@ const initializeChapaPayment = asyncHandler(async (req, res) => {
     }
 
     // Generate unique transaction reference
-    const txRef = `TX-${uuidv4()}`;
+    const txRef = `TX-${crypto.randomUUID()}`;
 
     // Prepare user data
     const customerName = order.customer.name || `${order.customer.firstName} ${order.customer.lastName}`;
     const [firstName, lastName] = customerName.split(' ');
 
-    // Determine actual payment method string for DB
+    // Determine actual payment method string for DB (Must match Payment model enum: 'CASH_ON_DELIVERY', 'CARD', 'MOBILE_MONEY')
     const dbPaymentMethod = ['telebirr', 'mpesa', 'cbebirr', 'amole', 'awashbirr'].includes(paymentMethod)
-        ? 'mobile_money'
-        : (paymentMethod || 'card');
+        ? 'MOBILE_MONEY'
+        : (paymentMethod?.toUpperCase() === 'CARD' ? 'CARD' : 'CARD');
 
     try {
         // Call Chapa Service
@@ -54,7 +54,8 @@ const initializeChapaPayment = asyncHandler(async (req, res) => {
                 transactionId: txRef,
                 amount: order.finalAmount,
                 paymentMethod: dbPaymentMethod,
-                paymentStatus: 'pending',
+                paymentStatus: 'PENDING',
+                paymentGateway: 'CHAPA',
                 customer: order.customer._id,
                 pharmacy: order.pharmacy._id,
                 metadata: {
@@ -98,7 +99,7 @@ const verifyChapaPayment = asyncHandler(async (req, res) => {
 
         if (verification.status === 'success') {
             // Update Payment Status
-            payment.paymentStatus = 'completed';
+            payment.paymentStatus = 'PAID';
             payment.paidAt = Date.now();
             await payment.save();
 
@@ -147,7 +148,7 @@ const cancelChapaPayment = asyncHandler(async (req, res) => {
 
         if (cancellation.status === 'success') {
             // Update Payment Status
-            payment.paymentStatus = 'cancelled'; // or 'failed' depending on preference
+            payment.paymentStatus = 'FAILED'; // or 'cancelled' if added to enum
             await payment.save();
 
             // Update Order Status if needed

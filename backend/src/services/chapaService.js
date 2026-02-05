@@ -43,7 +43,7 @@ class ChapaService {
                 last_name: lastName,
                 phone_number: phoneNumber,
                 tx_ref: txRef,
-                callback_url: callbackUrl || `${process.env.BACKEND_URL}/api/payments/chapa/callback`,
+                callback_url: callbackUrl || `${process.env.BACKEND_URL}/api/v1/payments/callbacks/chapa/callback`,
                 return_url: returnUrl || `${process.env.FRONTEND_URL}/payment/success`,
                 'customization[title]': customization.title || 'MediLink Payment',
                 'customization[description]': customization.description || 'Payment for medicine order',
@@ -66,6 +66,7 @@ class ChapaService {
             if (response.data.status === 'success' && response.data.data) {
                 return {
                     success: true,
+                    status: 'success',
                     message: response.data.message,
                     data: response.data.data,
                     checkoutUrl: response.data.data.checkout_url
@@ -74,6 +75,7 @@ class ChapaService {
                 // Handle failed response from Chapa
                 return {
                     success: false,
+                    status: 'failed',
                     message: response.data.message || 'Payment initialization failed',
                     error: response.data.message
                 };
@@ -84,12 +86,14 @@ class ChapaService {
             if (error.response?.data) {
                 return {
                     success: false,
+                    status: 'failed',
                     message: error.response.data.message || 'Payment initialization failed',
                     error: error.response.data.message
                 };
             }
             return {
                 success: false,
+                status: 'failed',
                 message: 'Failed to initialize payment',
                 error: error.message
             };
@@ -174,12 +178,14 @@ class ChapaService {
 
             return {
                 success: true,
+                status: 'success',
                 data: response.data
             };
         } catch (error) {
             console.error('Chapa refund error:', error.response?.data || error.message);
             return {
                 success: false,
+                status: 'failed',
                 error: error.response?.data?.message || error.message
             };
         }
@@ -204,6 +210,7 @@ class ChapaService {
 
             return {
                 success: true,
+                status: 'success',
                 message: 'Transaction cancelled successfully',
                 data: response.data
             };
@@ -211,6 +218,7 @@ class ChapaService {
             console.error('Chapa cancel transaction error:', error.response?.data || error.message);
             return {
                 success: false,
+                status: 'failed',
                 message: 'Failed to cancel transaction',
                 error: error.response?.data?.message || error.message
             };

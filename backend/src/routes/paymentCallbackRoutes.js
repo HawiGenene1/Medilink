@@ -7,6 +7,7 @@ const paymentCallbackController = require('../controllers/paymentCallbackControl
 // @access  Public (called by Chapa)
 // Query params: trx_ref, ref_id, status
 router.get('/chapa/callback', paymentCallbackController.handleChapaCallback);
+router.post('/chapa/callback', paymentCallbackController.handleChapaCallback);
 
 // @desc    Chapa webhook (POST)
 // @route   POST /api/payments/chapa/webhook
