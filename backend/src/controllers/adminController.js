@@ -1370,6 +1370,59 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
+// @desc    Update user profile
+// @route   PUT /api/admin/users/:id
+// @access  Private/Admin
+const updateUser = async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone } = req.body;
+    const userId = req.params.id;
+
+    // Build update object
+    const updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (email) updateData.email = email;
+    if (phone) updateData.phone = phone;
+
+    // Check if email is already taken by another user
+    if (email) {
+      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is already in use by another account'
+        });
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'User profile updated successfully',
+      data: user
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error updating user profile'
+    });
+  }
+};
+
 module.exports = {
   // Pharmacy registration management
   getPendingRegistrations,
@@ -1389,6 +1442,7 @@ module.exports = {
   createAdminUser,
   getAllUsers,
   getUserById,
+  updateUser,
   disableUser,
   enableUser,
   updateUserRole,

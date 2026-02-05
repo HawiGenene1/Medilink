@@ -66,7 +66,8 @@ import CashierDashboard from '../pages/cashier/Dashboard';
 // Owner Pages
 import OwnerDashboard from '../pages/owner/Dashboard';
 import PharmacyDetails from '../pages/owner/PharmacyDetails';
-import Inventory from '../pages/owner/Inventory'; // Fixed name
+import Inventory from '../pages/owner/Inventory';
+import AddInventory from '../pages/owner/Inventory/AddInventory';
 import Orders from '../pages/owner/Orders'; // Fixed name
 import StaffManagement from '../pages/owner/StaffManagement';
 import OwnerSubscription from '../pages/owner/Subscription';
@@ -186,12 +187,13 @@ const AppRouter = () => {
         </Route>
       </Route>
 
-      {/* Protected Routes - Pharmacy Owner */}
-      <Route element={<ProtectedRoute allowedRoles={['pharmacy_owner']} />}>
+      {/* Protected Routes - Pharmacy Owner & Staff */}
+      <Route element={<ProtectedRoute allowedRoles={['pharmacy_owner', 'pharmacy_staff', 'staff', 'pharmacist', 'technician', 'assistant']} />}>
         <Route element={<OwnerLayout />}>
           <Route path="/owner/dashboard" element={<OwnerDashboard />} />
           <Route path="/owner/pharmacy" element={<PharmacyDetails />} />
           <Route path="/owner/inventory" element={<Inventory />} />
+          <Route path="/owner/inventory/add" element={<AddInventory />} />
           <Route path="/owner/orders" element={<Orders />} />
           <Route path="/owner/staff" element={<StaffManagement />} />
           <Route path="/owner/subscription" element={<OwnerSubscription />} />
