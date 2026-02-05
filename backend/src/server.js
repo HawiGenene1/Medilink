@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+// const morgan = require('morgan');
+// require('colors');
 
 // Initialize Express app
 const path = require('path');
@@ -11,6 +13,13 @@ const app = express();
 app.use(cors());
 app.use(express.json()); // parse JSON requests
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
+
+/*
+// Dev logging middleware
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+*/
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Connect to MongoDB
@@ -29,46 +38,60 @@ const adminRoutes = require('./routes/adminRoutes');
 const pharmacyAdminRoutes = require('./routes/pharmacyAdminRoutes');
 const pharmacyRoutes = require('./routes/pharmacyRoutes');
 const userRoutes = require('./routes/userRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const chapaRoutes = require('./routes/chapaRoutes');
+const paymentCallbackRoutes = require('./routes/paymentCallbackRoutes');
+const medicineRoutes = require('./routes/medicineRoutes');
 
 // Import Middleware
 const { authenticate, authorize } = require('./middleware/authMiddleware');
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+// Define API prefixes for compatibility
+const prefixes = ['/api', '/api/v1'];
 
-// Delivery Routes
-app.use('/api/delivery', require('./routes/deliveryRoutes'));
-app.use('/api/delivery/onboarding', require('./routes/deliveryOnboardingRoutes'));
+prefixes.forEach(prefix => {
+  // API Routes
+  app.use(`${prefix}/auth`, authRoutes);
+  app.use(`${prefix}/users`, userRoutes);
 
-// Pharmacy Routes (for pharmacy owners/staff)
-app.use('/api/pharmacy', pharmacyRoutes);
+  // Delivery Routes
+  app.use(`${prefix}/delivery`, require('./routes/deliveryRoutes'));
+  app.use(`${prefix}/delivery/onboarding`, require('./routes/deliveryOnboardingRoutes'));
 
-// Pharmacy Admin Routes (platform-level administration)
-app.use('/api/pharmacy-admin', pharmacyAdminRoutes);
+  // Pharmacy Routes (for pharmacy owners/staff)
+  app.use(`${prefix}/pharmacy`, pharmacyRoutes);
 
-// Pharmacy Owner Routes
-app.use('/api/pharmacy-owner', require('./routes/pharmacyOwnerRoutes'));
+  // Pharmacy Admin Routes (platform-level administration)
+  app.use(`${prefix}/pharmacy-admin`, pharmacyAdminRoutes);
 
-// Inventory Routes
-app.use('/api/inventory', require('./routes/inventoryRoutes'));
+  // Pharmacy Owner Routes
+  app.use(`${prefix}/pharmacy-owner`, require('./routes/pharmacyOwnerRoutes'));
 
-// Order Processing Routes
-app.use('/api/order-processing', require('./routes/orderProcessingRoutes'));
+  // Inventory Routes
+  app.use(`${prefix}/inventory`, require('./routes/inventoryRoutes'));
 
-// Admin Routes (System-level management)
-try {
-  app.use('/api/admin', authenticate, authorize('system_admin'), adminRoutes);
-} catch (e) {
-  console.warn('Admin routes not mounted:', e.message);
-}
+  // Order Processing Routes
+  app.use(`${prefix}/order-processing`, require('./routes/orderProcessingRoutes'));
 
-// Medicines API
-try {
-  app.use('/api/medicines', require('./routes/medicineRoutes'));
-} catch (e) {
-  console.warn('Medicine routes not mounted:', e.message);
-}
+  // Order & Payment Routes
+  app.use(`${prefix}/orders`, orderRoutes);
+  app.use(`${prefix}/payments/chapa`, chapaRoutes);
+  app.use(`${prefix}/payments/callbacks`, paymentCallbackRoutes);
+
+  // Admin Routes (System-level management)
+  try {
+    app.use(`${prefix}/admin`, authenticate, authorize('system_admin'), adminRoutes);
+  } catch (e) {
+    if (prefix === '/api/v1') console.warn('Admin routes not mounted:', e.message);
+  }
+
+  // Medicines API
+  try {
+    app.use(`${prefix}/medicines`, medicineRoutes);
+  } catch (e) {
+    if (prefix === '/api/v1') console.warn('Medicine routes not mounted:', e.message);
+  }
+});
 
 // Test route
 app.get('/', (req, res) => {

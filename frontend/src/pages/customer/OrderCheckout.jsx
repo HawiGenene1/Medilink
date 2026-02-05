@@ -4,7 +4,7 @@ import { Card, Descriptions, Table, Alert, Button, Spin, message, Radio, Input, 
 import { ArrowLeftOutlined, CreditCardOutlined, MobileOutlined, BankOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
 
 const OrderCheckout = () => {
     const { orderId } = useParams();

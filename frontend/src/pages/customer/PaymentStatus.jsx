@@ -37,7 +37,7 @@ const PaymentStatus = () => {
 
             // Call backend to verify payment with Chapa
             // Endpoint: GET /api/payments/chapa/verify/:txRef
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/payments/chapa/verify/${txRef}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1'}/payments/chapa/verify/${txRef}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ const PaymentStatus = () => {
 
     const checkOrderStatus = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/orders/${orderId}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1'}/orders/${orderId}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }

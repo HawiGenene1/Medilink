@@ -136,7 +136,8 @@ const getOrderById = async (req, res) => {
  * Create a new order
  */
 const createOrder = async (req, res) => {
-  console.log('--- CREATE ORDER REQUEST START ---');
+  logger.info('--- CREATE ORDER REQUEST START ---');
+  logger.info('[CreateOrder] Body: %j', req.body);
   try {
     const {
       pharmacyId,
@@ -197,9 +198,9 @@ const createOrder = async (req, res) => {
       }]
     });
 
-    console.log('[CreateOrder] Saving new order...');
+    logger.info('[CreateOrder] Saving new order...');
     await newOrder.save();
-    console.log('[CreateOrder] Order saved successfully:', newOrder.orderNumber);
+    logger.info('[CreateOrder] Order saved successfully: %s', newOrder.orderNumber);
 
     // Populate pharmacy for notification data
     const populatedOrder = await Order.findById(newOrder._id).populate('pharmacy');
@@ -265,18 +266,22 @@ const createOrder = async (req, res) => {
         });
       }
     } catch (err) {
-      console.error('Failed to notify drivers:', err);
+      logger.error('Failed to notify drivers: %O', err);
       // Don't fail the request if notification fails
     }
 
     res.status(201).json({
       success: true,
       message: 'Order placed successfully',
-      data: newOrder
+      data: {
+        ...newOrder.toObject(),
+        orderId: newOrder._id
+      }
     });
   } catch (error) {
-    console.error('createOrder error:', error);
+    logger.error('createOrder error: %O', error);
     if (error.name === 'ValidationError') {
+      logger.error('[CreateOrder] Validation Error: %O', error.errors);
       return res.status(400).json({
         success: false,
         message: 'Order validation failed',
