@@ -20,10 +20,10 @@ export const CartProvider = ({ children }) => {
         localStorage.setItem('cart', JSON.stringify(cartItems));
     }, [cartItems]);
 
-    const addToCart = (medicine, quantity = 1, pharmacy = 'Default Pharmacy') => {
+    const addToCart = (medicine, quantity = 1, pharmacyId, pharmacyName = 'Default Pharmacy') => {
         setCartItems(prevItems => {
             const existingItemIndex = prevItems.findIndex(
-                item => item.id === medicine.id && item.pharmacy === pharmacy
+                item => item.id === medicine.id && item.pharmacyId === pharmacyId
             );
 
             if (existingItemIndex > -1) {
@@ -38,7 +38,8 @@ export const CartProvider = ({ children }) => {
             return [...prevItems, {
                 ...medicine,
                 quantity,
-                pharmacy,
+                pharmacyId,
+                pharmacyName,
                 priceValue,
                 prescriptionId: medicine.prescriptionId,
                 prescriptionImage: medicine.prescriptionImage,
@@ -47,13 +48,13 @@ export const CartProvider = ({ children }) => {
         });
     };
 
-    const removeFromCart = (itemId, pharmacy) => {
-        setCartItems(prevItems => prevItems.filter(item => !(item.id === itemId && item.pharmacy === pharmacy)));
+    const removeFromCart = (itemId, pharmacyId) => {
+        setCartItems(prevItems => prevItems.filter(item => !(item.id === itemId && item.pharmacyId === pharmacyId)));
     };
 
-    const updateQuantity = (itemId, pharmacy, delta) => {
+    const updateQuantity = (itemId, pharmacyId, delta) => {
         setCartItems(prevItems => prevItems.map(item => {
-            if (item.id === itemId && item.pharmacy === pharmacy) {
+            if (item.id === itemId && item.pharmacyId === pharmacyId) {
                 const newQty = Math.max(1, item.quantity + delta);
                 return { ...item, quantity: newQty };
             }
@@ -68,15 +69,17 @@ export const CartProvider = ({ children }) => {
     const getCartGroups = () => {
         const groups = {};
         cartItems.forEach(item => {
-            if (!groups[item.pharmacy]) {
-                groups[item.pharmacy] = [];
+            const groupKey = item.pharmacyId || item.pharmacyName;
+            if (!groups[groupKey]) {
+                groups[groupKey] = {
+                    pharmacyId: item.pharmacyId,
+                    pharmacyName: item.pharmacyName,
+                    items: []
+                };
             }
-            groups[item.pharmacy].push(item);
+            groups[groupKey].items.push(item);
         });
-        return Object.keys(groups).map(pharmacy => ({
-            pharmacy,
-            items: groups[pharmacy]
-        }));
+        return Object.values(groups);
     };
 
     const value = {

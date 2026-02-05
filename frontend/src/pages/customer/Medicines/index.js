@@ -98,7 +98,7 @@ const MedicineSearch = () => {
                                 bodyStyle={{ padding: '24px' }}
                                 actions={[
                                     <Tooltip title="View Details"><Button type="text" icon={<MedicineBoxOutlined />} onClick={() => navigate(`/customer/medicines/${item._id}`)}>Details</Button></Tooltip>,
-                                    <Tooltip title="Add to Cart"><Button type="primary" icon={<ShoppingCartOutlined />} onClick={() => addToCart({ ...item, id: String(item._id), pharmacyId: item.pharmacy?._id }, 1, item.pharmacy?.name || 'Pharmacy')}>Add</Button></Tooltip>
+                                    <Tooltip title="Add to Cart"><Button type="primary" icon={<ShoppingCartOutlined />} onClick={() => addToCart({ ...item, id: String(item._id) }, 1, item.pharmacy?._id, item.pharmacy?.name || 'Pharmacy')}>Add</Button></Tooltip>
                                 ]}
                             >
                                 <div style={{ display: 'flex', gap: '16px' }}>

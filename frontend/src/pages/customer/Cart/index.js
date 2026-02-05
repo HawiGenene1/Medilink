@@ -23,29 +23,27 @@ const Cart = () => {
   const { cartItems, removeFromCart, updateQuantity, getCartGroups, subtotal, clearCart } = useCart();
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (group) => {
     try {
       setIsCreatingOrder(true);
 
-      // Transform cart items to backend format
-      const orderItems = cartItems.map(item => ({
-        medicineId: item.id,
-        quantity: item.quantity
+      // Transform cart items to backend format for this specific pharmacy
+      const orderItems = group.items.map(item => ({
+        medicine: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.priceValue
       }));
 
-      // Create payload with default mock address if needed, or prompt user.
-      // For this flow, we'll assume a profile/default address or let the user edit it later.
-      // But orderController requires deliveryAddress. checking...
-      // Controller says: deliveryAddress is required in body? logic not strictly shown but usually yes.
-      // For now, let's provide a placeholder if the user hasn't set one, or ideally redirect to a pre-checkout confirming address.
-      // BUT current task is connecting to Real Payment. Real Payment assumes Order Exists.
-      // Let's send a placeholder "Stored Address" to pass validation, assuming profile has it.
-
       const payload = {
+        pharmacyId: group.pharmacyId,
         items: orderItems,
-        deliveryAddress: 'Default Profile Address', // TODO: Fetch from profile or ask user
-        paymentMethod: 'card', // Default, will be chosen at payment step
-        deliveryInstructions: '',
+        totalAmount: orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        address: {
+          label: 'Default Profile Address', // Fallback
+          geojson: { type: 'Point', coordinates: [38.7492, 9.0113] } // Dummy but required
+        },
+        paymentMethod: 'card',
         notes: 'Order via Web Cart'
       };
 
@@ -53,7 +51,8 @@ const Cart = () => {
 
       if (response.data.success) {
         message.success('Order created successfully!');
-        clearCart(); // Clear local cart
+        // Remove only this pharmacy's items from cart
+        group.items.forEach(item => removeFromCart(item.id, group.pharmacyId));
         navigate(`/customer/orders/${response.data.data.orderId}/checkout`);
       } else {
         message.error(response.data.message || 'Failed to create order');
@@ -91,10 +90,22 @@ const Cart = () => {
           {cartGroups.map((group, gIdx) => (
             <Card
               key={gIdx}
-              title={<Space><ShopOutlined /> <Text strong>{group.pharmacy}</Text></Space>}
+              title={<Space><ShopOutlined /> <Text strong>{group.pharmacyName}</Text></Space>}
               className="cart-group-card"
               style={{ marginBottom: '24px' }}
-              extra={<Button type="text" danger size="small">Remove All</Button>}
+              extra={
+                <Space>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={() => handleCheckout(group)}
+                    loading={isCreatingOrder}
+                  >
+                    Checkout This Pharmacy
+                  </Button>
+                  <Button type="text" danger size="small">Remove All</Button>
+                </Space>
+              }
             >
               {group.items.map((item, iIdx) => (
                 <div key={item.id} className="cart-item-row">
@@ -128,7 +139,7 @@ const Cart = () => {
                           <Button
                             size="small"
                             shape="circle"
-                            onClick={() => updateQuantity(item.id, group.pharmacy, -1)}
+                            onClick={() => updateQuantity(item.id, group.pharmacyId, -1)}
                           >
                             -
                           </Button>
@@ -136,7 +147,7 @@ const Cart = () => {
                           <Button
                             size="small"
                             shape="circle"
-                            onClick={() => updateQuantity(item.id, group.pharmacy, 1)}
+                            onClick={() => updateQuantity(item.id, group.pharmacyId, 1)}
                           >
                             +
                           </Button>
@@ -149,7 +160,7 @@ const Cart = () => {
                         icon={<DeleteOutlined />}
                         danger
                         size="small"
-                        onClick={() => removeFromCart(item.id, group.pharmacy)}
+                        onClick={() => removeFromCart(item.id, group.pharmacyId)}
                       />
                     </Col>
                   </Row>
@@ -207,11 +218,11 @@ const Cart = () => {
                 block
                 disabled={hasMissingRx || cartItems.length === 0}
                 loading={isCreatingOrder}
-                onClick={handleCheckout}
+                onClick={() => handleCheckout(cartGroups[0])} // Default checkout first group
                 className="checkout-btn"
                 icon={<ArrowRightOutlined />}
               >
-                {isCreatingOrder ? 'Creating Order...' : 'Proceed to Checkout'}
+                {isCreatingOrder ? 'Creating Order...' : 'Checkout All (First Pharmacy)'}
               </Button>
             </div>
 

@@ -21,7 +21,7 @@ const Favorites = () => {
     const { addToCart } = useCart();
 
     const handleAddToCart = (medicine) => {
-        addToCart(medicine, 1, 'Pharmacy of Choice');
+        addToCart(medicine, 1, medicine.pharmacy?._id, medicine.pharmacy?.name || 'Pharmacy');
     };
 
     return (

@@ -336,10 +336,9 @@ const MedicineDetail = () => {
                                         ...medicine,
                                         id: medicine._id,
                                         priceValue: medicine.price,
-                                        pharmacyId: medicine.pharmacy?._id,
                                         prescriptionId: selectedRx?.id,
                                         prescriptionImage: selectedRx?.url
-                                    }, quantity, medicine.pharmacy?.name || 'Pharmacy');
+                                    }, quantity, medicine.pharmacy?._id, medicine.pharmacy?.name || 'Pharmacy');
                                     notification.success({ message: 'Added to cart' });
                                 }}
                             >
@@ -357,10 +356,9 @@ const MedicineDetail = () => {
                                         ...medicine,
                                         id: medicine._id,
                                         priceValue: medicine.price,
-                                        pharmacyId: medicine.pharmacy?._id,
                                         prescriptionId: selectedRx?.id,
                                         prescriptionImage: selectedRx?.url
-                                    }, quantity, medicine.pharmacy?.name || 'Pharmacy');
+                                    }, quantity, medicine.pharmacy?._id, medicine.pharmacy?.name || 'Pharmacy');
                                     navigate('/customer/checkout');
                                 }}
                             >
