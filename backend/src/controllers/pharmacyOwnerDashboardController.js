@@ -39,20 +39,24 @@ const getDashboardStats = asyncHandler(async (req, res, next) => {
     ]);
 
     // Use Promise.all for parallel counting
+    console.time('[Dashboard] Parallel Queries');
     const [salesStats, totalOrders, totalProducts, totalStaff] = await Promise.all([
         salesStatsPromise,
         Order.countDocuments({ pharmacy: pharmacyId }),
         Inventory.countDocuments({ pharmacy: pharmacyId, isActive: true }),
         PharmacyStaff.countDocuments({ pharmacy: pharmacyId, isActive: true })
     ]);
+    console.timeEnd('[Dashboard] Parallel Queries');
 
     const totalSales = salesStats.length > 0 ? salesStats[0].totalSales : 0;
 
     // Fetch recent orders
+    console.time('[Dashboard] Recent Orders');
     const recentOrders = await Order.find({ pharmacy: pharmacyId })
         .populate('customer', 'firstName lastName')
         .sort({ createdAt: -1 })
         .limit(5);
+    console.timeEnd('[Dashboard] Recent Orders');
 
     res.json({
         success: true,
@@ -163,8 +167,15 @@ const updateProfile = asyncHandler(async (req, res, next) => {
             owner.lastName = parts.slice(1).join(' ') || owner.lastName;
         }
         if (phone) owner.phone = phone;
-        // Operational Permissions not fully supported on User yet, 
-        // strictly ignoring to avoid schema error, or could map to settings.
+        if (operationalPermissions) {
+            owner.operationalPermissions = { ...owner.operationalPermissions, ...operationalPermissions };
+            // Ensure mutual exclusivity logic if needed, but for now we follow frontend
+            if (operationalPermissions.manageInventory === true) {
+                owner.operationalPermissions.prepareOrders = false;
+            } else if (operationalPermissions.prepareOrders === true) {
+                owner.operationalPermissions.manageInventory = false;
+            }
+        }
     } else {
         if (fullName) owner.fullName = fullName;
         if (phone) owner.phone = phone;
@@ -194,7 +205,7 @@ const updateProfile = asyncHandler(async (req, res, next) => {
         email: owner.email,
         phone: owner.phone,
         role: owner.role,
-        operationalPermissions: {}
+        operationalPermissions: owner.operationalPermissions
     } : {
         id: owner._id,
         fullName: owner.fullName,
