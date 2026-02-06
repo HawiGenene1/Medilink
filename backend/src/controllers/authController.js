@@ -125,7 +125,16 @@ const login = async (req, res) => {
       });
     }
 
-    if (user.status !== 'active' && !(user.status === 'pending' && (user.role === 'delivery' || user.role === 'pharmacy_admin'))) {
+    if (user.status !== 'active' && !(user.status === 'pending' && (
+      user.role === 'delivery' ||
+      user.role === 'pharmacy_admin' ||
+      user.role === 'staff' ||
+      user.role === 'pharmacy_staff' ||
+      user.role === 'pharmacist' ||
+      user.role === 'technician' ||
+      user.role === 'assistant' ||
+      user.role === 'cashier'
+    ))) {
       let statusMessage = 'Your account is pending approval.';
       if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
       if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';
@@ -170,7 +179,10 @@ const login = async (req, res) => {
         phone: safeUser.phone,
         status: safeUser.status,
         avatar: safeUser.avatar,
-        mustChangePassword: safeUser.mustChangePassword
+        status: safeUser.status,
+        avatar: safeUser.avatar,
+        mustChangePassword: safeUser.mustChangePassword,
+        operationalPermissions: safeUser.operationalPermissions
       },
     });
   } catch (error) {
@@ -210,7 +222,9 @@ const getCurrentUser = async (req, res) => {
         role: user.role, // Fixed: role is a string
         phone: user.phone,
         status: user.status,
-        avatar: user.avatar
+        status: user.status,
+        avatar: user.avatar,
+        operationalPermissions: user.operationalPermissions && user.operationalPermissions.toObject ? user.operationalPermissions.toObject() : user.operationalPermissions
       },
     });
   } catch (error) {

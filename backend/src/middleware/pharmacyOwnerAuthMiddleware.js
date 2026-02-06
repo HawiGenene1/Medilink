@@ -36,7 +36,8 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
             return next(new ErrorResponse('Invalid token', 401));
         }
 
-        const id = decoded.userId || decoded.ownerId || decoded.id; // Support both userId and ownerId
+        const id = decoded.userId || decoded.ownerId || decoded.id;
+        console.log(`[Auth] Verifying ID: ${id}`);
 
         // Try to find as PharmacyOwner (Legacy)
         let owner = await PharmacyOwner.findById(id);
@@ -44,9 +45,9 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
         // If not found, try as User (New Flow)
         if (!owner) {
             const user = await User.findById(id);
-            if (user && ['pharmacy_owner', 'pharmacy_admin', 'system_admin'].includes(user.role)) {
-                // Normalize User to look like Owner for backward compatibility where possible
-                // Note: Controllers that re-fetch using PharmacyOwner model will need updates
+            const staffRoles = ['staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff'];
+            if (user && (['pharmacy_owner', 'pharmacy_admin', 'system_admin'].includes(user.role) || staffRoles.includes(user.role))) {
+                console.log(`[Auth] Found authorized user: ${user.email} with role: ${user.role}`);
                 user.isUserParams = true; // Flag for controllers
                 owner = user;
             }
