@@ -32,7 +32,8 @@ import {
     WarningOutlined,
     RiseOutlined,
     SafetyCertificateOutlined,
-    InfoCircleOutlined
+    InfoCircleOutlined,
+    FilterOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +52,7 @@ const InventoryPage = () => {
     const [editingMedicine, setEditingMedicine] = useState(null);
     const [form] = Form.useForm();
     const [searchText, setSearchText] = useState('');
+    const [filterCategory, setFilterCategory] = useState('all');
 
     // Derived stats
     const stats = {
@@ -148,7 +150,10 @@ const InventoryPage = () => {
             title: 'Category',
             dataIndex: ['medicine', 'category'],
             key: 'category',
-            render: (cat) => <Tag color="blue">{cat}</Tag>
+            render: (cat) => {
+                const name = typeof cat === 'object' ? cat?.name : (typeof cat === 'string' ? cat : null);
+                return <Tag color="blue">{name || 'Other'}</Tag>;
+            }
         },
         {
             title: 'Price',
@@ -211,11 +216,17 @@ const InventoryPage = () => {
     const filteredMedicines = medicines.filter(m => {
         const query = searchText.toLowerCase();
         const medicine = m.medicine || {};
-        return (
-            (medicine.name || '').toLowerCase().includes(query) ||
+
+        // Search match
+        const matchesSearch = (medicine.name || '').toLowerCase().includes(query) ||
             (medicine.manufacturer || '').toLowerCase().includes(query) ||
-            (medicine.brand || '').toLowerCase().includes(query)
-        );
+            (medicine.brand || '').toLowerCase().includes(query);
+
+        // Category match
+        const catName = medicine.category?.name || (typeof medicine.category === 'string' ? medicine.category : '');
+        const matchesCategory = filterCategory === 'all' || catName === filterCategory;
+
+        return matchesSearch && matchesCategory;
     });
 
     return (
@@ -306,15 +317,35 @@ const InventoryPage = () => {
                 bordered={false}
                 style={{ borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}
                 title={
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                         <Text strong style={{ fontSize: '16px' }}>Stock Ledger</Text>
-                        <Input
-                            placeholder="Search inventory..."
-                            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                            onChange={e => setSearchText(e.target.value)}
-                            style={{ width: 300, borderRadius: '8px' }}
-                            allowClear
-                        />
+                        <Space>
+                            <Select
+                                defaultValue="all"
+                                style={{ width: 180, borderRadius: '8px' }}
+                                onChange={setFilterCategory}
+                                suffixIcon={<FilterOutlined />}
+                            >
+                                <Option value="all">All Categories</Option>
+                                <Option value="Analgesics & Antipyretics">Analgesics & Antipyretics</Option>
+                                <Option value="Antibiotics">Antibiotics</Option>
+                                <Option value="Antihypertensives">Antihypertensives</Option>
+                                <Option value="Antidiabetics">Antidiabetics</Option>
+                                <Option value="Cardiovascular Drugs">Cardiovascular Drugs</Option>
+                                <Option value="Respiratory Medicines">Respiratory Medicines</Option>
+                                <Option value="Gastrointestinal Medicines">Gastrointestinal Medicines</Option>
+                                <Option value="Vitamins & Supplements">Vitamins & Supplements</Option>
+                                <Option value="Dermatological Products">Dermatological Products</Option>
+                                <Option value="Others">Others</Option>
+                            </Select>
+                            <Input
+                                placeholder="Search inventory..."
+                                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                                onChange={e => setSearchText(e.target.value)}
+                                style={{ width: 250, borderRadius: '8px' }}
+                                allowClear
+                            />
+                        </Space>
                     </div>
                 }
             >
