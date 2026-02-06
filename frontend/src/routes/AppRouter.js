@@ -188,7 +188,7 @@ const AppRouter = () => {
       </Route>
 
       {/* Protected Routes - Pharmacy Owner & Staff */}
-      <Route element={<ProtectedRoute allowedRoles={['pharmacy_owner', 'pharmacy_staff', 'staff', 'pharmacist', 'technician', 'assistant']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['pharmacy_owner', 'pharmacy_staff', 'staff', 'pharmacist', 'technician', 'assistant', 'cashier']} />}>
         <Route element={<OwnerLayout />}>
           <Route path="/owner/dashboard" element={<OwnerDashboard />} />
           <Route path="/owner/pharmacy" element={<PharmacyDetails />} />
