@@ -41,6 +41,7 @@ const createStaff = asyncHandler(async (req, res, next) => {
             phone,
             password,
             role: role || 'staff',
+            status: 'active',
             pharmacyId
         });
 
