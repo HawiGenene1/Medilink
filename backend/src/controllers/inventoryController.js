@@ -5,6 +5,7 @@ const inventoryAlertService = require('../services/inventoryAlertService');
 const mongoose = require('mongoose');
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
+const Category = require('../models/Category');
 
 /**
  * @desc    Get inventory for the current pharmacy
@@ -17,7 +18,6 @@ exports.getInventory = asyncHandler(async (req, res, next) => {
     // Normalize to string then back to ObjectId to ensure it's clean
     const pharmacyIdStr = pharmacyId ? pharmacyId.toString() : null;
 
-    console.log(`[Inventory DEBUG] User: ${req.user?.email} | Role: ${req.user?.role} | Pharmacy: ${pharmacyIdStr}`);
 
     if (!pharmacyIdStr) {
         return next(new ErrorResponse('User is not associated with any pharmacy', 400));
@@ -25,20 +25,36 @@ exports.getInventory = asyncHandler(async (req, res, next) => {
 
     const query = { pharmacy: new mongoose.Types.ObjectId(pharmacyIdStr) };
     const inventory = await Inventory.find(query)
-        .populate('medicine', 'name genericName brand manufacturer dosageForm strength packSize category requiresPrescription price')
+        .populate({
+            path: 'medicine',
+            populate: {
+                path: 'category',
+                model: 'Category',
+                select: 'name'
+            }
+        })
         .sort('-createdAt');
 
-    // Persistent file log for offline sync verification
-    const fs = require('fs');
-    const logMsg = `[${new Date().toISOString()}] Email: ${req.user?.email} | Role: ${req.user?.role} | Pharmacy: ${pharmacyIdStr} | Found: ${inventory.length}\n`;
-    fs.appendFileSync('inventory_sync.log', logMsg);
-
+    // Fallback manual population if deep populate failed for some reason
+    for (let item of inventory) {
+        if (item.medicine && item.medicine.category && typeof item.medicine.category !== 'object') {
+            try {
+                const cat = await Category.findById(item.medicine.category).select('name');
+                if (cat) {
+                    item.medicine.category = cat;
+                }
+            } catch (err) {
+                console.error('Manual category population error:', err);
+            }
+        }
+    }
     res.status(200).json({
         success: true,
         count: inventory.length,
         data: inventory
     });
 });
+
 
 /**
  * @desc    Add a medicine to pharmacy inventory
@@ -54,7 +70,6 @@ exports.addInventoryItem = asyncHandler(async (req, res, next) => {
     }
 
     const normalizedPharmacyId = new mongoose.Types.ObjectId(pharmacyIdStr);
-    console.log(`\n[Inventory DEBUG] User: ${req.user?.email} | Role: ${req.user?.role} | Adding to Pharmacy: ${pharmacyIdStr}`);
 
     const {
         medicineId,
@@ -78,22 +93,62 @@ exports.addInventoryItem = asyncHandler(async (req, res, next) => {
     } else {
         // Create new global medicine if details are provided
         const {
-            name, brand, manufacturer, category, dosageForm, strength, packSize,
+            name, brand, category, dosageForm, strength, packSize,
             imageUrl, sku, barcode, description, requiresPrescription,
-            genericName, therapeuticClass, storageCondition
+            genericName, therapeuticClass, storageCondition, unit
         } = req.body;
 
         if (!name || !manufacturer || !category) {
             return next(new ErrorResponse('Please provide medicine name, manufacturer and category for new entry', 400));
         }
 
+        // Resolve Category ObjectId
+        let categoryDoc = await Category.findOne({
+            $or: [
+                { name: new RegExp('^' + category + '$', 'i') },
+                { slug: category.toLowerCase() }
+            ]
+        });
+
+        if (!categoryDoc) {
+            // Create a temporary category if not found
+            categoryDoc = await Category.create({
+                name: category.charAt(0).toUpperCase() + category.slice(1),
+                isActive: true
+            });
+        }
+
+        // Map dosageForm to type for schema compatibility
+        const validTypes = ['tablet', 'capsule', 'liquid', 'injection', 'cream', 'ointment', 'inhaler', 'drops', 'spray', 'other'];
+        const medicineType = validTypes.includes(dosageForm?.toLowerCase()) ? dosageForm.toLowerCase() : 'other';
+
+        // Map unit for schema compatibility
+        const validUnits = ['mg', 'g', 'ml', 'mcg', 'iu', 'units'];
+        const dosageUnit = validUnits.includes(unit?.toLowerCase()) ? unit.toLowerCase() : 'units';
+
         medicine = await Medicine.create({
-            name, brand, manufacturer, category, dosageForm, strength, packSize,
-            imageUrl, sku, barcode, description, requiresPrescription,
-            genericName, therapeuticClass, storageCondition,
+            name,
+            brand,
+            manufacturer,
+            category: categoryDoc._id,
+            type: medicineType,
+            dosageForm,
+            strength: strength || 'N/A',
+            unit: dosageUnit,
+            packSize,
+            imageUrl,
+            sku,
+            barcode,
+            description,
+            prescriptionRequired: requiresPrescription === 'true' || requiresPrescription === true,
+            genericName,
+            therapeuticClass,
+            storageCondition,
             addedBy: req.user?._id || req.owner?._id,
-            price: { basePrice: sellingPrice || 0, currency: 'ETB' },
-            stockQuantity: quantity || 0, // Initial stock
+            price: Number(sellingPrice) || 0,
+            expiryDate: expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year if not provided
+            pharmacy: normalizedPharmacyId,
+            quantity: quantity || 0,
             availableAt: [normalizedPharmacyId]
         });
     }
@@ -120,7 +175,7 @@ exports.addInventoryItem = asyncHandler(async (req, res, next) => {
         quantity: quantity || 0,
         reorderLevel: reorderLevel || 10,
         costPrice: costPrice || 0,
-        sellingPrice: sellingPrice || medicine.price?.basePrice || 0,
+        sellingPrice: sellingPrice || medicine.price || 0,
         batchNumber,
         expiryDate,
         manufactureDate,

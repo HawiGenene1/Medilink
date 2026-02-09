@@ -3,18 +3,14 @@ const { ErrorResponse } = require('../utils/errorResponse');
 
 // In a production environment, you would integrate with actual email/SMS services
 const sendEmail = async (to, subject, html) => {
-  console.log(`[Email] To: ${to}, Subject: ${subject}`);
-  console.log(html);
   return { success: true };
 };
 
 const sendSMS = async (to, message) => {
-  console.log(`[SMS] To: ${to}, Message: ${message}`);
   return { success: true };
 };
 
 const sendPushNotification = async (userId, title, body) => {
-  console.log(`[Push] User: ${userId}, Title: ${title}, Body: ${body}`);
   return { success: true };
 };
 

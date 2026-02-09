@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed": "node src/seedDatabase.js",
     "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit",
     "test:unit": "cross-env NODE_ENV=test jest --testPathPattern=unit",
     "test:integration": "cross-env NODE_ENV=test jest --testPathPattern=integration"

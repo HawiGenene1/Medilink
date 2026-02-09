@@ -22,23 +22,30 @@ import {
 const { Title, Text, Paragraph } = Typography;
 
 const Analytics = () => {
-    const isDev = process.env.NODE_ENV === 'development';
-    const [loading, setLoading] = useState(!isDev);
+    const [loading, setLoading] = useState(true);
 
-    // Mock data for the chart
-    const salesData = [
-        { month: 'Jul', sales: 12500 },
-        { month: 'Aug', sales: 15000 },
-        { month: 'Sep', sales: 13200 },
-        { month: 'Oct', sales: 18400 },
-        { month: 'Nov', sales: 21000 },
-        { month: 'Dec', sales: 25000 },
-    ];
+    // Data for the chart (will be fetched from API in production)
+    const [salesData, setSalesData] = useState([]);
 
     useEffect(() => {
-        // Immediate load for mock data
-        setLoading(false);
+        // Fetch analytics data
+        fetchAnalytics();
     }, []);
+
+    const fetchAnalytics = async () => {
+        try {
+            setLoading(true);
+            // API call would go here
+            // const response = await pharmacyOwnerAPI.getAnalytics();
+            // if (response.data.success) {
+            //     setSalesData(response.data.data);
+            // }
+        } catch (error) {
+            console.error('Fetch Analytics Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const maxSales = Math.max(...salesData.map(d => d.sales));
 
@@ -55,7 +62,6 @@ const Analytics = () => {
             <div className="page-header" style={{ marginBottom: '32px' }}>
                 <Space size="middle" align="baseline">
                     <Title level={2}>Analytics</Title>
-                    {isDev && <Tag color="blue">Development Mock</Tag>}
                 </Space>
                 <Paragraph type="secondary">
                     Review your pharmacy's business performance and growth trends.
@@ -68,7 +74,7 @@ const Analytics = () => {
                     <Card bordered={false} hoverable>
                         <Statistic
                             title={<Space>Total Sales (Monthly) <Tooltip title="Gross revenue for the current calendar month"><InfoCircleOutlined /></Tooltip></Space>}
-                            value={25000}
+                            value={0}
                             precision={2}
                             prefix={<DollarOutlined />}
                             suffix="ETB"
@@ -80,7 +86,7 @@ const Analytics = () => {
                     <Card bordered={false} hoverable>
                         <Statistic
                             title="Total Orders"
-                            value={1240}
+                            value={0}
                             prefix={<ShoppingCartOutlined />}
                             valueStyle={{ color: '#52c41a' }}
                         />
@@ -90,7 +96,7 @@ const Analytics = () => {
                     <Card bordered={false} hoverable>
                         <Statistic
                             title="Staff Count"
-                            value={12}
+                            value={0}
                             prefix={<TeamOutlined />}
                             valueStyle={{ color: '#722ed1' }}
                         />

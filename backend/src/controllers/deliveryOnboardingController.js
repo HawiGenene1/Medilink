@@ -39,8 +39,6 @@ const saveOnboardingStep = async (req, res) => {
     try {
         const { step } = req.body;
         const userId = req.user.userId || req.user.id;
-        console.log(`[Onboarding] Saving step ${step} for user ${userId}`);
-
         let profile = await DeliveryProfile.findOne({ userId });
         if (!profile) {
             profile = new DeliveryProfile({ userId });

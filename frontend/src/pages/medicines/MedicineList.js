@@ -74,10 +74,16 @@ const MedicineList = () => {
                     onChange={handleFilterChange}
                   >
                     <option value="">All Categories</option>
-                    <option value="prescription">Prescription</option>
-                    <option value="otc">Over the Counter</option>
-                    <option value="supplement">Supplements</option>
-                    <option value="equipment">Medical Equipment</option>
+                    <option value="Analgesics & Antipyretics">Analgesics & Antipyretics</option>
+                    <option value="Antibiotics">Antibiotics</option>
+                    <option value="Antihypertensives">Antihypertensives</option>
+                    <option value="Antidiabetics">Antidiabetics</option>
+                    <option value="Cardiovascular Drugs">Cardiovascular Drugs</option>
+                    <option value="Respiratory Medicines">Respiratory Medicines</option>
+                    <option value="Gastrointestinal Medicines">Gastrointestinal Medicines</option>
+                    <option value="Vitamins & Supplements">Vitamins & Supplements</option>
+                    <option value="Dermatological Products">Dermatological Products</option>
+                    <option value="Others">Others</option>
                   </Form.Select>
                 </Form.Group>
               </Col>

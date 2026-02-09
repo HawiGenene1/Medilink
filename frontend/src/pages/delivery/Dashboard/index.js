@@ -107,7 +107,6 @@ const DeliveryDashboard = () => {
       await api.put('/delivery/status', payload);
 
       setIsOnline(online);
-      console.log(`Status updated to ${online ? 'Online' : 'Offline'}`);
     } catch (error) {
       notification.error({ message: 'Failed to update status' });
     } finally {
@@ -161,7 +160,6 @@ const DeliveryDashboard = () => {
   useEffect(() => {
     if (socket && isOnline) {
       socket.on('delivery_request', (request) => {
-        console.log('New delivery request received:', request);
         setIncomingRequest(request);
         notification.info({
           message: 'New Delivery Request!',
@@ -181,7 +179,6 @@ const DeliveryDashboard = () => {
       const response = await api.put('/delivery/accept', { orderId });
 
       if (response.data.success) {
-        console.log('Order Accepted successfully.');
         setIncomingRequest(null);
         setTasks(prev => [response.data.data, ...prev]);
         setAvailableJobs(prev => prev.filter(job => job._id !== orderId));
@@ -218,8 +215,7 @@ const DeliveryDashboard = () => {
             coordinates: loc,
             orderId: currentOrderId
           });
-        },
-        (error) => console.log('Watch Error:', error),
+        }, (error) => { /* Error handled */ },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }

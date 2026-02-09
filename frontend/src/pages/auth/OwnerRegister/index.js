@@ -70,7 +70,6 @@ const OwnerRegister = () => {
             }
             setCurrentStep(prev => prev + 1);
         } catch (info) {
-            console.log('Validate Failed:', info);
         }
     };
 

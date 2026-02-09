@@ -156,9 +156,6 @@ const createOrder = async (req, res) => {
 
     // Use req.user.userId from protect middleware or fallback for dev
     const customerId = req.user.userId || req.user.id || req.user._id;
-    console.log('[CreateOrder] Starting order creation for customer:', customerId);
-    console.log('[CreateOrder] Pharmacy ID:', pharmacyId);
-
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const newOrder = new Order({
@@ -254,7 +251,6 @@ const createOrder = async (req, res) => {
             earnings: populatedOrder.serviceFee
           });
         });
-        console.log(`Notified ${drivers.length} drivers for order ${populatedOrder.orderNumber}`);
         // Notify Customer
         await createNotification({
           userId: populatedOrder.customer,

@@ -29,38 +29,13 @@ import { pharmacyOwnerAPI } from '../../../services/api';
 const { Title, Text, Paragraph } = Typography;
 
 const PharmacyDetails = () => {
-    const isDev = process.env.NODE_ENV === 'development';
     const [form] = Form.useForm();
-    const [loading, setLoading] = useState(!isDev);
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    const mockDetails = {
-        name: 'MediLink Central Pharmacy',
-        licenseNumber: 'PHA-2023-8892',
-        email: 'contact@medilink-central.com',
-        phone: '+251 116 678 901',
-        description: 'Primary pharmacy location serving the Addis Ababa metropolitan area with 24/7 prescription services and medical consultations.',
-        address: {
-            street: 'Bole Road, Near Friendship Mall',
-            city: 'Addis Ababa',
-            state: 'Addis Ababa',
-            zipCode: '1000'
-        },
-        openingHours: {
-            monday: { open: '08:00', close: '22:00', isClosed: false },
-            tuesday: { open: '08:00', close: '22:00', isClosed: false },
-            wednesday: { open: '08:00', close: '22:00', isClosed: false },
-            thursday: { open: '08:00', close: '22:00', isClosed: false },
-            friday: { open: '08:00', close: '22:00', isClosed: false },
-            saturday: { open: '09:00', close: '20:00', isClosed: false },
-            sunday: { open: '09:00', close: '18:00', isClosed: false }
-        }
-    };
+
 
     useEffect(() => {
-        if (isDev) {
-            setFields(mockDetails);
-        }
         fetchPharmacyDetails();
     }, []);
 
@@ -95,13 +70,13 @@ const PharmacyDetails = () => {
 
     const fetchPharmacyDetails = async () => {
         try {
-            if (!isDev) setLoading(true);
+            setLoading(true);
             const response = await pharmacyOwnerAPI.getPharmacy();
             if (response.data.success) {
                 setFields(response.data.data);
             }
         } catch (error) {
-            if (!isDev && error.response?.status !== 401) {
+            if (error.response?.status !== 401) {
                 message.error('Failed to load pharmacy details');
             }
         } finally {

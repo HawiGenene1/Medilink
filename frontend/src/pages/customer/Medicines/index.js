@@ -24,6 +24,7 @@ const MedicineSearch = () => {
     const { isFavorite, toggleFavorite } = useFavorites();
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('all');
     const [medicines, setMedicines] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -33,6 +34,7 @@ const MedicineSearch = () => {
             const response = await api.get('/medicines', {
                 params: {
                     search: searchQuery,
+                    categories: selectedCategory === 'all' ? undefined : selectedCategory
                 }
             });
             setMedicines(response.data.data || []);
@@ -52,7 +54,7 @@ const MedicineSearch = () => {
             fetchMedicines();
         }, 500);
         return () => clearTimeout(timeoutId);
-    }, [searchQuery]);
+    }, [searchQuery, selectedCategory]);
 
     const filteredMedicines = medicines;
 
@@ -75,10 +77,18 @@ const MedicineSearch = () => {
                         />
                     </Col>
                     <Col xs={24} md={12} style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-                        <Select defaultValue="all" size="large" style={{ width: 150 }}>
+                        <Select defaultValue="all" size="large" style={{ width: 180 }} onChange={setSelectedCategory}>
                             <Option value="all">All Categories</Option>
-                            <Option value="prescription">Prescription</Option>
-                            <Option value="otc">OTC</Option>
+                            <Option value="Analgesics & Antipyretics">Analgesics & Antipyretics</Option>
+                            <Option value="Antibiotics">Antibiotics</Option>
+                            <Option value="Antihypertensives">Antihypertensives</Option>
+                            <Option value="Antidiabetics">Antidiabetics</Option>
+                            <Option value="Cardiovascular Drugs">Cardiovascular Drugs</Option>
+                            <Option value="Respiratory Medicines">Respiratory Medicines</Option>
+                            <Option value="Gastrointestinal Medicines">Gastrointestinal Medicines</Option>
+                            <Option value="Vitamins & Supplements">Vitamins & Supplements</Option>
+                            <Option value="Dermatological Products">Dermatological Products</Option>
+                            <Option value="Others">Others</Option>
                         </Select>
                     </Col>
                 </Row>

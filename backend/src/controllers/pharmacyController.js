@@ -9,13 +9,7 @@ const logger = require('../utils/logger');
  * @access  Public
  */
 const registerPharmacy = async (req, res) => {
-  console.log('=== REGISTER PHARMACY START ===');
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('Body:', JSON.stringify(req.body, null, 2));
-  console.log('Files:', req.files);
-
   try {
-    console.log('Entered try block');
     const {
       pharmacyName,
       licenseNumber,
@@ -311,6 +305,74 @@ const requestSubscriptionRenewal = async (req, res) => {
   }
 };
 
+/**
+ * @route   GET /api/pharmacy
+ * @desc    Get public pharmacies (approved and active only)
+ * @access  Public
+ */
+const getPharmacies = async (req, res) => {
+  try {
+    const { search, lat, lng, radius = 10 } = req.query;
+
+    // 1. Get all active subscriptions
+    const SubscriptionModel = require('../models/Subscription');
+    const PharmacyModel = require('../models/Pharmacy');
+
+    // Find pharmacies with active subscriptions
+    // In a mature system, you might want to denormalize this status on the Pharmacy record
+    const activeSubscriptions = await SubscriptionModel.find({
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).select('pharmacy');
+
+    const validPharmacyIds = activeSubscriptions.map(s => s.pharmacy);
+
+    // 2. Build query for pharmacies
+    let query = {
+      _id: { $in: validPharmacyIds },
+      status: 'approved',
+      isActive: true
+    };
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { 'address.city': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Geospatial search
+    if (lat && lng) {
+      query.location = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(lng), parseFloat(lat)]
+          },
+          $maxDistance: radius * 1000 // Convert km to meters
+        }
+      };
+    }
+
+    const pharmacies = await PharmacyModel.find(query)
+      .select('name address phone location openingHours isVerified rating reviewCount status isActive')
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      count: pharmacies.length,
+      data: pharmacies
+    });
+  } catch (error) {
+    logger.error('Error fetching pharmacies:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching pharmacies',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // Admin functions would go here (approvePharmacy, rejectPharmacy, etc.)
 // These would be protected by admin middleware
 
@@ -319,5 +381,6 @@ module.exports = {
   checkPharmacyStatus,
   getPharmacySubscription,
   requestSubscriptionRenewal,
-  getPharmacyById
+  getPharmacyById,
+  getPharmacies
 };

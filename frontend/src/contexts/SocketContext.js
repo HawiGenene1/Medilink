@@ -17,8 +17,6 @@ export const SocketProvider = ({ children }) => {
         socket.current = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
 
         socket.current.on('connect', () => {
-            console.log('Socket connected:', socket.current.id);
-
             if (user) {
                 socket.current.emit('join_user_room', user.id || user._id);
             }

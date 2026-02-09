@@ -162,7 +162,11 @@ const userSchema = new mongoose.Schema({
   roleUpdateReason: String,
   permissions: [{
     type: String
-  }]
+  }],
+  operationalPermissions: {
+    manageInventory: { type: Boolean, default: false },
+    prepareOrders: { type: Boolean, default: false }
+  }
 }, {
   timestamps: true
 });

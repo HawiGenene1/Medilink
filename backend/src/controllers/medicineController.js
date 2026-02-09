@@ -2,6 +2,9 @@ const { createClient } = require('redis');
 const { promisify } = require('util');
 const mongoose = require('mongoose');
 const Medicine = require('../models/Medicine');
+const Category = require('../models/Category');
+const Pharmacy = require('../models/Pharmacy');
+const Subscription = require('../models/Subscription');
 const FilterService = require('../services/filterService');
 
 // Initialize Redis client with error handling and reconnection
@@ -170,7 +173,7 @@ const buildFilterQuery = (filters = {}) => {
   if (categories) {
     const categoryList = Array.isArray(categories) ? categories : [categories];
     if (categoryList.length > 0) {
-      query.category = { $in: categoryList.map(cat => new RegExp(`^${cat}`, 'i')) };
+      query.category = { $in: categoryList };
     }
   }
 
@@ -296,9 +299,51 @@ const getMedicines = async (req, res) => {
     // Build search query
     const searchQuery = buildSearchQuery(search);
 
-    // Build filter query
+    // Resolve category names to IDs if filtering by category
+    let categoryIds = [];
+    if (categories) {
+      const categoryList = Array.isArray(categories) ? categories : [categories];
+      const validCategoryList = categoryList.filter(Boolean);
+
+      if (validCategoryList.length > 0) {
+        // Find categories by name or slug
+        const categoryDocs = await Category.find({
+          $or: [
+            { name: { $in: validCategoryList.map(c => new RegExp(`^${c}$`, 'i')) } },
+            { slug: { $in: validCategoryList.map(c => c.toLowerCase()) } }
+          ]
+        }).select('_id');
+
+        categoryIds = categoryDocs.map(doc => doc._id);
+
+        // If categories were requested but none found, we should return empty results
+        if (categoryIds.length === 0) {
+          categoryIds = [new mongoose.Types.ObjectId()]; // Dummy ID that won't match anything
+        }
+      }
+    }
+
+    // 1. Get valid pharmacy IDs (approved + active subscription)
+    // Memoization or caching could be added here for performance
+    const activeSubs = await Subscription.find({
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).select('pharmacy');
+
+    const validPharmIds = activeSubs.map(s => s.pharmacy);
+
+    // 2. Further filter those IDs by Pharmacy status
+    const approvedPharms = await Pharmacy.find({
+      _id: { $in: validPharmIds },
+      status: 'approved',
+      isActive: true
+    }).select('_id');
+
+    const finalPharmIds = approvedPharms.map(p => p._id);
+
+    // 3. Build filter query
     const filterQuery = buildFilterQuery({
-      categories,
+      categories: categoryIds.length > 0 ? categoryIds : undefined,
       minPrice,
       maxPrice,
       inStock,
@@ -311,15 +356,26 @@ const getMedicines = async (req, res) => {
       pharmacyId: req.query.pharmacyId
     });
 
-    // Combine queries
+    // 4. Combine queries
     const query = {
       ...searchQuery,
       ...filterQuery,
       isActive: { $ne: false } // Only show active medicines
     };
 
+    // Ensure we only show results from valid pharmacies
+    if (query.pharmacy) {
+      // If filtering by specific pharmacy, ensure it's in the valid list
+      const requestedId = query.pharmacy.toString();
+      const isValid = finalPharmIds.some(id => id.toString() === requestedId);
+      if (!isValid) {
+        query.pharmacy = new mongoose.Types.ObjectId(); // Non-matching ID
+      }
+    } else {
+      query.pharmacy = { $in: finalPharmIds };
+    }
+
     if (process.env.NODE_ENV === 'development') {
-      console.log('Medicine Search Query:', JSON.stringify(query, null, 2));
     }
 
     // Build sort options
@@ -346,6 +402,7 @@ const getMedicines = async (req, res) => {
 const handleCursorPagination = async (req, res, query, sortOptions, cursor, prevCursor) => {
   const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
   let findQuery = Medicine.find(query)
+    .populate('category', 'name')
     .sort(sortOptions)
     .limit(limit + 1); // Fetch one extra to determine if there are more items
 
@@ -407,10 +464,10 @@ const handleOffsetPagination = async (req, res, query, sortOptions, pageParam, l
     ...(req.query.search && { score: { $meta: 'textScore' } })
   };
 
-  // Execute queries in parallel
   const [items, total] = await Promise.all([
     Medicine.find(query, projection)
       .populate('pharmacy', 'name location address phone')
+      .populate('category', 'name')
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
@@ -603,11 +660,8 @@ const addMedicine = async (req, res) => {
       dosageForm,
       strength,
       packSize,
-      price: {
-        basePrice: price,
-        currency: 'ETB'
-      },
-      stockQuantity: stockQuantity !== undefined ? stockQuantity : (quantity || 0),
+      price: Number(price) || 0,
+      quantity: stockQuantity !== undefined ? stockQuantity : (quantity || 0),
       minStockLevel: minStockLevel || 10,
       description,
       requiresPrescription: requiresPrescription === 'true' || requiresPrescription === true,
@@ -674,9 +728,9 @@ const updateMedicine = async (req, res) => {
     // Handle price update specially
     if (updateData.price !== undefined) {
       if (typeof updateData.price === 'number') {
-        medicine.price = { ...medicine.price, basePrice: updateData.price };
-      } else if (typeof updateData.price === 'object') {
-        medicine.price = { ...medicine.price, ...updateData.price };
+        medicine.price = updateData.price;
+      } else if (typeof updateData.price === 'object' && updateData.price.basePrice !== undefined) {
+        medicine.price = Number(updateData.price.basePrice);
       }
     }
 

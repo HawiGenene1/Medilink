@@ -8,6 +8,7 @@ let emailPreviewUrl = null;
 async function initTransporter() {
     if (transporter) return transporter;
 
+    logger.info('Initializing email transporter...');
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         // Use configured email service (Gmail, etc.)
         transporter = nodemailer.createTransport({
@@ -26,6 +27,7 @@ async function initTransporter() {
     } else {
         // Create Ethereal test account for development
         try {
+            logger.info('Creating Ethereal test account...');
             const testAccount = await nodemailer.createTestAccount();
             transporter = nodemailer.createTransport({
                 host: 'smtp.ethereal.email',
@@ -59,9 +61,6 @@ async function initTransporter() {
 
     return transporter;
 }
-
-// Initialize immediately
-initTransporter();
 
 /**
  * Send email with retry logic

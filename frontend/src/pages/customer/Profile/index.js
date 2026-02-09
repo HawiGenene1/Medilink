@@ -106,7 +106,6 @@ const Profile = () => {
   };
 
   const handleSetup2FA = async (values) => {
-    console.log('[2FA Setup] Submitting values:', values);
     setLoading(true);
     try {
       const response = await api.put('/users/profile', {
@@ -114,7 +113,6 @@ const Profile = () => {
         // We only save the recovery info, we DON'T enable login 2FA
         // isTwoFactorEnabled: true 
       });
-      console.log('[Recovery Setup] Success:', response.data);
       message.success('Account recovery options updated!');
       setTwoFactorModalVisible(false);
       await refreshUser();

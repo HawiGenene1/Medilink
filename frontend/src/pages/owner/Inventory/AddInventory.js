@@ -80,11 +80,12 @@ const AddInventory = () => {
                 name: medicine.name,
                 genericName: medicine.genericName,
                 brand: medicine.brand,
-                category: medicine.category,
+                category: typeof medicine.category === 'object' ? (medicine.category.slug || medicine.category.name?.toLowerCase()) : medicine.category,
                 dosageForm: medicine.dosageForm,
                 strength: medicine.strength,
                 packSize: medicine.packSize,
                 manufacturer: medicine.manufacturer,
+                requiresPrescription: medicine.prescriptionRequired,
                 sellingPrice: medicine.price?.basePrice || 0
             });
         }
@@ -234,12 +235,16 @@ const AddInventory = () => {
                                 <Col span={6}>
                                     <Form.Item label="Category" name="category" rules={[{ required: true }]}>
                                         <Select placeholder="Select">
-                                            <Option value="otc">Pain Relief (OTC)</Option>
-                                            <Option value="prescription">Prescription</Option>
-                                            <Option value="herbal">Herbal</Option>
-                                            <Option value="supplement">Supplements</Option>
-                                            <Option value="medical_device">Medical Device</Option>
-                                            <Option value="other">Other</Option>
+                                            <Option value="Analgesics & Antipyretics">Analgesics & Antipyretics</Option>
+                                            <Option value="Antibiotics">Antibiotics</Option>
+                                            <Option value="Antihypertensives">Antihypertensives</Option>
+                                            <Option value="Antidiabetics">Antidiabetics</Option>
+                                            <Option value="Cardiovascular Drugs">Cardiovascular Drugs</Option>
+                                            <Option value="Respiratory Medicines">Respiratory Medicines</Option>
+                                            <Option value="Gastrointestinal Medicines">Gastrointestinal Medicines</Option>
+                                            <Option value="Vitamins & Supplements">Vitamins & Supplements</Option>
+                                            <Option value="Dermatological Products">Dermatological Products</Option>
+                                            <Option value="Others">Others</Option>
                                         </Select>
                                     </Form.Item>
                                 </Col>
@@ -267,9 +272,21 @@ const AddInventory = () => {
                                 </Col>
                             </Row>
 
-                            <Form.Item label="Batch / Lot Number" name="batchNumber" rules={[{ required: true }]}>
-                                <Input prefix={<SolutionOutlined />} placeholder="Unique batch identifier" />
-                            </Form.Item>
+                            <Row gutter={16}>
+                                <Col span={12}>
+                                    <Form.Item label="Batch / Lot Number" name="batchNumber" rules={[{ required: true }]}>
+                                        <Input prefix={<SolutionOutlined />} placeholder="Unique batch identifier" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item label="Prescription Status" name="requiresPrescription" rules={[{ required: true }]}>
+                                        <Select placeholder="Select status">
+                                            <Option value={true}>Prescription Required</Option>
+                                            <Option value={false}>Over the Counter (OTC)</Option>
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                            </Row>
                         </Card>
 
                         {/* Section 2: Expiry & Safety */}

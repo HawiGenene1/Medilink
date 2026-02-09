@@ -11,9 +11,6 @@ const handleChapaCallback = asyncHandler(async (req, res) => {
     try {
         // Callback Response: { trx_ref, ref_id, status }
         const { trx_ref, ref_id, status } = req.query;
-
-        console.log('Chapa callback received:', { trx_ref, ref_id, status });
-
         if (!trx_ref) {
             return res.status(400).json({
                 success: false,
@@ -68,9 +65,7 @@ const handleChapaCallback = asyncHandler(async (req, res) => {
 
                 // Automatic Invoice Generation
                 try {
-                    console.log(`Generating invoice for order: ${payment.order._id}`);
                     await generateInvoice(payment.order._id);
-                    console.log(`✅ Invoice generated automatically for order: ${payment.order.orderNumber}`);
                 } catch (invError) {
                     console.error('❌ Automatic invoice generation failed:', invError.message);
                     // Do not fail the callback response, just log it
@@ -113,8 +108,6 @@ const handleChapaCallback = asyncHandler(async (req, res) => {
 const handleChapaWebhook = asyncHandler(async (req, res) => {
     try {
         const webhookData = req.body;
-        console.log('Chapa webhook received:', webhookData);
-
         const { trx_ref, status, reference } = webhookData;
 
         if (!trx_ref) {
@@ -151,7 +144,6 @@ const handleChapaWebhook = asyncHandler(async (req, res) => {
 
                 // Automatic Invoice Generation
                 try {
-                    console.log(`Generating invoice for order via webhook: ${payment.order._id}`);
                     await generateInvoice(payment.order._id);
                 } catch (invError) {
                     console.error('❌ Automatic webhook invoice generation failed:', invError.message);

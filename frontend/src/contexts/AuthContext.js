@@ -134,6 +134,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Direct user update helper
+  const updateUser = (userData) => {
+    // Merge existing user with new data to prevent data loss
+    setUser(prev => ({
+      ...prev,
+      ...userData
+    }));
+
+    // Update local storage if it exists there too
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      localStorage.setItem('user', JSON.stringify({ ...parsed, ...userData }));
+    }
+  };
+
   const value = {
     user,
     isAuthenticated,
@@ -143,6 +159,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     refreshUser,
+    updateUser,
     hasRole,
     hasAnyRole
   };

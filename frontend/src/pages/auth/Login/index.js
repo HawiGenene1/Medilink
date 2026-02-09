@@ -201,16 +201,6 @@ const Login = () => {
             </Link>
           </div>
 
-          {/* Dev Helper - Quick Login */}
-          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '16px' }}>
-            <p style={{ fontSize: '12px', color: '#888', textAlign: 'center' }}>Demo Quick Login:</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '16px' }}>
-              <Button size="small" onClick={() => onFinish({ email: 'customer@test.com', password: '123' })}>Customer</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'pharmacy@test.com', password: '123' })}>Pharmacy</Button>
-              <Button size="small" onClick={() => onFinish({ email: 'sysadmin@medilink.com', password: 'SysAdmin@123' })}>System Admin</Button>
-            </div>
-          </div>
-
           <div style={{ textAlign: 'center', padding: '12px', borderTop: '1px solid #f1f5f9' }}>
             <span style={{ color: '#64748b' }}>Want to earn with MediLink? </span>
             <Link to="/auth/delivery/register" style={{ fontWeight: 600, color: '#1E88E5' }}>

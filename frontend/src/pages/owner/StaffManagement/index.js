@@ -32,59 +32,17 @@ import { useAuth } from '../../../contexts/AuthContext';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const MOCK_STAFF_DATA = [
-    {
-        _id: 'mock-staff-1',
-        user: {
-            firstName: 'Abebe',
-            lastName: 'Beso',
-            email: 'abebe@medilink.com',
-            phone: '+251911223344',
-            isActive: true
-        },
-        role: 'pharmacist',
-        isActive: true,
-        permissions: {
-            inventory: { view: true, add: true, edit: true, delete: false },
-            orders: { view: true, process: true, cancel: false },
-            customers: { view: true, add: true, edit: true }
-        }
-    },
-    {
-        _id: 'mock-staff-2',
-        user: {
-            firstName: 'Kebede',
-            lastName: 'Chala',
-            email: 'kebede@medilink.com',
-            phone: '+251922334455',
-            isActive: true
-        },
-        role: 'technician',
-        isActive: true,
-        permissions: {
-            inventory: { view: true, add: false, edit: false, delete: false },
-            orders: { view: true, process: false, cancel: false },
-            customers: { view: true, add: false, edit: false }
-        }
-    }
-];
-
 const StaffManagement = () => {
-    const isDev = process.env.NODE_ENV === 'development';
-    const [loading, setLoading] = useState(!isDev);
-    const [staff, setStaff] = useState(isDev ? MOCK_STAFF_DATA : []);
+    const [loading, setLoading] = useState(true);
+    const [staff, setStaff] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingStaff, setEditingStaff] = useState(null);
-    const [isDevMock, setIsDevMock] = useState(false);
     const [form] = Form.useForm();
     const { user } = useAuth();
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const isMock = isDev && token && token.startsWith('header.');
-        setIsDevMock(isMock);
         fetchStaff();
-    }, [isDev]);
+    }, []);
 
     const fetchStaff = async () => {
         try {
@@ -94,11 +52,7 @@ const StaffManagement = () => {
                 setStaff(response.data.data);
             }
         } catch (error) {
-            console.error('Fetch Staff Error:', error);
-            if (process.env.NODE_ENV === 'development') {
-                console.log('API failed, falling back to mock data');
-                setStaff(MOCK_STAFF_DATA);
-            } else {
+            if (error.response?.status !== 401) {
                 message.error('Failed to load staff list');
             }
         } finally {
@@ -143,7 +97,6 @@ const StaffManagement = () => {
     };
 
     const onFinish = async (values) => {
-        console.log('Submission Values:', values);
         try {
             let response;
             if (editingStaff) {
@@ -226,7 +179,6 @@ const StaffManagement = () => {
                 <div>
                     <Space size="middle" align="center">
                         <Title level={2} style={{ marginBottom: 0 }}>Staff Management</Title>
-                        {isDevMock && <Tag color="orange" icon={<SafetyCertificateOutlined />}>Mock data</Tag>}
                     </Space>
                     <div style={{ marginTop: 8 }}>
                         <Text type="secondary">Manage your pharmacy team and their access permissions.</Text>
@@ -255,30 +207,6 @@ const StaffManagement = () => {
                 title={
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '32px' }}>
                         <span>{editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}</span>
-                        {isDev && !editingStaff && (
-                            <Button
-                                size="small"
-                                type="dashed"
-                                onClick={() => {
-                                    const mockEmail = `staff-${Math.floor(Math.random() * 1000)}@test.com`;
-                                    form.setFieldsValue({
-                                        firstName: 'Staff',
-                                        lastName: 'Member',
-                                        email: mockEmail,
-                                        phone: '+251911223344',
-                                        password: 'password123',
-                                        role: 'pharmacist',
-                                        permissions: {
-                                            inventory: { view: true, add: true, edit: true, delete: false },
-                                            orders: { view: true, process: true, cancel: false },
-                                            customers: { view: true, add: true, edit: true }
-                                        }
-                                    });
-                                }}
-                            >
-                                Dev: Auto-fill
-                            </Button>
-                        )}
                     </div>
                 }
                 open={isModalOpen}

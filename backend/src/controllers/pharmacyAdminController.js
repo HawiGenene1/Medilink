@@ -278,8 +278,8 @@ const approveRegistration = async (req, res) => {
         await pharmacy.save();
 
         // Send approval email with credentials
-        const sendWelcomeEmail = require('../services/emailService').sendWelcomeEmail;
-        sendWelcomeEmail(tempPharmacy.email, tempPharmacy.ownerName, generatedPassword)
+        const { sendWelcomeEmail } = require('../services/emailService');
+        sendWelcomeEmail(tempPharmacy.email, tempPharmacy.ownerName, generatedPassword, undefined, 'pharmacy_owner')
             .then(() => logger.info(`Approval email sent to ${tempPharmacy.email}`))
             .catch((err) => logger.error('Failed to send approval email:', err));
 

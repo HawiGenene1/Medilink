@@ -12,13 +12,10 @@ const init = (server) => {
     });
 
     io.on('connection', (socket) => {
-        console.log('New client connected', socket.id);
-
         // Join a room based on user ID for private messages/notifications
         socket.on('join_user_room', (userId) => {
             socket.join(userId);
             connectedUsers.set(userId, socket.id);
-            console.log(`User ${userId} joined room ${userId}`);
         });
 
         // Delivery driver updates their location
@@ -55,7 +52,6 @@ const init = (server) => {
                     break;
                 }
             }
-            console.log('Client disconnected', socket.id);
         });
     });
 

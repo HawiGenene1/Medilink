@@ -225,8 +225,6 @@ const Checkout = () => {
                 setLoading(false);
 
                 // Debug logging
-                console.log('Chapa Initialization Response:', paymentRes.data);
-
                 if (window.ChapaCheckout) {
                     try {
                         if (!paymentRes.data.publicKey) {
@@ -263,8 +261,6 @@ const Checkout = () => {
                                 `
                             }
                         });
-
-                        console.log('Initializing Chapa form...');
                         chapa.initialize('chapa-inline-form');
                     } catch (chapaError) {
                         console.error('Chapa Constructor Error:', chapaError);

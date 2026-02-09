@@ -19,7 +19,12 @@ const {
   adminResetPassword,
   getAllOrders
 } = require('../controllers/adminController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const { logAdminAction } = require('../middleware/auditMiddleware');
+
+// Protect all routes
+router.use(protect);
+router.use(authorize('admin', 'system_admin'));
 
 // @desc    Admin Health Check
 router.get('/check', (req, res) => {

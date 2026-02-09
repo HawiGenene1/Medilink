@@ -32,11 +32,10 @@ const { Title, Text } = Typography;
 const OwnerProfile = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const isDev = process.env.NODE_ENV === 'development';
     const isStaff = ['staff', 'pharmacist', 'technician', 'cashier'].includes(user?.role);
-    const [loading, setLoading] = useState(!isDev && !isStaff);
-    const [pharmacy, setPharmacy] = useState(isDev ? { name: 'Sample Pharmacy', licenseNumber: 'ML-789-2023' } : null);
-    const [subscription, setSubscription] = useState(isDev ? { plan: 'BASIC', status: 'ACTIVE', endDate: '2026-12-31' } : null);
+    const [loading, setLoading] = useState(true);
+    const [pharmacy, setPharmacy] = useState(null);
+    const [subscription, setSubscription] = useState(null);
 
     useEffect(() => {
         if (!isStaff) {
@@ -47,8 +46,30 @@ const OwnerProfile = () => {
         }
     }, [isStaff, user]);
 
+
     const fetchProfileData = async () => {
-        // ... previous fetchProfileData code ...
+        try {
+            setLoading(true);
+
+            // Fetch pharmacy details
+            const pharmacyResponse = await pharmacyOwnerAPI.getPharmacy();
+            if (pharmacyResponse.data.success) {
+                setPharmacy(pharmacyResponse.data.data);
+            }
+
+            // Fetch subscription details
+            const subscriptionResponse = await pharmacyOwnerAPI.getSubscription();
+            if (subscriptionResponse.data.success) {
+                setSubscription(subscriptionResponse.data.data);
+            }
+        } catch (error) {
+            console.error('Fetch Profile Data Error:', error);
+            if (error.response?.status !== 401) {
+                message.error('Failed to load profile data');
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (loading) {

@@ -1,6 +1,25 @@
 const Medicine = require('../models/Medicine');
 const Category = require('../models/Category');
 const Pharmacy = require('../models/Pharmacy');
+const Subscription = require('../models/Subscription');
+
+// Helper to get pharmacies that are both approved and have active subscriptions
+const getValidPharmacyIds = async () => {
+  const activeSubs = await Subscription.find({
+    status: 'active',
+    endDate: { $gt: new Date() }
+  }).select('pharmacy');
+
+  const validSubPharmIds = activeSubs.map(s => s.pharmacy);
+
+  const approvedPharms = await Pharmacy.find({
+    _id: { $in: validSubPharmIds },
+    status: 'approved',
+    isActive: true
+  }).select('_id');
+
+  return approvedPharms.map(p => p._id);
+};
 
 // @desc    Get medicines with advanced filtering
 // @route   GET /api/customer/medicines
@@ -26,10 +45,12 @@ exports.getMedicines = async (req, res) => {
     } = req.query;
 
     // Build query
+    const validPharmacyIds = await getValidPharmacyIds();
     let query = {
       isActive: true,
       isDiscontinued: false,
-      quantity: { $gt: 0 }
+      quantity: { $gt: 0 },
+      pharmacy: { $in: validPharmacyIds }
     };
 
     // Text search
@@ -203,13 +224,25 @@ exports.getMedicineDetails = async (req, res) => {
       });
     }
 
+    // Check if pharmacy is approved and active
+    const validPharmacyIds = await getValidPharmacyIds();
+    const isPharmacyValid = validPharmacyIds.some(id => id.toString() === medicine.pharmacy._id.toString());
+
+    if (!isPharmacyValid) {
+      return res.status(404).json({
+        success: false,
+        message: 'Medicine is not available from this provider'
+      });
+    }
+
     // Get related medicines (same category, different brand)
     const relatedMedicines = await Medicine.find({
       _id: { $ne: medicine._id },
       category: medicine.category,
       isActive: true,
       isDiscontinued: false,
-      quantity: { $gt: 0 }
+      quantity: { $gt: 0 },
+      pharmacy: { $in: validPharmacyIds }
     })
       .populate('category', 'name')
       .limit(8)
@@ -294,10 +327,12 @@ exports.getFeaturedMedicines = async (req, res) => {
   try {
     const { limit = 10, category } = req.query;
 
+    const validPharmacyIds = await getValidPharmacyIds();
     let query = {
       isActive: true,
       isDiscontinued: false,
-      quantity: { $gt: 0 }
+      quantity: { $gt: 0 },
+      pharmacy: { $in: validPharmacyIds }
     };
 
     if (category) {
@@ -341,9 +376,10 @@ exports.searchMedicines = async (req, res) => {
       });
     }
 
+    const validPharmacyIds = await getValidPharmacyIds();
     const medicines = await Medicine.find({
       $and: [
-        { isActive: true, isDiscontinued: false },
+        { isActive: true, isDiscontinued: false, pharmacy: { $in: validPharmacyIds } },
         {
           $or: [
             { name: { $regex: q, $options: 'i' } },

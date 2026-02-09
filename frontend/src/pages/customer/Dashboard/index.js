@@ -58,37 +58,11 @@ const CustomerDashboard = () => {
         date: new Date(order.createdAt).toLocaleDateString()
     }));
 
-    // Mock Data for Search Results
-    const searchResults = searchQuery ? [
-        {
-            id: 'med-1',
-            name: 'Paracetamol 500mg',
-            genericName: 'Acetaminophen',
-            prescriptionRequired: false,
-            category: 'Pain Relief',
-            pharmacies: [
-                { id: 'ph-1', name: 'Kenema Pharmacy', rating: 4.8, distance: '0.5 km', price: '45 ETB', available: true },
-                { id: 'ph-2', name: 'Abyssinia Pharma', rating: 4.5, distance: '1.2 km', price: '48 ETB', available: true },
-                { id: 'ph-3', name: 'Red Cross', rating: 4.9, distance: '2.5 km', price: '42 ETB', available: false },
-            ]
-        },
-        {
-            id: 'med-2',
-            name: 'Amoxicillin 250mg',
-            genericName: 'Amoxicillin',
-            prescriptionRequired: true,
-            category: 'Antibiotics',
-            pharmacies: [
-                { id: 'ph-1', name: 'Kenema Pharmacy', rating: 4.8, distance: '0.5 km', price: '120 ETB', available: true },
-            ]
-        }
-    ] : [];
+    // Search results come from API - no mock data
+    const searchResults = [];
 
-    const nearbyPharmacies = [
-        { name: 'Kenema Pharmacy', distance: '0.5 km', status: 'Open', rating: 4.8 },
-        { name: 'Abyssinia Pharma', distance: '1.2 km', status: 'Open', rating: 4.5 },
-        { name: 'Bethel Pharmacy', distance: '1.8 km', status: 'Open', rating: 4.7 },
-    ];
+    // Nearby pharmacies come from API - no mock data
+    const nearbyPharmacies = [];
 
     const quickActions = [
         {

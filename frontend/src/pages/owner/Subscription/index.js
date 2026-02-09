@@ -14,19 +14,7 @@ import { pharmacyOwnerAPI } from '../../../services/api';
 
 const { Title, Text, Paragraph } = Typography;
 
-const MOCK_SUBSCRIPTION = {
-    plan: 'BASIC', // FREE, BASIC, PREMIUM
-    status: 'ACTIVE', // ACTIVE, EXPIRED
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-    features: [
-        'Up to 5 staff members',
-        'Basic business reporting',
-        'Inventory oversight',
-        'Customer management',
-        'Email support'
-    ]
-};
+
 
 const PLAN_THEMES = {
     FREE: { color: 'default', icon: <UserOutlined />, label: 'FREE' },
@@ -35,9 +23,8 @@ const PLAN_THEMES = {
 };
 
 const Subscription = () => {
-    const isDev = process.env.NODE_ENV === 'development';
-    const [loading, setLoading] = useState(!isDev);
-    const [subscription, setSubscription] = useState(isDev ? MOCK_SUBSCRIPTION : null);
+    const [loading, setLoading] = useState(true);
+    const [subscription, setSubscription] = useState(null);
     const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
     const { user } = useAuth();
 
@@ -47,14 +34,14 @@ const Subscription = () => {
 
     const fetchSubscription = async () => {
         try {
-            if (!isDev) setLoading(true);
+            setLoading(true);
             const response = await pharmacyOwnerAPI.getSubscription();
             if (response.data.success) {
                 setSubscription(response.data.data);
             }
         } catch (error) {
             console.error('Fetch Subscription Error:', error);
-            if (!isDev && error.response?.status !== 401) {
+            if (error.response?.status !== 401) {
                 message.error('Failed to load subscription details');
             }
         } finally {
@@ -70,21 +57,32 @@ const Subscription = () => {
         message.info('Subscription renewal logic will be implemented with the payment gateway.');
     };
 
-    const theme = PLAN_THEMES[subscription?.plan || 'FREE'];
+    if (loading) {
+        return (
+            <div style={{ padding: '24px', textAlign: 'center' }}>
+                <Text>Loading subscription details...</Text>
+            </div>
+        );
+    }
 
-    if (loading) return <div style={{ padding: '24px' }}>Loading...</div>;
+    if (!subscription) {
+        return (
+            <div style={{ padding: '24px' }}>
+                <Empty description="No subscription data available" />
+            </div>
+        );
+    }
+
+    // Get theme with fallback to FREE if plan is not recognized
+    const theme = PLAN_THEMES[subscription.plan] || PLAN_THEMES.FREE;
 
     return (
         <div style={{ padding: '24px' }}>
-            <div className="page-header" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div>
-                    <Space size="middle" align="center">
-                        <Title level={2} style={{ marginBottom: 0 }}>Subscription Management</Title>
-
-                    </Space>
-                    <div style={{ marginTop: 8 }}>
-                        <Text type="secondary">Manage your business tier, billing cycles, and included features.</Text>
-                    </div>
+                    <Title level={2}>
+                        <CreditCardOutlined /> Subscription Management
+                    </Title>
                 </div>
                 <Space>
                     <Button icon={<CalendarOutlined />} onClick={() => message.info('Billing history feature coming soon!')}>

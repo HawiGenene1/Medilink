@@ -200,6 +200,10 @@ const medicineSchema = new Schema({
     type: locationSchema,
     index: '2dsphere' // For geospatial queries
   },
+  availableAt: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Pharmacy'
+  }],
 
   // Add text index for search
   searchText: String // Will contain searchable text

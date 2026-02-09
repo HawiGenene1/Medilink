@@ -46,15 +46,12 @@ const OwnerLayout = () => {
             const ops = user?.operationalPermissions || {};
 
             // Inventory Management Mode: manageInventory = true
-            // - Show both Inventory and Order Processing
+            // Management Mode: manageInventory = true -> Show
+            // Oversight Mode: manageInventory = false -> Hide
+            const isManagementMode = ops.manageInventory === true;
 
-            // Order Oversight Mode: prepareOrders = true, manageInventory = false
-            // - Hide both Inventory and Order Processing
-
-            const isOrderOversightMode = ops.prepareOrders === true && ops.manageInventory === false;
-
-            if (isOrderOversightMode) {
-                // Hide both Inventory and Orders in Order Oversight mode
+            if (!isManagementMode) {
+                // Hide both Inventory and Orders in Oversight mode
                 if (item.key === '/owner/inventory' || item.key === '/owner/orders') {
                     return false;
                 }

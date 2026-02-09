@@ -40,14 +40,9 @@ const CustomerDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-
-      console.log('Loading dashboard data...');
-
       // Load recent orders
       try {
-        console.log('Fetching orders...');
         const ordersResponse = await ordersAPI.getAll(1, 5);
-        console.log('Orders response:', ordersResponse.data);
         setRecentOrders(ordersResponse.data.data?.orders || []);
       } catch (orderError) {
         console.error('Orders API error:', orderError.response?.data || orderError.message);
@@ -56,9 +51,7 @@ const CustomerDashboard = () => {
 
       // Load recommended medicines
       try {
-        console.log('Fetching medicines...');
         const medsResponse = await medicinesAPI.search('', {}, 1, 8);
-        console.log('Medicines response:', medsResponse.data);
         setRecommendedMeds(medsResponse.data.medicines || []);
       } catch (medsError) {
         console.error('Medicines API error:', medsError.response?.data || medsError.message);
@@ -67,9 +60,7 @@ const CustomerDashboard = () => {
 
       // Load cart
       try {
-        console.log('Fetching cart...');
         const cartResponse = await cartAPI.getCart();
-        console.log('Cart response:', cartResponse.data);
         setCart(cartResponse.data.items || {});
       } catch (cartError) {
         console.error('Cart API error:', cartError.response?.data || cartError.message);

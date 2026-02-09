@@ -15,59 +15,6 @@ import './Dashboard.css';
 const { Title, Text, Paragraph } = Typography;
 
 const OwnerDashboard = () => {
-    const isDev = process.env.NODE_ENV === 'development';
-
-    // Mock data for development/presentation
-    const mockData = {
-        stats: {
-            totalSales: 45890.50,
-            totalOrders: 156,
-            totalProducts: 420,
-            totalStaff: 8
-        },
-        recentOrders: [
-            {
-                _id: '1',
-                orderNumber: 'ORD-2023-001',
-                customer: { firstName: 'Abebe', lastName: 'Bikila' },
-                finalAmount: 1250,
-                status: 'delivered',
-                createdAt: new Date().toISOString()
-            },
-            {
-                _id: '2',
-                orderNumber: 'ORD-2023-002',
-                customer: { firstName: 'Mulu', lastName: 'Tesfaye' },
-                finalAmount: 840,
-                status: 'pending',
-                createdAt: new Date(Date.now() - 3600000).toISOString()
-            },
-            {
-                _id: '3',
-                orderNumber: 'ORD-2023-003',
-                customer: { firstName: 'Kebede', lastName: 'Kassa' },
-                finalAmount: 2100,
-                status: 'processing',
-                createdAt: new Date(Date.now() - 86400000).toISOString()
-            },
-            {
-                _id: '4',
-                orderNumber: 'ORD-2023-004',
-                customer: { firstName: 'Selam', lastName: 'Desta' },
-                finalAmount: 450,
-                status: 'completed',
-                createdAt: new Date(Date.now() - 172800000).toISOString()
-            },
-            {
-                _id: '5',
-                orderNumber: 'ORD-2023-005',
-                customer: { firstName: 'Tadesse', lastName: 'Girma' },
-                finalAmount: 3200,
-                status: 'cancelled',
-                createdAt: new Date(Date.now() - 259200000).toISOString()
-            }
-        ]
-    };
 
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState(null);

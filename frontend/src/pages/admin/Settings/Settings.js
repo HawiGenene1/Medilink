@@ -21,7 +21,6 @@ const Settings = () => {
     const [maintenanceMode, setMaintenanceMode] = useState(false);
 
     const onFinish = (values) => {
-        console.log('Success:', values);
         message.success('System settings updated successfully');
     };
 

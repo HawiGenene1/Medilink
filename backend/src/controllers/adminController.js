@@ -27,7 +27,6 @@ const getPendingRegistrations = async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    console.log('[Admin] Fetching registrations. Query:', query);
 
     const data = await Promise.all(pendingUsers.map(async (user) => {
       let details = null;
@@ -460,8 +459,6 @@ const renewSubscription = async (req, res) => {
 // @route   POST /api/admin/users/create-admin
 // @access  Private/Admin
 const createAdminUser = async (req, res) => {
-  console.log('[CreateAdmin] Request received:', JSON.stringify(req.body, null, 2));
-  console.log('[CreateAdmin] User:', req.user ? req.user.email : 'No user');
 
   try {
     const {

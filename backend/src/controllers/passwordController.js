@@ -39,8 +39,6 @@ exports.requestPasswordReset = async (req, res) => {
 
     // We no longer send the code automatically here to avoid duplicates.
     // The code will be sent when the user selects a method in the next step.
-    console.log(`[RECOVERY_SESSION] Initialized for ${user.email}. Code ${code} ready for delivery.`);
-
     res.json({
       success: true,
       message: "Recovery options found",
@@ -73,11 +71,6 @@ exports.sendRecoveryCode = async (req, res) => {
       await sendOTPEmail(value, user.firstName, user.resetToken);
     } else {
       // Logic for SMS would go here (e.g. Twilio, AWS SNS)
-      console.log('\n' + '='.repeat(50));
-      console.log(`📡 [SMS_GATEWAY_SIMULATION]`);
-      console.log(`To: ${value}`);
-      console.log(`Message: Your Medilink recovery code is: ${user.resetToken}`);
-      console.log('='.repeat(50) + '\n');
     }
 
     res.json({ success: true, message: `Code sent to your ${type.replace('_', ' ')}` });

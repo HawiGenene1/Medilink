@@ -1,11 +1,23 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { registerPharmacy, checkPharmacyStatus, getPharmacySubscription, requestSubscriptionRenewal, getPharmacyById } = require('../controllers/pharmacyController');
+const {
+  registerPharmacy,
+  checkPharmacyStatus,
+  getPharmacySubscription,
+  requestSubscriptionRenewal,
+  getPharmacyById,
+  getPharmacies
+} = require('../controllers/pharmacyController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const router = express.Router();
 const multer = require('multer');
 
 const upload = require('../middleware/uploadMiddleware');
+
+// @route   GET /api/pharmacy
+// @desc    Get all active and approved pharmacies
+// @access  Public
+router.get('/', getPharmacies);
 
 // @route   POST /api/pharmacy/register
 // @desc    Register a new pharmacy (temporary until approved)
@@ -30,7 +42,6 @@ router.post('/register',
     // Document validation moved to controller checking req.files
   ],
   (req, res, next) => {
-    console.log('[Pharmacy Register Route] Hit! Content-Type:', req.headers['content-type']);
     console.log('[Pharmacy Register Route] Files present:', req.files ? Object.keys(req.files) : 'None');
     console.log('[Pharmacy Register Route] Body keys:', Object.keys(req.body));
     next();

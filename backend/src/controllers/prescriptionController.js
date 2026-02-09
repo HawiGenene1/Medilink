@@ -11,9 +11,7 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const rootDir = path.join(__dirname, '../../');
     const uploadDir = path.join(rootDir, 'uploads/prescriptions');
-    console.log('[PrescriptionController] Target upload directory:', uploadDir);
     if (!fs.existsSync(uploadDir)) {
-      console.log('[PrescriptionController] Creating directory:', uploadDir);
       fs.mkdirSync(uploadDir, { recursive: true });
     }
     cb(null, uploadDir);
@@ -65,8 +63,6 @@ const uploadPrescription = [
       }
 
       const { notes, pharmacyId, urgency = 'normal' } = req.body;
-
-      console.log('[PrescriptionController] User in request:', req.user);
       const customerId = req.user.id || req.user.userId || req.user._id;
 
       if (!customerId) {
@@ -87,7 +83,7 @@ const uploadPrescription = [
         mimeType: req.file.mimetype,
         notes: notes || '',
         urgency,
-        status: 'approved',
+        status: 'pending_review',
         uploadedAt: new Date()
       });
 

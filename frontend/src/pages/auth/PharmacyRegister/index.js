@@ -22,8 +22,6 @@ const PharmacyRegister = () => {
 
   const onFinish = async (values) => {
     setLoading(true);
-    console.log('Submitting registration with values:', values);
-
     try {
       const formData = new FormData();
 
@@ -57,17 +55,11 @@ const PharmacyRegister = () => {
       if (tinFileList[0]?.originFileObj) {
         formData.append('tinDocument', tinFileList[0].originFileObj);
       }
-
-      console.log('Sending registration request via Axios...');
-
       const response = await api.post('/pharmacy/register', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-
-      console.log('Server response:', response.data);
-
       if (response.data.success) {
         message.success({
           content: 'Pharmacy registration submitted successfully! Your application is pending approval. You will receive an email with login credentials once approved.',
