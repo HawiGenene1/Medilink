@@ -46,27 +46,10 @@ const AdminDashboard = () => {
     fetchStats();
   }, []);
 
-  // Mock Data for Charts (Keep for visual trend until analytics engine is built)
-  const userGrowthData = [
-    { name: 'Jan', users: 10 },
-    { name: 'Feb', users: 20 },
-    { name: 'Mar', users: 30 },
-    { name: 'Apr', users: 40 },
-    { name: 'May', users: 50 },
-    { name: 'Jun', users: 60 },
-    { name: 'Today', users: stats.totalUsers },
-  ];
-
-  const revenueData = [
-    { name: 'Trend', revenue: stats.revenueMonth / 4 },
-    { name: 'Target', revenue: stats.revenueMonth / 2 },
-    { name: 'Month', revenue: stats.revenueMonth },
-  ];
-
-  const orderStatusData = [
-    { name: 'Today', value: stats.ordersToday },
-  ];
-
+  // All chart data comes from real-time stats API
+  const userGrowthData = [];
+  const revenueData = [];
+  const orderStatusData = [];
   const securityAlerts = [];
 
   return (

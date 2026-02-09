@@ -21,26 +21,7 @@ import { pharmacyOwnerAPI } from '../../../services/api';
 
 const { Title, Text, Paragraph } = Typography;
 
-const MOCK_SALES_TRENDS = [
-    { key: '1', period: 'January 2026', revenue: 45200, orders: 1240, growth: 12.5 },
-    { key: '2', period: 'December 2025', revenue: 40150, orders: 1120, growth: 8.2 },
-    { key: '3', period: 'November 2025', revenue: 37100, orders: 1050, growth: -2.1 },
-    { key: '4', period: 'October 2025', revenue: 38000, orders: 1080, growth: 4.5 },
-];
-
-const MOCK_STAFF_TRENDS = [
-    { key: '1', period: 'January 2026', totalStaff: 12, newJoiners: 2, turnover: 0 },
-    { key: '2', period: 'December 2025', totalStaff: 10, newJoiners: 1, turnover: 1 },
-    { key: '3', period: 'November 2025', totalStaff: 10, newJoiners: 0, turnover: 0 },
-];
-
-const MOCK_RECENT_ORDERS = [
-    { key: '1', orderNumber: 'ORD-2026-001', customer: 'Abebe Bikila', amount: 1250, status: 'delivered', date: '2026-01-30', paymentMethod: 'CARD', paymentStatus: 'PAID' },
-    { key: '2', orderNumber: 'ORD-2026-002', customer: 'Mulu Tesfaye', amount: 840, status: 'processing', date: '2026-01-30', paymentMethod: 'CASH_ON_DELIVERY', paymentStatus: 'PENDING' },
-    { key: '3', orderNumber: 'ORD-2026-003', customer: 'Kebede Kassa', amount: 2100, status: 'pending', date: '2026-01-29', paymentMethod: 'CASH_ON_DELIVERY', paymentStatus: 'PENDING' },
-    { key: '4', orderNumber: 'ORD-2026-004', customer: 'Selam Desta', amount: 450, status: 'completed', date: '2026-01-29', paymentMethod: 'CARD', paymentStatus: 'PAID' },
-    { key: '5', orderNumber: 'ORD-2026-005', customer: 'Tadesse Girma', amount: 3200, status: 'cancelled', date: '2026-01-28', paymentMethod: 'CASH_ON_DELIVERY', paymentStatus: 'REFUNDED' },
-];
+// All data loaded from database via API calls
 
 const Reports = () => {
     const [loading, setLoading] = useState(false);
@@ -371,7 +352,8 @@ const Reports = () => {
                 <Col span={24}>
                     <Card title={<Space><ShoppingOutlined /> Order Activity</Space>}>
                         <Table
-                            dataSource={MOCK_RECENT_ORDERS}
+                            dataSource={[]}
+                            locale={{ emptyText: 'No recent orders available' }}
                             pagination={false}
                             size="middle"
                             columns={[

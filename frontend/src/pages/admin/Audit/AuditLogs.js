@@ -10,16 +10,8 @@ const AuditLogs = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [selectedLog, setSelectedLog] = useState(null);
 
-    // Mock Data
-    const logs = Array.from({ length: 25 }).map((_, i) => ({
-        key: i,
-        timestamp: `2023-11-${String(Math.floor(i / 2) + 1).padStart(2, '0')} 14:${String(i).padStart(2, '0')}:22`,
-        actor: i % 3 === 0 ? 'Admin (System)' : `User ${i}`,
-        action: i % 4 === 0 ? 'DELETE' : (i % 3 === 0 ? 'UPDATE' : 'CREATE'),
-        resource: i % 2 === 0 ? 'Order #1234' : 'User Profile',
-        ip: `192.168.1.${i}`,
-        status: i % 10 === 0 ? 'Failed' : 'Success'
-    }));
+    // All audit logs loaded from database
+    const logs = [];
 
     const columns = [
         { title: 'Timestamp', dataIndex: 'timestamp', key: 'timestamp', width: 180 },
