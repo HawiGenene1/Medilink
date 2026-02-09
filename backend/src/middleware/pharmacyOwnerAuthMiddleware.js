@@ -7,10 +7,6 @@ const ErrorResponse = require('../utils/errorResponse');
 const Pharmacy = require('../models/Pharmacy');
 const User = require('../models/User');
 
-// Stable mock IDs for development
-const STABLE_MOCK_PHARMACY_ID = '65a7d5c9f1a2b3c4d5e6f701';
-const STABLE_MOCK_OWNER_ID = '507f191e810c19729de160e1';
-
 /**
  * Middleware to protect pharmacy owner routes
  */
@@ -37,8 +33,6 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
         }
 
         const id = decoded.userId || decoded.ownerId || decoded.id;
-        console.log(`[Auth] Verifying ID: ${id}`);
-
         // Try to find as PharmacyOwner (Legacy)
         let owner = await PharmacyOwner.findById(id);
 
@@ -47,7 +41,6 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
             const user = await User.findById(id);
             const staffRoles = ['staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff'];
             if (user && (['pharmacy_owner', 'pharmacy_admin', 'system_admin'].includes(user.role) || staffRoles.includes(user.role))) {
-                console.log(`[Auth] Found authorized user: ${user.email} with role: ${user.role}`);
                 user.isUserParams = true; // Flag for controllers
                 owner = user;
             }

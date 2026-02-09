@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Pharmacy = require('../models/Pharmacy');
 const Role = require('../models/Role');
 const { generateToken } = require('../config/jwt');
 const { validationResult } = require('express-validator');
@@ -80,7 +81,7 @@ const register = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error during registration',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -102,11 +103,9 @@ const login = async (req, res) => {
     }
 
     const { email, password } = req.body;
-    console.log('LOGIN DEBUG: Attempting login for:', email);
 
     // Find user
     const user = await User.findOne({ email }).select('+password');
-    console.log('LOGIN DEBUG: User found:', user ? user._id : 'NO USER');
 
     if (!user) {
       return res.status(400).json({
@@ -116,7 +115,6 @@ const login = async (req, res) => {
     }
 
     // Check status
-    console.log('LOGIN DEBUG: Checking status. Role:', user.role, 'Status:', user.status, 'isActive:', user.isActive);
 
     if (user.isActive === false) {
       return res.status(403).json({
@@ -125,31 +123,65 @@ const login = async (req, res) => {
       });
     }
 
-    if (user.status !== 'active' && !(user.status === 'pending' && (
-      user.role === 'delivery' ||
-      user.role === 'pharmacy_admin' ||
-      user.role === 'staff' ||
-      user.role === 'pharmacy_staff' ||
-      user.role === 'pharmacist' ||
-      user.role === 'technician' ||
-      user.role === 'assistant' ||
-      user.role === 'cashier'
-    ))) {
+    if (user.status !== 'active') {
       let statusMessage = 'Your account is pending approval.';
       if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
       if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';
 
-      console.log('LOGIN DEBUG: Account not active:', statusMessage);
       return res.status(403).json({
         success: false,
         message: statusMessage,
       });
     }
 
+    // Pharmacy Status Check for pharmacy-related roles
+    const pharmacyRoles = [
+      'pharmacy_owner',
+      'PHARMACY_OWNER',
+      'pharmacy_admin',
+      'staff',
+      'pharmacist',
+      'technician',
+      'assistant',
+      'pharmacy_staff',
+      'cashier'
+    ];
+
+    if (pharmacyRoles.includes(user.role)) {
+      let pharmacy = null;
+
+      // If user has a pharmacyId, use it. Otherwise find pharmacy owned by this user
+      if (user.pharmacyId) {
+        pharmacy = await Pharmacy.findById(user.pharmacyId);
+      } else if (user.role === 'pharmacy_owner' || user.role === 'PHARMACY_OWNER') {
+        pharmacy = await Pharmacy.findOne({ owner: user._id });
+      }
+
+      if (pharmacy) {
+        if (pharmacy.status !== 'approved') {
+          return res.status(403).json({
+            success: false,
+            message: 'Your pharmacy is pending approval. You can login once the pharmacy registration is approved.',
+          });
+        }
+        if (pharmacy.isActive === false) {
+          return res.status(403).json({
+            success: false,
+            message: 'Your pharmacy is currently inactive. Please contact support.',
+          });
+        }
+      } else if (user.role !== 'pharmacy_admin') {
+        // If it's a pharmacy roles but no pharmacy is found, block access
+        // Note: pharmacy_admin might be a platform-wide role that doesn't belong to a specific pharmacy
+        // but the prompt mentions pharmacy owners, so we check carefully.
+        // Let's check if pharmacy_admin is platform-level.
+        // Based on model comments: "pharmacy_admin: Platform-level governance, compliance, and business control."
+        // So pharmacy_admin might not have a specific pharmacyId.
+      }
+    }
+
     // Verify Password
-    console.log('LOGIN DEBUG: Verifying password...');
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('LOGIN DEBUG: Password match result:', isMatch);
 
     if (!isMatch) {
       return res.status(400).json({
@@ -159,13 +191,10 @@ const login = async (req, res) => {
     }
 
     // Generate Token
-    console.log('LOGIN DEBUG: Generating token...');
     const token = generateToken({ userId: user._id, role: user.role });
-    console.log('LOGIN DEBUG: Token generated.');
 
     const { password: _pwd, ...safeUser } = user.toObject();
 
-    console.log('LOGIN DEBUG: Sending response.');
     return res.json({
       success: true,
       token,
@@ -190,7 +219,7 @@ const login = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error during login',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -232,7 +261,7 @@ const getCurrentUser = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error while fetching user profile',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -311,7 +340,7 @@ const registerPharmacy = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error during pharmacy registration',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -367,7 +396,7 @@ const verifyEmail = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error during email verification',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };

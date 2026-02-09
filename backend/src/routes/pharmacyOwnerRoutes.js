@@ -3,7 +3,7 @@ const router = express.Router();
 const { register, login } = require('../controllers/pharmacyOwnerController');
 const { getDashboardStats, getProfile, updateProfile, updatePassword, getSubscriptionDetails, getReports, getPharmacy, updatePharmacy, getAnalytics } = require('../controllers/pharmacyOwnerDashboardController');
 const { createStaff, getStaff, updateStaff, deleteStaff } = require('../controllers/pharmacyOwnerStaffController');
-const { protectPharmacyOwner } = require('../middleware/pharmacyOwnerAuthMiddleware');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const {
     validateOwnerRegister,
     validateOwnerLogin,
@@ -16,8 +16,9 @@ const {
 router.post('/register', validateOwnerRegister, register);
 router.post('/login', validateOwnerLogin, login);
 
-// Protected routes (Require Pharmacy Owner Authentication)
-router.use(protectPharmacyOwner);
+// Protected routes (Require Pharmacy Owner or Staff Authentication)
+router.use(protect);
+router.use(authorize('pharmacy_owner', 'PHARMACY_OWNER', 'pharmacy_staff', 'pharmacist', 'cashier'));
 
 // Dashboard & Profile
 router.get('/dashboard', getDashboardStats);

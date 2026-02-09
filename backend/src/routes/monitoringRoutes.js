@@ -9,6 +9,12 @@ const {
   getRecentAuditLogs
 } = require('../controllers/monitoringController');
 
+const { protect, authorize } = require('../middleware/authMiddleware');
+
+// Protect all routes
+router.use(protect);
+router.use(authorize('admin', 'system_admin', 'pharmacy_admin'));
+
 // System overview and health
 router.get('/overview', getSystemOverview);
 router.get('/health', getSystemHealth);

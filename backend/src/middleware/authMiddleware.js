@@ -22,27 +22,34 @@ const protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Find user or owner by ID from token
-      let user;
+      // Find user by ID from token
       const targetId = decoded.userId || decoded.ownerId || decoded.id;
 
-      // Try User collection first
-      user = await User.findById(targetId).select('-password');
+      // Primary: Find in User collection
+      let user = await User.findById(targetId).select('-password');
 
-      // If not found in User, try PharmacyOwner collection
+      // Secondary: Try PharmacyOwner legacy collection ONLY if not found in User
       if (!user) {
-        const PharmacyOwner = require("../models/PharmacyOwner");
-        const owner = await PharmacyOwner.findById(targetId).select('-password');
+        try {
+          const PharmacyOwner = require("../models/PharmacyOwner");
+          const owner = await PharmacyOwner.findById(targetId).select('-password');
 
-        if (owner) {
-          user = {
-            _id: owner._id,
-            email: owner.email,
-            role: 'pharmacy_owner',
-            pharmacyId: owner.pharmacyId,
-            status: owner.isActive ? 'active' : 'suspended',
-            isActive: owner.isActive
-          };
+          if (owner) {
+            // Map legacy owner to standardize user object
+            user = {
+              _id: owner._id,
+              firstName: owner.fullName ? owner.fullName.split(' ')[0] : 'Owner',
+              lastName: owner.fullName ? owner.fullName.split(' ').slice(1).join(' ') : '',
+              email: owner.email,
+              role: 'pharmacy_owner',
+              pharmacyId: owner.pharmacyId,
+              isActive: owner.isActive !== false,
+              status: owner.isActive === false ? 'suspended' : 'active'
+            };
+          }
+        } catch (modelError) {
+          // Model might not exist or other DB error
+          console.warn('Legacy PharmacyOwner lookup skipped:', modelError.message);
         }
       }
 
@@ -53,11 +60,11 @@ const protect = async (req, res, next) => {
         });
       }
 
-      // Check if user is active
-      if (!user.isActive) {
-        return res.status(401).json({
+      // Check if user is active (strictly)
+      if (user.isActive === false || user.status === 'suspended' || user.status === 'rejected') {
+        return res.status(403).json({
           success: false,
-          message: 'Account has been deactivated.'
+          message: 'Your account is currently inactive or suspended. Please contact support.'
         });
       }
 

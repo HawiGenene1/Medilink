@@ -51,24 +51,6 @@ router.post(
 // @access  Private
 router.get('/me', authenticate, getCurrentUser);
 
-// DEBUG ROUTE (Delete later)
-router.get('/debug-user/:email', async (req, res) => {
-  try {
-    const User = require('../models/User');
-    const user = await User.findOne({ email: req.params.email }).select('+password').populate('role');
-    if (!user) return res.json({ found: false });
-    return res.json({
-      found: true,
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      passwordHash: user.password
-    });
-  } catch (e) {
-    return res.status(500).json({ error: e.toString() });
-  }
-});
-
 // @desc    Request password reset
 // @route   POST /api/auth/request-reset
 // @access  Public
