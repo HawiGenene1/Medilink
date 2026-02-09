@@ -13,12 +13,14 @@ const ErrorResponse = require('../utils/errorResponse');
  * @access  Private (Pharmacy Owner only)
  */
 const getDashboardStats = asyncHandler(async (req, res, next) => {
-    const pharmacyId = req.owner.pharmacyId;
-    console.log('[Dashboard] Fetching stats for pharmacy:', pharmacyId);
-    console.log('[Dashboard] Owner data:', req.owner);
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
 
+    const pharmacyId = req.owner.pharmacyId;
     if (!pharmacyId) {
-        return next(new ErrorResponse('No pharmacy associated with this owner', 400));
+        return next(new ErrorResponse('No pharmacy associated with this user', 400));
     }
 
     // Prepare aggregation for sales stats
@@ -80,6 +82,11 @@ const User = require('../models/User');
  * @access  Private (Pharmacy Owner only)
  */
 const getProfile = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     let owner = await PharmacyOwner.findById(req.owner._id).populate('pharmacyId');
 
     // Fallback to User model
@@ -146,6 +153,11 @@ const getProfile = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const updateProfile = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     const { fullName, phone, operationalPermissions } = req.body;
 
     let owner = await PharmacyOwner.findById(req.owner._id);
@@ -228,6 +240,11 @@ const updateProfile = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const updatePassword = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -266,14 +283,52 @@ const updatePassword = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const getSubscriptionDetails = asyncHandler(async (req, res, next) => {
-    // We can rely on req.owner if it was already fetched in middleware
-    // but to get fresh data including any updates:
-    const owner = await PharmacyOwner.findById(req.owner._id);
-
-    if (!owner) {
-        return next(new ErrorResponse('Owner account not found', 404));
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
     }
 
+    // Try to find as PharmacyOwner first (legacy)
+    let owner = await PharmacyOwner.findById(req.owner._id);
+
+    // If not found, try as User (new flow)
+    if (!owner) {
+        owner = await User.findById(req.owner._id);
+
+        if (!owner) {
+            return next(new ErrorResponse('Account not found', 404));
+        }
+
+        // For User model, fetch subscription from Pharmacy
+        if (owner.pharmacyId) {
+            const pharmacy = await Pharmacy.findById(owner.pharmacyId).populate('subscription');
+
+            if (pharmacy && pharmacy.subscription) {
+                return res.json({
+                    success: true,
+                    data: {
+                        plan: pharmacy.subscription.plan || 'FREE',
+                        status: pharmacy.subscription.status || 'active',
+                        startDate: pharmacy.subscription.startDate,
+                        endDate: pharmacy.subscription.endDate
+                    }
+                });
+            }
+        }
+
+        // Default subscription for User without pharmacy subscription
+        return res.json({
+            success: true,
+            data: {
+                plan: 'FREE',
+                status: 'active',
+                startDate: owner.createdAt,
+                endDate: null
+            }
+        });
+    }
+
+    // For PharmacyOwner model (legacy)
     res.json({
         success: true,
         data: {
@@ -291,10 +346,14 @@ const getSubscriptionDetails = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const getReports = asyncHandler(async (req, res, next) => {
-    const pharmacyId = req.owner.pharmacyId;
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
 
+    const pharmacyId = req.owner.pharmacyId;
     if (!pharmacyId) {
-        return next(new ErrorResponse('No pharmacy associated with this owner', 400));
+        return next(new ErrorResponse('No pharmacy associated with this user', 400));
     }
 
     // 1. Sales trends (revenue and order count by month)
@@ -389,6 +448,11 @@ const getReports = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const getPharmacy = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     const pharmacy = await Pharmacy.findById(req.owner.pharmacyId);
 
     if (!pharmacy) {
@@ -407,6 +471,11 @@ const getPharmacy = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const updatePharmacy = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     let pharmacy = await Pharmacy.findById(req.owner.pharmacyId);
 
     if (!pharmacy) {
@@ -431,10 +500,14 @@ const updatePharmacy = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const getAnalytics = asyncHandler(async (req, res, next) => {
-    const pharmacyId = req.owner.pharmacyId;
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
 
+    const pharmacyId = req.owner.pharmacyId;
     if (!pharmacyId) {
-        return next(new ErrorResponse('No pharmacy associated with this owner', 400));
+        return next(new ErrorResponse('No pharmacy associated with this user', 400));
     }
 
     // 1. Aggregate Total Revenue and Total Orders

@@ -11,6 +11,11 @@ const ErrorResponse = require('../utils/errorResponse');
  * @access  Private (Pharmacy Owner only)
  */
 const createStaff = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     try {
         const { firstName, lastName, email, phone, password, role, permissions } = req.body;
         const pharmacyId = req.owner.pharmacyId;
@@ -88,19 +93,18 @@ const createStaff = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const getStaff = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     const pharmacyId = req.owner.pharmacyId;
 
     if (!pharmacyId) {
         return next(new ErrorResponse('No pharmacy associated with this owner account', 400));
     }
-
-    console.log('Fetching staff for pharmacy:', pharmacyId);
-
     const staff = await PharmacyStaff.find({ pharmacy: pharmacyId })
         .populate('user', 'firstName lastName email phone isActive');
-
-    console.log(`Found ${staff.length} staff members`);
-
     res.json({
         success: true,
         count: staff.length,
@@ -114,6 +118,11 @@ const getStaff = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const updateStaff = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     const { firstName, lastName, email, phone, role, permissions, isActive } = req.body;
     const staffId = req.params.id;
 
@@ -160,6 +169,11 @@ const updateStaff = asyncHandler(async (req, res, next) => {
  * @access  Private (Pharmacy Owner only)
  */
 const deleteStaff = asyncHandler(async (req, res, next) => {
+    // Normalize req.owner for both pharmacy owners and staff
+    if (!req.owner && req.user) {
+        req.owner = req.user;
+    }
+
     try {
         const staffId = req.params.id;
         const staff = await PharmacyStaff.findOne({ _id: staffId, pharmacy: req.owner.pharmacyId });

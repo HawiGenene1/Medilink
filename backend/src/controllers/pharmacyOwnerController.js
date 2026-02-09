@@ -9,18 +9,14 @@ const ErrorResponse = require('../utils/errorResponse');
  * @access  Public
  */
 const register = asyncHandler(async (req, res, next) => {
-    console.log('[Owner Register] Request body:', req.body);
     const { fullName, email, phone, password, pharmacyId, subscriptionPlan } = req.body;
 
     try {
         // Check if owner already exists
         const existingOwner = await PharmacyOwner.findOne({ email });
         if (existingOwner) {
-            console.log('[Owner Register] Email already exists:', email);
             return next(new ErrorResponse('A pharmacy owner with this email already exists', 400));
         }
-
-        console.log('[Owner Register] Creating new owner...');
         // Create new owner
         const owner = await PharmacyOwner.create({
             fullName,
@@ -30,8 +26,6 @@ const register = asyncHandler(async (req, res, next) => {
             pharmacyId,
             subscriptionPlan
         });
-        console.log('[Owner Register] Owner created:', owner._id);
-
         const token = generateToken({
             ownerId: owner._id,
             email: owner.email,
@@ -95,9 +89,7 @@ const login = asyncHandler(async (req, res, next) => {
         const token = generateToken({
             userId: user._id,
             role: user.role,
-            email: user.email
         });
-
         // Generate response object compatible with frontend expectations
         res.json({
             success: true,
@@ -110,6 +102,7 @@ const login = asyncHandler(async (req, res, next) => {
                 phone: user.phone,
                 role: user.role,
                 permissions: user.permissions,
+                operationalPermissions: user.operationalPermissions.toObject ? user.operationalPermissions.toObject() : user.operationalPermissions,
                 // Subscription info usually on Pharmacy, might be undefined here but dashboard fetches it
                 pharmacyId: user.pharmacyId
             }
@@ -150,6 +143,7 @@ const login = asyncHandler(async (req, res, next) => {
             email: owner.email,
             role: 'pharmacy_owner',
             permissions: owner.permissions,
+            operationalPermissions: owner.operationalPermissions,
             subscriptionPlan: owner.subscriptionPlan,
             subscriptionStatus: owner.subscriptionStatus,
             pharmacyId: owner.pharmacyId
