@@ -139,19 +139,21 @@ const acceptOrder = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
 
+        if (order.courier && order.courier.toString() === driverId.toString()) {
+            return res.status(200).json({ success: true, message: 'You have already accepted this order', data: order });
+        }
+
         if (order.courier) {
             return res.status(400).json({ success: false, message: 'Order already accepted by another driver' });
         }
 
         // Assign driver
         order.courier = driverId;
-        order.status = 'confirmed';
-        order.statusHistory.push({
-            status: 'confirmed',
-            timestamp: new Date(),
-            note: 'Order accepted by courier'
+        await order.updateStatus('confirmed', {
+            userId: driverId,
+            reason: 'Driver accepted order',
+            note: 'Order assigned to courier'
         });
-        await order.save();
 
         // Mark driver as busy?
         // await DeliveryProfile.findOneAndUpdate({ userId: driverId }, { isAvailable: false });
@@ -299,24 +301,17 @@ const startDelivery = async (req, res) => {
         const { orderId } = req.body;
         const driverId = req.user.userId || req.user.id; // Verify authorization matches driver (optional but good)
 
-        const order = await Order.findOneAndUpdate(
-            { _id: orderId, courier: driverId },
-            {
-                $set: { status: 'in_transit' },
-                $push: {
-                    statusHistory: {
-                        status: 'in_transit',
-                        timestamp: new Date(),
-                        note: 'Driver picked up order'
-                    }
-                }
-            },
-            { new: true }
-        );
+        const order = await Order.findOne({ _id: orderId, courier: driverId });
 
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
         }
+
+        await order.updateStatus('in_transit', {
+            userId: driverId,
+            reason: 'Pickup confirmed',
+            note: 'Driver picked up order'
+        });
 
         await createNotification({
             userId: order.customer,
@@ -343,30 +338,35 @@ const startDelivery = async (req, res) => {
  */
 const completeDelivery = async (req, res) => {
     try {
-        const { orderId } = req.body;
+        const { orderId, signature } = req.body;
         const driverId = req.user.userId || req.user.id;
 
         // Fetch order first to get serviceFee
-        const existingOrder = await Order.findOne({ _id: orderId, courier: driverId });
-        if (!existingOrder) {
-            return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
-        }
-
-        const order = await Order.findOneAndUpdate(
-            { _id: orderId, courier: driverId },
-            {
-                status: 'delivered',
-                actualArrivalTime: new Date(),
-                paymentStatus: 'paid',
-                courierEarnings: existingOrder.serviceFee || 50,
-                $push: { statusHistory: { status: 'delivered', timestamp: new Date(), note: 'Order delivered' } }
-            },
-            { new: true }
-        );
-
+        const order = await Order.findOne({ _id: orderId, courier: driverId });
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
         }
+
+        order.courierEarnings = order.serviceFee || 50;
+        
+        // Save delivery proof
+        if (!order.delivery) order.delivery = {};
+        if (!order.delivery.deliveryProof) order.delivery.deliveryProof = {};
+        
+        if (signature) {
+            order.delivery.deliveryProof.signature = signature;
+        }
+        order.delivery.deliveryProof.deliveredBy = driverId;
+
+        await order.updateStatus('delivered', {
+            userId: driverId,
+            reason: 'Delivery completed',
+            note: 'Order delivered with proof'
+        });
+
+        // Additional delivery specific updates
+        order.paymentStatus = 'paid';
+        await order.save();
 
         await createNotification({
             userId: order.customer,
@@ -625,10 +625,9 @@ const getAvailableRequests = async (req, res) => {
         const userId = req.user.userId || req.user.id;
         logger.info(`[GetAvailableRequests] Driver ${userId} fetching available jobs...`);
 
-        // Find all orders in 'pending' status that don't have a courier yet
-        // We check for both field not existing AND field being null
+        // Find all orders that don't have a courier yet and are in states ready for pickup or being prepared
         const orders = await Order.find({
-            status: 'pending',
+            status: { $in: ['pending', 'confirmed', 'processing', 'prepared', 'preparing', 'ready', 'ready_for_pickup'] },
             $or: [
                 { courier: { $exists: false } },
                 { courier: null }

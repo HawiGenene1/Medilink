@@ -13,6 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { ordersAPI } from '../../../services/api/orders';
 import './Orders.css';
 
+import { io } from 'socket.io-client';
+
 const { Title, Text } = Typography;
 
 const Orders = () => {
@@ -37,6 +39,28 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders();
+
+    // Socket.io initialization
+    const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
+    
+    socket.on('connect', () => {
+      console.log('Connected to socket server');
+    });
+
+    socket.on('order_status_update', (data) => {
+      console.log('Order status update received:', data);
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order._id === data.orderId || order._id === data.id
+            ? { ...order, ...data }
+            : order
+        )
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const getStatusColor = (status) => {
@@ -47,6 +71,7 @@ const Orders = () => {
       'ready': 'processing',
       'in_transit': 'processing',
       'delivered': 'success',
+      'completed': 'success',
       'cancelled': 'error'
     };
     return colors[status] || 'default';
@@ -59,13 +84,14 @@ const Orders = () => {
       'preparing': 50,
       'ready': 75,
       'in_transit': 90,
-      'delivered': 100
+      'delivered': 100,
+      'completed': 100
     };
     return progress[status] || 0;
   };
 
-  const activeOrders = orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
-  const pastOrders = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
+  const activeOrders = orders.filter(o => !['delivered', 'completed', 'cancelled'].includes(o.status));
+  const pastOrders = orders.filter(o => ['delivered', 'completed', 'cancelled'].includes(o.status));
 
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -132,7 +158,7 @@ const Orders = () => {
         </Col>
         <Col xs={24} md={8} style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '12px' }}>
           <Button block icon={<FileTextOutlined />} onClick={() => handleViewDetails(order)}>View Details</Button>
-          {(isActive || order.status === 'delivered') && (
+          {(isActive || ['delivered', 'completed'].includes(order.status)) && (
             <Button type="primary" block icon={<EnvironmentOutlined />} onClick={() => navigate(`/customer/orders/track/${order._id}`)}>
               Track Live
             </Button>
@@ -173,12 +199,12 @@ const Orders = () => {
       <Tabs defaultActiveKey="1" items={tabsItems} className="clinical-tabs" />
 
       <Modal
-        title={`Order Details - ${selectedOrder?.id}`}
+        title={`Order Details - ${selectedOrder?.orderNumber}`}
         open={detailsVisible}
         onCancel={() => setDetailsVisible(false)}
         footer={[
           <Button key="close" onClick={() => setDetailsVisible(false)}>Close</Button>,
-          selectedOrder?.status === 'Delivered' && <Button key="reorder" type="primary">Reorder Items</Button>
+          (selectedOrder?.status === 'delivered' || selectedOrder?.status === 'completed') && <Button key="reorder" type="primary">Reorder Items</Button>
         ]}
         width={600}
       >
@@ -187,18 +213,15 @@ const Orders = () => {
             <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <Text type="secondary">Pharmacy</Text>
-                <Title level={4} style={{ margin: 0 }}>{selectedOrder.pharmacy}</Title>
+                <Title level={4} style={{ margin: 0 }}>{typeof selectedOrder.pharmacy === 'object' ? selectedOrder.pharmacy?.name : (selectedOrder.pharmacy || 'Pharmacy')}</Title>
               </div>
-              <Tag color={selectedOrder.statusColor}>{selectedOrder.status}</Tag>
+              <Tag color={getStatusColor(selectedOrder.status)}>{(selectedOrder.status || 'pending').toUpperCase().replace('_', ' ')}</Tag>
             </div>
 
             <Title level={5}>Order Items</Title>
             <List
               itemLayout="horizontal"
-              dataSource={[
-                { name: 'Amoxicillin 500mg', qty: 2, price: '120 ETB' },
-                { name: 'Paracetamol 500mg', qty: 1, price: '40 ETB' }
-              ]}
+              dataSource={selectedOrder.items || []}
               renderItem={item => (
                 <List.Item>
                   <List.Item.Meta
@@ -208,30 +231,46 @@ const Orders = () => {
                         style={{ background: token.colorFillSecondary, color: token.colorPrimary }}
                       />
                     }
-                    title={item.name}
-                    description={`Quantity: ${item.qty}`}
+                    title={item.name || (item.medicine?.name)}
+                    description={`Quantity: ${item.quantity}`}
                   />
-                  <div>{item.price}</div>
+                  <div>{item.price * item.quantity} ETB</div>
                 </List.Item>
               )}
             />
 
             <Divider style={{ margin: '16px 0' }} />
 
-            <div style={{ backgroundColor: token.colorFillAlter, padding: '16px', borderRadius: '8px' }}>
+            <div style={{ backgroundColor: token.colorFillAlter, padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
               <Row justify="space-between" style={{ marginBottom: '8px' }}>
                 <Text>Subtotal</Text>
-                <Text strong>160 ETB</Text>
+                <Text strong>{selectedOrder.totalAmount || (selectedOrder.finalAmount - (selectedOrder.serviceFee || 50))} ETB</Text>
               </Row>
               <Row justify="space-between" style={{ marginBottom: '8px' }}>
                 <Text>Delivery Fee</Text>
-                <Text strong>50 ETB</Text>
+                <Text strong>{selectedOrder.serviceFee || 50} ETB</Text>
               </Row>
               <Row justify="space-between">
                 <Title level={4} style={{ margin: 0 }}>Total</Title>
-                <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>{selectedOrder.total}</Title>
+                <Title level={4} style={{ margin: 0, color: token.colorPrimary }}>{selectedOrder.finalAmount} ETB</Title>
               </Row>
             </div>
+
+            {selectedOrder.delivery?.deliveryProof?.signature && (
+              <div style={{ marginTop: '24px' }}>
+                <Text strong>Customer Signature</Text>
+                <div style={{ 
+                  marginTop: '8px', 
+                  border: '1px solid #d9d9d9', 
+                  borderRadius: '8px', 
+                  padding: '8px',
+                  background: '#fff',
+                  textAlign: 'center'
+                }}>
+                  <img src={selectedOrder.delivery.deliveryProof.signature} alt="Customer Signature" style={{ maxHeight: '100px', maxWidth: '100%' }} />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

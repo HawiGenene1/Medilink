@@ -227,9 +227,62 @@ const DeliveryDetails = () => {
         }
     };
 
+    const canvasRef = useRef(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+
+    useEffect(() => {
+        if (showProofModal && canvasRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+        }
+    }, [showProofModal]);
+
+    const startDrawing = (e) => {
+        setIsDrawing(true);
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const ctx = canvas.getContext('2d');
+        const x = (e.clientX || e.touches[0].clientX) - rect.left;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    };
+
+    const draw = (e) => {
+        if (!isDrawing) return;
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        const ctx = canvas.getContext('2d');
+        const x = (e.clientX || e.touches[0].clientX) - rect.left;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+        ctx.lineTo(x, y);
+        ctx.stroke();
+    };
+
+    const stopDrawing = () => {
+        setIsDrawing(false);
+    };
+
+    const clearSignature = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+
     const handleProofSubmit = async () => {
         try {
-            await api.put('/delivery/complete', { orderId: id });
+            const canvas = canvasRef.current;
+            const signature = canvas.toDataURL('image/png');
+            
+            await api.put('/delivery/complete', { 
+                orderId: id,
+                signature: signature 
+            });
+            
             setStatus('delivered');
             message.success('Delivery Completed Successfully');
             setShowProofModal(false);
@@ -240,9 +293,6 @@ const DeliveryDetails = () => {
     };
 
     const handleOpenNavigation = () => {
-        // Determine destination based on status
-        // If not in_transit, next stop is pharmacy
-        // If in_transit, next stop is customer
         let destination = null;
         if (status === 'in_transit') {
             destination = destPos;
@@ -252,7 +302,6 @@ const DeliveryDetails = () => {
 
         if (destination) {
             const [lat, lng] = destination;
-            // Open Google Maps directions from current position to destination
             const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
             window.open(url, '_blank');
         } else {
@@ -310,8 +359,8 @@ const DeliveryDetails = () => {
 
                 <Row justify="space-between" align="middle" style={{ marginBottom: '20px' }}>
                     <Col>
-                        <Title level={3} style={{ margin: 0 }}>#{id || '882'}</Title>
-                        <Text type="secondary"><ClockCircleOutlined /> Assigned 12 mins ago</Text>
+                        <Title level={3} style={{ margin: 0 }}>#{order?.orderNumber?.split('-').pop() || '882'}</Title>
+                        <Text type="secondary"><ClockCircleOutlined /> Assigned {new Date(order?.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                     </Col>
                     <Col>
                         <Tag color={status === 'delivered' ? 'success' : 'blue'} style={{ borderRadius: '12px', padding: '4px 12px' }}>
@@ -323,7 +372,7 @@ const DeliveryDetails = () => {
                 <div className="action-card">
                     <Row align="middle" gutter={16}>
                         <Col>
-                            <Avatar size={48} src="https://i.pravatar.cc/150?u=customer" />
+                            <Avatar size={48} src={`https://ui-avatars.com/api/?name=${order?.customer?.firstName || 'C'}&background=1E88E5&color=fff`} />
                         </Col>
                         <Col flex="auto">
                             <Text strong block>{order?.customer?.firstName || order?.customer?.name || 'Customer'} {order?.customer?.lastName || ''}</Text>
@@ -355,7 +404,7 @@ const DeliveryDetails = () => {
                                 <Text type="secondary">{order?.pharmacy?.name}</Text>
                                 <Text type="secondary" style={{ fontSize: '12px' }}>
                                     {typeof order?.pharmacy?.address === 'object'
-                                        ? `${order.pharmacy.address.street}, ${order.pharmacy.address.city}`
+                                        ? `${order.pharmacy.address.street || ''}, ${order.pharmacy.address.city || ''}`
                                         : (order?.pharmacy?.address || 'Address not available')}
                                 </Text>
                             </div>
@@ -385,21 +434,29 @@ const DeliveryDetails = () => {
                 okText="Submit & Complete"
                 okButtonProps={{ className: 'confirm-location-btn' }}
             >
-                <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                    <Upload.Dragger>
-                        <p className="ant-upload-drag-icon">
-                            <CameraOutlined />
-                        </p>
-                        <p className="ant-upload-text">Take a photo of the delivery</p>
-                        <p className="ant-upload-hint">Ensure the package and house number are visible.</p>
-                    </Upload.Dragger>
-
-                    <div style={{ marginTop: '16px', textAlign: 'left' }}>
-                        <Text strong>Recipient Signature</Text>
-                        <div style={{ height: '100px', border: '1px dashed #d9d9d9', borderRadius: '8px', marginTop: '8px', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: '#bfbfbf' }}>
-                            Sign here on arrival
+                <div style={{ padding: '0 0' }}>
+                    <Text strong>Recipient Signature</Text>
+                    <div className="signature-pad-container">
+                        <canvas
+                            ref={canvasRef}
+                            className="signature-canvas"
+                            width={450}
+                            height={180}
+                            onMouseDown={startDrawing}
+                            onMouseMove={draw}
+                            onMouseUp={stopDrawing}
+                            onMouseOut={stopDrawing}
+                            onTouchStart={startDrawing}
+                            onTouchMove={draw}
+                            onTouchEnd={stopDrawing}
+                        />
+                        <div className="signature-actions">
+                            <Button size="small" onClick={clearSignature}>Clear</Button>
                         </div>
                     </div>
+                    <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                        Customer must sign here to confirm receipt of medical items.
+                    </Text>
                 </div>
             </Modal>
         </div>
