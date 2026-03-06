@@ -1,0 +1,94 @@
+{
+  "users": [
+    {
+      "_id": "698b097012f9b2dc5e83edcb",
+      "firstName": "alex",
+      "lastName": "driver",
+      "email": "circular.bandicoot.eohm@protectsmail.net",
+      "phone": "0922334455",
+      "role": "delivery",
+      "avatar": "",
+      "isTwoFactorEnabled": false,
+      "currentLocation": {
+        "lastUpdated": "2026-02-10T10:33:20.790Z"
+      },
+      "isActive": true,
+      "status": "pending",
+      "isEmailVerified": false,
+      "verificationToken": "4c61622e365ca4b4ae604dd6580f3cc443bcc581912c2f713901c38193f61cde",
+      "verificationTokenExpires": "2026-02-11T10:33:20.781Z",
+      "settings": {
+        "notificationsEnabled": true,
+        "complianceEnabled": true,
+        "theme": "light"
+      },
+      "resetToken": null,
+      "resetTokenExpire": null,
+      "mustChangePassword": false,
+      "permissions": [],
+      "operationalPermissions": {
+        "manageInventory": false,
+        "prepareOrders": false
+      },
+      "addresses": [],
+      "createdAt": "2026-02-10T10:33:20.804Z",
+      "updatedAt": "2026-02-10T18:57:20.840Z",
+      "__v": 0
+    }
+  ],
+  "profiles": [
+    {
+      "_id": "698b7d4c00642bbad1559009",
+      "userId": "698b097012f9b2dc5e83edcb",
+      "currentStep": 8,
+      "isAvailable": false,
+      "onboardingStatus": "pending_review",
+      "personalDetails": {
+        "dateOfBirth": "2026-01-31T21:00:00.000Z",
+        "residentialAddress": {
+          "street": "summit feyel bet",
+          "city": "Addis Ababa",
+          "zipCode": "1000"
+        },
+        "preferredLanguage": "English",
+        "emergencyContact": {
+          "name": "mik",
+          "phone": "098765432"
+        }
+      },
+      "documents": {
+        "vehiclePhotos": []
+      },
+      "backgroundCheck": {
+        "consented": true,
+        "consentedAt": "2026-02-10T18:56:48.617Z",
+        "status": "pending"
+      },
+      "paymentInfo": {
+        "bankName": "Dashen",
+        "accountNumber": "0987875445354324",
+        "preference": "weekly"
+      },
+      "training": {
+        "completed": false
+      },
+      "inspection": {
+        "status": "not_required",
+        "inspectionPhotos": []
+      },
+      "weeklyGoal": 1000,
+      "createdAt": "2026-02-10T18:47:40.741Z",
+      "updatedAt": "2026-02-11T04:56:52.837Z",
+      "__v": 0,
+      "submittedAt": "2026-02-10T18:57:20.835Z",
+      "vehicleDetails": {
+        "vehicleType": "motorcycle",
+        "make": "Honda",
+        "model": "Click 160",
+        "year": "2024",
+        "color": "Blue/White",
+        "licensePlate": "AA-ALEX-7"
+      }
+    }
+  ]
+}

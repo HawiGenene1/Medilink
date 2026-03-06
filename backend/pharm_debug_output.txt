@@ -1,0 +1,37 @@
+Connected to MongoDB
+
+=== Checking: Kenema Pharmacy ===
+ID: 6981ea42c5d027c424974c8f
+Status: approved
+IsActive: true
+Verified: true
+Subscription Status: suspended
+Subscription End: Thu Feb 03 2028 15:29:54 GMT+0300 (East Africa Time)
+Is Current: true
+Inventory Items: 0
+
+=== Checking: HawiPharmacy ===
+ID: 6981d95ab30af83dc9b6a7f5
+Status: approved
+IsActive: true
+Verified: true
+Subscription Status: active
+Subscription End: Wed Feb 03 2027 14:17:46 GMT+0300 (East Africa Time)
+Is Current: true
+Inventory Items: 0
+
+=== Checking: HealthPlus Pharmacy ===
+ID: 698187538c1eaf01684f80fc
+Status: pending
+IsActive: true
+Verified: true
+No Subscription found
+Inventory Items: 0
+
+=== Checking: MediCare Pharmacy ===
+ID: 698187538c1eaf01684f80ed
+Status: pending
+IsActive: true
+Verified: true
+No Subscription found
+Inventory Items: 0

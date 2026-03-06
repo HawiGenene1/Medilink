@@ -1,0 +1,21 @@
+[
+  {
+    "_id": "698187538c1eaf01684f80fc",
+    "pharmacyName": "HealthPlus Pharmacy",
+    "medicineCount": 2,
+    "sampleMedicines": [
+      "Ibuprofen",
+      "Vitamin C"
+    ]
+  },
+  {
+    "_id": "698187538c1eaf01684f80ed",
+    "pharmacyName": "MediCare Pharmacy",
+    "medicineCount": 3,
+    "sampleMedicines": [
+      "Paracetamol",
+      "Cough Syrup",
+      "Amoxicillin"
+    ]
+  }
+]
