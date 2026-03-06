@@ -120,6 +120,11 @@ const PharmacyControl = () => {
             title: 'Email',
             dataIndex: 'email',
             key: 'email',
+            render: (text) => (
+                <div style={{ wordWrap: 'break-word', wordBreak: 'break-all', maxWidth: '200px' }}>
+                    {text}
+                </div>
+            )
         },
         {
             title: 'Actions',
