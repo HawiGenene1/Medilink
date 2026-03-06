@@ -24,7 +24,8 @@ Database: MongoDB
 ## Landing Page
 ![LandingPage](screenshots/LandingPage.png)
 ## Register Pages
-![Register](screenshots/Pharmacy.png)
+![Register](screenshots/PharmacyRegister.png)
+![Register](screenshots/DeliveryRegister.png)
 ## Login Page
 1.Users
 ![Login](screenshots/Login.png)
@@ -47,6 +48,8 @@ Database: MongoDB
 ![Dashboard](screenshots/CustomerDashboard.png)
 ![BrowseMedicine](screenshots/BrowseMedicne.png)
 ![FindNearByPharmacy](screenshots/FindNearbyPharmacy.png)
+# Deliver Page
+![Dashboard](screenshots/DeliveryPortal.png)
 
 ### Medicine Search
 ![Search](screenshots/BrowseMedicine.png)
