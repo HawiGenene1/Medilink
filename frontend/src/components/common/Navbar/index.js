@@ -22,24 +22,53 @@ const Navbar = () => {
 
   const getDashboardLink = () => {
     if (!user) return '/auth/login';
-    switch (user.role) {
-      case 'admin': return '/admin/dashboard';
-      case 'delivery': return '/delivery/dashboard';
-      case 'pharmacy_admin': return '/pharmacy-admin/dashboard';
-      case 'pharmacy_staff': return '/pharmacy-staff/inventory';
-      case 'cashier': return '/cashier/dashboard';
-      case 'customer': return '/customer/dashboard';
-      default: return '/customer/dashboard';
+    const role = user.role?.toLowerCase();
+    switch (role) {
+      case 'admin': 
+      case 'system_admin':
+        return '/admin/dashboard';
+      case 'delivery': 
+        return '/delivery/dashboard';
+      case 'pharmacy_admin': 
+        return '/pharmacy-admin/dashboard';
+      case 'pharmacy_owner':
+      case 'pharmacy_staff':
+      case 'pharmacist':
+      case 'staff':
+      case 'technician':
+        return '/owner/dashboard';
+      case 'cashier': 
+        return '/cashier/dashboard';
+      case 'customer': 
+        return '/customer/dashboard';
+      default: 
+        return '/customer/dashboard';
     }
   };
 
   const getProfileLink = () => {
     if (!user) return '/auth/login';
-    switch (user.role) {
-      case 'admin': return '/admin/settings';
-      case 'delivery': return '/delivery/profile';
-      case 'customer': return '/customer/profile';
-      default: return getDashboardLink(); // Fallback to their dashboard if no profile page exists
+    const role = user.role?.toLowerCase();
+    switch (role) {
+      case 'admin': 
+      case 'system_admin':
+        return '/admin/settings';
+      case 'delivery': 
+        return '/delivery/profile';
+      case 'customer': 
+        return '/customer/profile';
+      case 'pharmacy_owner':
+      case 'pharmacy_staff':
+      case 'pharmacist':
+      case 'staff':
+      case 'technician':
+        return '/owner/profile';
+      case 'pharmacy_admin':
+        return '/pharmacy-admin/profile';
+      case 'cashier':
+        return '/cashier/settings';
+      default: 
+        return getDashboardLink();
     }
   };
 

@@ -238,7 +238,31 @@ const login = async (req, res) => {
  */
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password');
+    let user = await User.findById(req.user.userId).select('-password');
+
+    if (!user) {
+      // Fallback for legacy PharmacyOwner collection
+      try {
+        const PharmacyOwner = require('../models/PharmacyOwner');
+        const owner = await PharmacyOwner.findById(req.user.userId).select('-password');
+        
+        if (owner) {
+          user = {
+            _id: owner._id,
+            firstName: owner.fullName ? owner.fullName.split(' ')[0] : 'Owner',
+            lastName: owner.fullName ? owner.fullName.split(' ').slice(1).join(' ') : '',
+            email: owner.email,
+            role: 'pharmacy_owner',
+            phone: owner.phone,
+            status: owner.isActive === false ? 'suspended' : 'active',
+            avatar: null,
+            operationalPermissions: owner.operationalPermissions || {}
+          };
+        }
+      } catch (e) {
+        console.error('Legacy owner lookup error:', e);
+      }
+    }
 
     if (!user) {
       return res.status(404).json({
