@@ -13,6 +13,10 @@ class ChapaService {
      */
     async initializePayment(paymentData) {
         try {
+            // Ensure we use the latest env variables
+            const secretKey = process.env.CHAPA_SECRET_KEY;
+            const baseURL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
+
             const {
                 amount,
                 currency = 'ETB',
@@ -52,11 +56,11 @@ class ChapaService {
             };
 
             const response = await axios.post(
-                `${this.baseURL}/transaction/initialize`,
+                `${baseURL}/transaction/initialize`,
                 payload,
                 {
                     headers: {
-                        'Authorization': `Bearer ${this.secretKey}`,
+                        'Authorization': `Bearer ${secretKey}`,
                         'Content-Type': 'application/json'
                     }
                 }
@@ -115,11 +119,14 @@ class ChapaService {
                 };
             }
 
+            const secretKey = process.env.CHAPA_SECRET_KEY;
+            const baseURL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
+
             const response = await axios.get(
-                `${this.baseURL}/transaction/verify/${txRef}`,
+                `${baseURL}/transaction/verify/${txRef}`,
                 {
                     headers: {
-                        'Authorization': `Bearer ${this.secretKey}`
+                        'Authorization': `Bearer ${secretKey}`
                     },
                     timeout: 10000 // 10 second timeout
                 }
@@ -159,6 +166,9 @@ class ChapaService {
      */
     async processRefund(txRef, amount, reason) {
         try {
+            const secretKey = process.env.CHAPA_SECRET_KEY;
+            const baseURL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
+
             const payload = {
                 tx_ref: txRef,
                 amount: parseFloat(amount),
@@ -166,11 +176,11 @@ class ChapaService {
             };
 
             const response = await axios.post(
-                `${this.baseURL}/transaction/refund`,
+                `${baseURL}/transaction/refund`,
                 payload,
                 {
                     headers: {
-                        'Authorization': `Bearer ${this.secretKey}`,
+                        'Authorization': `Bearer ${secretKey}`,
                         'Content-Type': 'application/json'
                     }
                 }
@@ -198,12 +208,15 @@ class ChapaService {
      */
     async cancelTransaction(txRef) {
         try {
+            const secretKey = process.env.CHAPA_SECRET_KEY;
+            const baseURL = process.env.CHAPA_BASE_URL || 'https://api.chapa.co/v1';
+
             const response = await axios.put(
-                `${this.baseURL}/transaction/cancel/${txRef}`,
+                `${baseURL}/transaction/cancel/${txRef}`,
                 {},
                 {
                     headers: {
-                        'Authorization': `Bearer ${this.secretKey}`
+                        'Authorization': `Bearer ${secretKey}`
                     }
                 }
             );

@@ -66,6 +66,11 @@ router.post('/register',
   },
   registerPharmacy);
 
+// @route   GET /api/pharmacy
+// @desc    Get all pharmacies with proximity search
+// @access  Public
+router.get('/', getPharmacies);
+
 // @route   GET /api/pharmacy/status/:id
 // @desc    Check registration status of a pharmacy
 // @access  Public

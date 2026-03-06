@@ -11,6 +11,8 @@ const app = express();
 
 // Middleware
 app.use(cors());
+const { monitoringMiddleware } = require('./middleware/monitoringMiddleware');
+app.use(monitoringMiddleware);
 app.use(express.json()); // parse JSON requests
 app.use(express.urlencoded({ extended: true })); // parse URL-encoded requests
 
@@ -41,6 +43,7 @@ const userRoutes = require('./routes/userRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const chapaRoutes = require('./routes/chapaRoutes');
 const paymentCallbackRoutes = require('./routes/paymentCallbackRoutes');
+const cashierRoutes = require('./routes/cashierRoutes');
 const medicineRoutes = require('./routes/medicineRoutes');
 
 // Import Middleware
@@ -61,6 +64,9 @@ prefixes.forEach(prefix => {
   // Pharmacy Routes (for pharmacy owners/staff)
   app.use(`${prefix}/pharmacy`, pharmacyRoutes);
 
+  // Cashier Routes
+  app.use(`${prefix}/cashier`, cashierRoutes);
+
   // Pharmacy Admin Routes (platform-level administration)
   app.use(`${prefix}/pharmacy-admin`, pharmacyAdminRoutes);
 
@@ -80,7 +86,7 @@ prefixes.forEach(prefix => {
 
   // Admin Routes (System-level management)
   try {
-    app.use(`${prefix}/admin`, authenticate, authorize('system_admin'), adminRoutes);
+    app.use(`${prefix}/admin`, authenticate, authorize('admin', 'system_admin'), adminRoutes);
   } catch (e) {
     if (prefix === '/api/v1') console.warn('Admin routes not mounted:', e.message);
   }
@@ -91,6 +97,9 @@ prefixes.forEach(prefix => {
   } catch (e) {
     if (prefix === '/api/v1') console.warn('Medicine routes not mounted:', e.message);
   }
+
+  // Prescriptions API
+  app.use(`${prefix}/prescriptions`, require('./routes/prescriptionRoutes'));
 });
 
 // Test route
@@ -118,6 +127,12 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const httpServer = require('http').createServer(app);
+const { init } = require('./socket');
+
+// Initialize Socket.io
+init(httpServer);
+
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

@@ -198,7 +198,8 @@ const orderSchema = new mongoose.Schema({
       'completed',
       'cancelled',
       'refunded',
-      'on_hold'
+      'on_hold',
+      'awaiting_physical_prescription'
     ],
     default: 'pending'
   },
@@ -247,6 +248,10 @@ const orderSchema = new mongoose.Schema({
   instructions: {
     type: String,
     trim: true
+  },
+  cashier: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
   prescriptionRequired: {
     type: Boolean,
@@ -427,7 +432,7 @@ orderSchema.methods.verifyPrescription = async function (userId, isApproved, not
 
   // Update the order status based on verification
   if (isApproved) {
-    this.status = this.status === 'awaiting_prescription' ? 'processing' : this.status;
+    this.status = this.status === 'awaiting_prescription' ? 'verified' : this.status;
   } else {
     this.status = 'on_hold';
   }

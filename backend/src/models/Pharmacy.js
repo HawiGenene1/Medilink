@@ -128,6 +128,10 @@ const pharmacySchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  allowOwnerInventoryManagement: {
+    type: Boolean,
+    default: false
+  },
   totalOrders: {
     type: Number,
     default: 0

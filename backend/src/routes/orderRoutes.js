@@ -6,7 +6,8 @@ const {
   getMyOrders,
   getOrderDetails,
   cancelOrder,
-  getOrderTracking
+  getOrderTracking,
+  updateOrderAddress
 } = require('../controllers/orderController');
 
 // Public route for creating orders
@@ -23,5 +24,8 @@ router.patch('/:id/cancel', authenticate, cancelOrder);
 
 // Live tracking route
 router.get('/:id/tracking', authenticate, getOrderTracking);
+
+// Update delivery address
+router.patch('/:id/address', authenticate, updateOrderAddress);
 
 module.exports = router;

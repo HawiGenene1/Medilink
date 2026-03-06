@@ -3,7 +3,8 @@ const router = express.Router();
 const {
     getPharmacyOrders,
     updateOrderStatus,
-    verifyPrescription
+    verifyPrescription,
+    requestPhysicalPrescription
 } = require('../controllers/orderProcessingController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 const { checkSubscription } = require('../middleware/subscriptionMiddleware');
@@ -17,5 +18,6 @@ router.use(checkSubscription);
 router.get('/', getPharmacyOrders);
 router.put('/:id/status', updateOrderStatus);
 router.put('/:id/verify-prescription', verifyPrescription);
+router.put('/:id/request-physical-prescription', requestPhysicalPrescription);
 
 module.exports = router;

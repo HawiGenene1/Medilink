@@ -20,7 +20,7 @@ router.post('/verify/:orderId', cashierController.verifyPaymentStatus);
 
 // Invoice and Reports
 router.post('/generate-invoice/:orderId', cashierController.generateInvoice);
-router.post('/refund/:paymentId', cashierController.initiateRefund);
+// router.post('/refund/:paymentId', cashierController.initiateRefund);
 router.get('/financial-report', cashierController.getFinancialReport);
 router.post('/export-report', cashierController.exportReportPDF);
 
@@ -38,11 +38,22 @@ router.get('/transactions/recent', dashboardController.getRecentTransactions);
 router.get('/alerts', dashboardController.getAlerts);
 router.get('/performance', dashboardController.getPerformance);
 
-// ===== NEW REFUND MANAGEMENT ROUTES =====
+// ===== NEW REFUND MANAGEMENT ROUTES (DISABLED) =====
+/*
 router.post('/refund-v2/check-eligibility', refundController.checkRefundEligibility);
 router.post('/refund-v2/initiate', refundController.initiateRefund);
+```
+Wait, I need to check the file content again to be sure of the state.
+Actually, let's just view the file again.
+Then I will move to frontend.
+
+Frontend:
+1. `CashierLayout.js`
+2. `AppRouter.js`
+3. `pages/cashier/Dashboard/index.js`
 router.post('/refund-v2/:id/approve', authorize('supervisor', 'manager', 'admin'), refundController.approveRefund);
 router.post('/refund-v2/:id/complete', refundController.completeRefund);
 router.get('/refund-v2/list', refundController.getRefunds);
+*/
 
 module.exports = router;
