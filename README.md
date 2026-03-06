@@ -29,6 +29,9 @@ Database: MongoDB
 ## Login Page
 1.Users
 ![Login](screenshots/Login.png)
+### Medicine Search
+![BrowseMedicine](screenshots/BrowseMedicine.png)
+
 ## System Admin Page
 ![Dashboard](screenshots/AdminDashboard.png)
 ![Monitoring](screenshots/AdminMonitoring.png)
@@ -51,8 +54,6 @@ Database: MongoDB
 # Deliver Page
 ![Dashboard](screenshots/DeliveryPortal.png)
 
-### Medicine Search
-![Search](screenshots/BrowseMedicine.png)
 
 
 ## How to Run the Project
