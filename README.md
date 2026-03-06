@@ -60,7 +60,7 @@ Database: MongoDB
 1. Clone the repository
 
 ```bash
-git clone https://github.com/MeronT07/medilink.git
+https://github.com/HawiGenene1/Medilink.git
 
 2.Backend
 cd backend
