@@ -168,8 +168,18 @@ const Analytics = () => {
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
-                                    <Legend />
+                                    <Legend 
+                                        layout="horizontal" 
+                                        verticalAlign="bottom" 
+                                        align="center"
+                                        iconType="circle"
+                                        wrapperStyle={{
+                                            paddingTop: '20px',
+                                            fontSize: '13px',
+                                            fontWeight: '500',
+                                            lineHeight: '24px'
+                                        }}
+                                    />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
