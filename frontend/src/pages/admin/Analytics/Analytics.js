@@ -151,15 +151,15 @@ const Analytics = () => {
                 </Col>
                 <Col xs={24} lg={8}>
                     <Card title="Order Status Distribution" bordered={false} loading={loading}>
-                        <div style={{ width: '100%', height: 300 }}>
+                        <div style={{ width: '100%', height: 350 }}>
                             <ResponsiveContainer>
                                 <PieChart>
                                     <Pie
                                         data={statusDistribution}
                                         cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
+                                        cy="45%"
+                                        innerRadius={70}
+                                        outerRadius={95}
                                         fill="#8884d8"
                                         paddingAngle={5}
                                         dataKey="value"
@@ -168,16 +168,17 @@ const Analytics = () => {
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
+                                    <Tooltip />
                                     <Legend 
                                         layout="horizontal" 
                                         verticalAlign="bottom" 
                                         align="center"
                                         iconType="circle"
                                         wrapperStyle={{
-                                            paddingTop: '20px',
-                                            fontSize: '13px',
+                                            paddingTop: '30px',
+                                            fontSize: '11px',
                                             fontWeight: '500',
-                                            lineHeight: '24px'
+                                            lineHeight: '16px'
                                         }}
                                     />
                                 </PieChart>
