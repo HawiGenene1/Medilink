@@ -75,6 +75,7 @@ const PharmacyControl = () => {
             title: 'Pharmacy',
             dataIndex: 'name',
             key: 'name',
+            width: 200,
             render: (text, record) => (
                 <Space>
                     <ShopOutlined />
@@ -86,15 +87,18 @@ const PharmacyControl = () => {
             title: 'Owner',
             dataIndex: 'ownerName',
             key: 'ownerName',
+            width: 150,
         },
         {
             title: 'License',
             dataIndex: 'licenseNumber',
             key: 'licenseNumber',
+            width: 120,
         },
         {
             title: 'License Status',
             key: 'licenseStatus',
+            width: 150,
             render: (_, record) => {
                 if (!record.licenseExpiryDate) return <Tag color="default">Unverified</Tag>;
                 const expiry = new Date(record.licenseExpiryDate);
@@ -110,6 +114,7 @@ const PharmacyControl = () => {
             title: 'Account Status',
             dataIndex: 'isActive',
             key: 'isActive',
+            width: 150,
             render: (isActive) => (
                 <Tag color={isActive ? 'success' : 'error'}>
                     {isActive ? 'ACTIVE' : 'SUSPENDED'}
@@ -120,8 +125,9 @@ const PharmacyControl = () => {
             title: 'Email',
             dataIndex: 'email',
             key: 'email',
+            width: 250,
             render: (text) => (
-                <div style={{ wordWrap: 'break-word', wordBreak: 'break-all', maxWidth: '200px' }}>
+                <div style={{ wordWrap: 'break-word', wordBreak: 'break-all' }}>
                     {text}
                 </div>
             )
@@ -129,6 +135,8 @@ const PharmacyControl = () => {
         {
             title: 'Actions',
             key: 'actions',
+            width: 150,
+            fixed: 'right',
             render: (_, record) => (
                 <Space>
                     <Button
@@ -176,6 +184,7 @@ const PharmacyControl = () => {
                             pagination={pagination}
                             onChange={(newPagination) => setPagination({ ...pagination, current: newPagination.current })}
                             rowKey="_id"
+                            scroll={{ x: 1100 }}
                         />
                     </Card>
                 </Col>
