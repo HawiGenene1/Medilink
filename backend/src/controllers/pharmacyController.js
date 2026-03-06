@@ -1,4 +1,5 @@
 const TempPharmacy = require('../models/TempPharmacy');
+const Pharmacy = require('../models/Pharmacy');
 const { generatePassword, hashPassword } = require('../utils/passwordGenerator');
 const { sendWelcomeEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
@@ -375,6 +376,7 @@ const getPharmacies = async (req, res) => {
 
 // Admin functions would go here (approvePharmacy, rejectPharmacy, etc.)
 // These would be protected by admin middleware
+
 
 module.exports = {
   registerPharmacy,

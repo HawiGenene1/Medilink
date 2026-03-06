@@ -133,6 +133,13 @@ exports.getOrders = async (req, res) => {
     const { status, page = 1, limit = 10, search, startDate, endDate } = req.query;
     const query = {};
 
+    // Filter by Cashier's Pharmacy
+    console.log('[DEBUG] getOrders - req.user:', req.user);
+    if (req.user && req.user.pharmacyId) {
+      query.pharmacy = req.user.pharmacyId;
+    }
+    console.log('[DEBUG] getOrders - Query:', JSON.stringify(query));
+
     // Filter by Payment Status
     if (status && status !== 'all') {
       if (status === 'failed') {
@@ -160,6 +167,8 @@ exports.getOrders = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
       .populate('customer', 'firstName lastName email phone')
+      .populate('prescription.verifiedBy', 'firstName lastName')
+      .populate('items.medicine', 'name price')
       .lean();
 
     // Efficiently fetch payment info for these orders
@@ -177,6 +186,8 @@ exports.getOrders = async (req, res) => {
     });
 
     const total = await Order.countDocuments(query);
+    console.log('[DEBUG] getOrders - Found orders count:', orders.length);
+    console.log('[DEBUG] getOrders - Total count in DB for query:', total);
 
     res.status(200).json({
       success: true,

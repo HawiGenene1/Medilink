@@ -24,7 +24,7 @@ exports.getTodayStats = async (req, res) => {
 
         // Today's transactions
         const todayTransactions = await Order.find({
-            cashier: cashierId,
+            pharmacy: req.user.pharmacyId,
             createdAt: { $gte: today, $lt: tomorrow },
             paymentStatus: 'paid'
         });
@@ -34,7 +34,7 @@ exports.getTodayStats = async (req, res) => {
 
         // Pending payments
         const pendingPayments = await Order.countDocuments({
-            cashier: cashierId,
+            pharmacy: req.user.pharmacyId,
             paymentStatus: 'pending',
             createdAt: { $gte: today, $lt: tomorrow }
         });
@@ -103,7 +103,7 @@ exports.getRecentTransactions = async (req, res) => {
         const cashierId = req.user.userId;
         const { limit = 10 } = req.query;
 
-        const transactions = await Order.find({ cashier: cashierId })
+        const transactions = await Order.find({ pharmacy: req.user.pharmacyId })
             .populate('customer', 'firstName lastName email phone')
             .populate('items.medicine', 'name price')
             .sort({ createdAt: -1 })

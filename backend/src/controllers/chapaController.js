@@ -17,6 +17,12 @@ const initializeChapaPayment = asyncHandler(async (req, res) => {
         throw new Error('Order not found');
     }
 
+    // Check if prescription verification is pending
+    if (['awaiting_prescription', 'awaiting_physical_prescription'].includes(order.status)) {
+        res.status(400);
+        throw new Error('Payment cannot be initialized until the pharmacy verifies your prescription.');
+    }
+
     // Generate unique transaction reference
     const txRef = `TX-${crypto.randomUUID()}`;
 

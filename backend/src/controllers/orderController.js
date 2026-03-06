@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
+const Prescription = require('../models/Prescription');
 const Medicine = require('../models/Medicine');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
@@ -9,6 +10,7 @@ const { getIo } = require('../socket');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 const { createNotification } = require('../utils/notificationHelper');
+const FilterService = require('../services/filterService');
 
 /**
  * GET /api/orders
@@ -151,7 +153,8 @@ const createOrder = async (req, res) => {
       paymentMethod,
       paymentDetails,
       prescriptionRequired,
-      prescriptionImage
+      prescriptionImage,
+      prescriptionId
     } = req.body;
 
     // Use req.user.userId from protect middleware or fallback for dev
@@ -186,7 +189,7 @@ const createOrder = async (req, res) => {
       paymentMethod: paymentMethod || 'cash',
       paymentStatus: 'pending',
       status: 'pending',
-      prescriptionRequired: prescriptionRequired || false,
+      prescriptionRequired: prescriptionRequired || (prescriptionId ? true : false),
       prescriptionImage: prescriptionImage || null,
       statusHistory: [{
         status: 'pending',
@@ -195,75 +198,96 @@ const createOrder = async (req, res) => {
       }]
     });
 
+    let attachedPrescription = null;
+    if (prescriptionId) {
+      attachedPrescription = await Prescription.findById(prescriptionId);
+      if (attachedPrescription) {
+        newOrder.prescriptionImage = attachedPrescription.imageUrl;
+        newOrder.prescriptionRequired = true;
+        
+        // Push full structure into the order
+        newOrder.prescription = {
+          required: true,
+          status: attachedPrescription.status === 'approved' ? 'verified' : 'pending_verification',
+          images: [{ url: attachedPrescription.imageUrl, uploadedAt: attachedPrescription.uploadedAt }],
+          notes: attachedPrescription.notes
+        };
+
+        if (attachedPrescription.status !== 'approved') {
+          newOrder.status = 'awaiting_prescription';
+          newOrder.statusHistory.push({
+            status: 'awaiting_prescription',
+            timestamp: new Date(),
+            note: 'Order awaiting prescription verification from pharmacy staff'
+          });
+        } else {
+          // Even if verified in inventory, we should force pharmacy approval for the specific order
+          newOrder.status = 'awaiting_prescription';
+          newOrder.statusHistory.push({
+            status: 'awaiting_prescription',
+            timestamp: new Date(),
+            note: 'Order requires pharmacist review of attached prescription'
+          });
+        }
+      }
+    }
+
     logger.info('[CreateOrder] Saving new order...');
     await newOrder.save();
+    
+    // If prescription exists, link back to order
+    if (attachedPrescription) {
+      attachedPrescription.order = newOrder._id;
+      await attachedPrescription.save();
+    }
+    
     logger.info('[CreateOrder] Order saved successfully: %s', newOrder.orderNumber);
 
     // Populate pharmacy for notification data
     const populatedOrder = await Order.findById(newOrder._id).populate('pharmacy');
 
-    // Notify nearby drivers
+    // Notify Pharmacy Cashiers
     try {
-      const pickupLocation = populatedOrder.pharmacy?.location;
-      logger.info(`[CreateOrder] Notification Diagnostic for ${orderNumber}:`);
-      logger.info(` - Pickup Coords (Lon/Lat): ${JSON.stringify(pickupLocation?.coordinates)}`);
+      const cashiers = await User.find({
+        pharmacyId: pharmacyId,
+        role: 'cashier',
+        isActive: true
+      });
 
-      if (pickupLocation && pickupLocation.coordinates) {
-        logger.info('[CreateOrder] Searching for approved drivers with isAvailable: true...');
-        const drivers = await DeliveryProfile.find({
-          isAvailable: true,
-          onboardingStatus: 'approved',
-          currentLocation: {
-            $near: {
-              $geometry: {
-                type: 'Point',
-                coordinates: pickupLocation.coordinates
-              },
-              $maxDistance: 10000 // 10km radius
-            }
-          }
-        });
-        logger.info(`[CreateOrder] Found ${drivers.length} eligible drivers nearby.`);
+      logger.info(`[CreateOrder] Notifying ${cashiers.length} cashiers for pharmacy ${pharmacyId}`);
 
-        if (drivers.length === 0) {
-          const anyReady = await DeliveryProfile.countDocuments({ onboardingStatus: 'approved' });
-          const anyOnline = await DeliveryProfile.countDocuments({ isAvailable: true });
-          logger.warn(`[CreateOrder] ZERO drivers notified. System Stats: Total Approved=${anyReady}, total Online=${anyOnline}`);
-        }
+      const io = getIo();
+      cashiers.forEach(cashier => {
+        // Socket notification
+        io.to(cashier._id.toString()).emit('new_order_alert', {
+          orderId: populatedOrder._id,
+          orderNumber: populatedOrder.orderNumber,
+          amount: populatedOrder.finalAmount,
+          customerName: `${populatedOrder.customer.firstName} ${populatedOrder.customer.lastName}`
+        });
 
-        const io = getIo();
-        drivers.forEach(driver => {
-          io.to(driver.userId.toString()).emit('delivery_request', {
-            orderId: populatedOrder._id,
-            orderNumber: populatedOrder.orderNumber,
-            pickup: {
-              name: populatedOrder.pharmacy.name,
-              address: populatedOrder.pharmacy.address,
-              location: populatedOrder.pharmacy.location
-            },
-            dropoff: {
-              address: populatedOrder.address.label,
-              location: populatedOrder.address.geojson,
-              notes: populatedOrder.address.notes
-            },
-            items: populatedOrder.items,
-            totalAmount: populatedOrder.totalAmount,
-            earnings: populatedOrder.serviceFee
-          });
-        });
-        // Notify Customer
-        await createNotification({
-          userId: populatedOrder.customer,
-          title: 'Order Placed',
-          message: `Order #${populatedOrder.orderNumber} has been successfully placed!`,
-          type: 'order_update',
-          link: `/customer/orders/track/${populatedOrder._id}`,
-          metadata: { isSuccess: true }
-        });
-      }
+        // Database notification
+        createNotification({
+          userId: cashier._id,
+          title: 'New Order Received',
+          message: `New order #${populatedOrder.orderNumber} ($${populatedOrder.finalAmount}) needs approval.`,
+          type: 'order_alert',
+          link: `/cashier/orders`, // Adjust based on frontend routes
+          metadata: { orderId: populatedOrder._id }
+        }).catch(err => logger.error(`Failed to create DB notification for cashier ${cashier._id}: ${err.message}`));
+      });
+
+      // Notify Customer that order is pending approval
+      await createNotification({
+        userId: populatedOrder.customer,
+        title: 'Order Placed',
+        message: `Order #${populatedOrder.orderNumber} has been received and is awaiting pharmacy approval.`,
+        type: 'order_update',
+        link: `/customer/orders/track/${populatedOrder._id}`,
+        metadata: { isSuccess: true }
+      });
     } catch (err) {
-      logger.error('Failed to notify drivers: %O', err);
-      // Don't fail the request if notification fails
+      logger.error('Failed to notify cashiers: %O', err);
     }
 
     res.status(201).json({
@@ -554,6 +578,71 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+/**
+ * PATCH /api/orders/:id/address
+ * Update order delivery address and coordinates
+ */
+const updateOrderAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { address, coordinates, label, notes } = req.body;
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Authorization check: Only the customer who placed the order can update the address
+    const userId = req.user.userId || req.user._id;
+    if (order.customer.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this order' });
+    }
+
+    // Only allow update if order is not yet out for delivery
+    const restrictedStatuses = ['out_for_delivery', 'delivered', 'completed', 'cancelled'];
+    if (restrictedStatuses.includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot update address when order is ${order.status}`
+      });
+    }
+
+    // Update order address
+    if (address) order.address.street = address; // compatibility
+    if (label) order.address.label = label;
+    if (notes) order.address.notes = notes;
+
+    if (coordinates) {
+      order.address.coordinates = {
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude
+      };
+      order.address.geojson = {
+        type: 'Point',
+        coordinates: [coordinates.longitude, coordinates.latitude]
+      };
+    }
+
+    order.statusHistory.push({
+      status: order.status,
+      timestamp: new Date(),
+      note: 'Delivery address updated by customer'
+    });
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Order address updated successfully',
+      data: order
+    });
+  } catch (error) {
+    console.error('updateOrderAddress error:', error);
+    res.status(500).json({ success: false, message: 'Server error updating address' });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
@@ -564,5 +653,6 @@ module.exports = {
   cancelOrder,
   getOrderTracking,
   getPharmacyOrders,
-  updateOrderStatus
+  updateOrderStatus,
+  updateOrderAddress
 };

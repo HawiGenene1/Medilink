@@ -1,6 +1,10 @@
 const Order = require('../models/Order');
 const Payment = require('../models/Payment');
 const Medicine = require('../models/Medicine');
+const DeliveryProfile = require('../models/DeliveryProfile');
+const { getIo } = require('../socket');
+const { createNotification } = require('../utils/notificationHelper');
+const logger = require('../utils/logger');
 const asyncHandler = require('../middleware/async');
 const ErrorResponse = require('../utils/errorResponse');
 
@@ -71,6 +75,57 @@ exports.updateOrderStatus = asyncHandler(async (req, res, next) => {
         reason: reason || 'Operational update',
         note: note || `Status updated to ${status} by staff`
     });
+
+    // If status is verified or confirmed, notify nearby drivers
+    if (['verified', 'confirmed'].includes(status)) {
+        try {
+            const populatedOrder = await Order.findById(id).populate('pharmacy');
+            const pickupLocation = populatedOrder.pharmacy?.location;
+
+            if (pickupLocation && pickupLocation.coordinates) {
+                logger.info(`[UpdateOrderStatus] Triggering driver search for ${order.orderNumber}`);
+
+                const drivers = await DeliveryProfile.find({
+                    isAvailable: true,
+                    onboardingStatus: 'approved',
+                    currentLocation: {
+                        $near: {
+                            $geometry: {
+                                type: 'Point',
+                                coordinates: pickupLocation.coordinates
+                            },
+                            $maxDistance: 10000 // 10km radius
+                        }
+                    }
+                });
+
+                logger.info(`[UpdateOrderStatus] Found ${drivers.length} eligible drivers nearby.`);
+
+                const io = getIo();
+                drivers.forEach(driver => {
+                    io.to(driver.userId.toString()).emit('delivery_request', {
+                        orderId: populatedOrder._id,
+                        orderNumber: populatedOrder.orderNumber,
+                        pickup: {
+                            name: populatedOrder.pharmacy.name,
+                            address: populatedOrder.pharmacy.address,
+                            location: populatedOrder.pharmacy.location
+                        },
+                        dropoff: {
+                            address: populatedOrder.address.label,
+                            location: populatedOrder.address.geojson,
+                            notes: populatedOrder.address.notes
+                        },
+                        items: populatedOrder.items,
+                        totalAmount: populatedOrder.totalAmount,
+                        earnings: populatedOrder.serviceFee
+                    });
+                });
+            }
+        } catch (err) {
+            logger.error(`Failed to notify drivers during status update: ${err.message}`);
+        }
+    }
 
     // Sync with Payment model
     try {
@@ -149,6 +204,61 @@ exports.verifyPrescription = asyncHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: `Prescription verification ${isApproved ? 'approved' : 'rejected'}`,
+        data: order
+    });
+});
+
+/**
+ * @desc    Request physical prescription from customer
+ * @route   PUT /api/orders/:id/request-physical-prescription
+ * @access  Private (Pharmacy Staff/Pharmacist)
+ */
+exports.requestPhysicalPrescription = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { note } = req.body;
+    const pharmacyId = req.user.pharmacyId;
+
+    let order = await Order.findById(id);
+
+    if (!order) {
+        return next(new ErrorResponse(`Order not found with id of ${id}`, 404));
+    }
+
+    if (order.pharmacy.toString() !== pharmacyId.toString() && req.user.role !== 'admin') {
+        return next(new ErrorResponse('Not authorized to update this order', 403));
+    }
+
+    order.status = 'awaiting_physical_prescription';
+    order.statusHistory.push({
+        status: 'awaiting_physical_prescription',
+        timestamp: new Date(),
+        changedBy: req.user._id,
+        note: note || 'Pharmacist requested to see the physical prescription in person.'
+    });
+
+    if (order.prescription) {
+        order.prescription.status = 'pending_verification';
+        order.prescription.notes = note || 'Physical prescription required in person.';
+    }
+
+    await order.save();
+
+    // Notify Customer
+    try {
+        await createNotification({
+            userId: order.customer,
+            title: 'Physical Prescription Required',
+            message: `The pharmacist for order #${order.orderNumber} has requested to see your physical prescription in person. Please bring it to the pharmacy to complete your order.`,
+            type: 'prescription_verification',
+            link: `/customer/orders/track/${order._id}`
+        });
+    } catch (err) {
+        logger.error(`Failed to notify customer: ${err.message}`);
+    }
+
+    res.status(200).json({
+        success: true,
+        message: 'Physical prescription requested successfully',
         data: order
     });
 });

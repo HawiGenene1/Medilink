@@ -59,7 +59,7 @@ const saveOnboardingStep = async (req, res) => {
 
             case 3: // Vehicle Selection
                 profile.vehicleDetails = {
-                    type: stepData.type,
+                    vehicleType: stepData.type,
                     make: stepData.make,
                     model: stepData.model,
                     year: stepData.year,
@@ -71,12 +71,12 @@ const saveOnboardingStep = async (req, res) => {
             case 4: // Documents
                 // Files are handled via Multer and available in req.files
                 if (req.files) {
-                    if (req.files.governmentId) profile.documents.governmentId = req.files.governmentId[0].path;
-                    if (req.files.workEligibility) profile.documents.workEligibility = req.files.workEligibility[0].path;
-                    if (req.files.driversLicense) profile.documents.driversLicense = req.files.driversLicense[0].path;
-                    if (req.files.vehicleRegistration) profile.documents.vehicleRegistration = req.files.vehicleRegistration[0].path;
-                    if (req.files.insuranceProof) profile.documents.insuranceProof = req.files.insuranceProof[0].path;
-                    if (req.files.bicycleOwnership) profile.documents.bicycleOwnership = req.files.bicycleOwnership[0].path;
+                    if (req.files.governmentId) profile.documents.governmentId = req.files.governmentId[0].path.replace(/\\/g, '/');
+                    if (req.files.workEligibility) profile.documents.workEligibility = req.files.workEligibility[0].path.replace(/\\/g, '/');
+                    if (req.files.driversLicense) profile.documents.driversLicense = req.files.driversLicense[0].path.replace(/\\/g, '/');
+                    if (req.files.vehicleRegistration) profile.documents.vehicleRegistration = req.files.vehicleRegistration[0].path.replace(/\\/g, '/');
+                    if (req.files.insuranceProof) profile.documents.insuranceProof = req.files.insuranceProof[0].path.replace(/\\/g, '/');
+                    if (req.files.bicycleOwnership) profile.documents.bicycleOwnership = req.files.bicycleOwnership[0].path.replace(/\\/g, '/');
                 }
                 break;
 
@@ -97,13 +97,13 @@ const saveOnboardingStep = async (req, res) => {
                     preference: stepData.preference
                 };
                 if (req.files && req.files.chequePhoto) {
-                    profile.paymentInfo.chequePhoto = req.files.chequePhoto[0].path;
+                    profile.paymentInfo.chequePhoto = req.files.chequePhoto[0].path.replace(/\\/g, '/');
                 }
                 break;
 
             case 7: // Inspection & Submission
                 if (req.files && req.files.inspectionPhotos) {
-                    profile.inspection.inspectionPhotos = req.files.inspectionPhotos.map(f => f.path);
+                    profile.inspection.inspectionPhotos = req.files.inspectionPhotos.map(f => f.path.replace(/\\/g, '/'));
                     profile.inspection.status = 'pending';
                 }
 

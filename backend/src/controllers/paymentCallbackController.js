@@ -43,7 +43,7 @@ const handleChapaCallback = asyncHandler(async (req, res) => {
 
         // Update payment based on callback status
         if (status === 'success' && verification.status === 'success') {
-            payment.paymentStatus = 'completed';
+            payment.paymentStatus = 'PAID';
             payment.paidAt = new Date();
             payment.paymentGatewayResponse = {
                 responseCode: '00',
@@ -51,7 +51,7 @@ const handleChapaCallback = asyncHandler(async (req, res) => {
                 gatewayTransactionId: ref_id,
                 rawResponse: verification.data
             };
-            payment.addHistory('completed', 'Payment completed via Chapa callback', null);
+            payment.addHistory('PAID', 'Payment completed via Chapa callback', null);
 
             // Update order
             if (payment.order) {
@@ -72,10 +72,11 @@ const handleChapaCallback = asyncHandler(async (req, res) => {
                 }
             }
 
+            payment.addHistory('PAID', 'Payment completed via Chapa callback', null);
         } else if (status === 'failed') {
-            payment.paymentStatus = 'failed';
+            payment.paymentStatus = 'FAILED';
             payment.failureReason = 'Payment failed from Chapa callback';
-            payment.addHistory('failed', 'Payment failed', null);
+            payment.addHistory('FAILED', 'Payment failed', null);
 
             // Update order
             if (payment.order) {
@@ -130,7 +131,7 @@ const handleChapaWebhook = asyncHandler(async (req, res) => {
 
         // Process webhook
         if (status === 'success') {
-            payment.paymentStatus = 'completed';
+            payment.paymentStatus = 'PAID';
             payment.paidAt = new Date();
             payment.paymentGatewayResponse = {
                 gatewayTransactionId: reference,

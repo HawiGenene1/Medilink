@@ -16,19 +16,20 @@ const getPendingRegistrations = async (req, res) => {
   try {
     const { role, page = 1, limit = 20, status = 'pending' } = req.query;
 
-    const query = { status };
+    let data = [];
+    let count = 0;
+
+    // Build query for User-based registrations
+    const userQuery = { status };
     if (role) {
-      query.role = role;
+      userQuery.role = role;
     }
 
-    const pendingUsers = await User.find(query)
+    const pendingUsers = await User.find(userQuery)
       .select('-password')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .sort({ createdAt: -1 });
 
-
-    const data = await Promise.all(pendingUsers.map(async (user) => {
+    const userData = await Promise.all(pendingUsers.map(async (user) => {
       let details = null;
       if (user.role === 'pharmacy_admin' || user.role === 'pharmacy_owner') {
         details = await PendingPharmacy.findOne({ userId: user._id }) || await TempPharmacy.findOne({ userId: user._id });
@@ -44,15 +45,45 @@ const getPendingRegistrations = async (req, res) => {
       };
     }));
 
-    const filteredData = data.filter(item => item !== null);
-    const count = await User.countDocuments(query);
+    data = [...userData];
+
+    // Also fetch TempPharmacy records that don't have a User associated yet
+    // (Happens during public pharmacy owner registration)
+    if (!role || role === 'pharmacy_admin' || role === 'pharmacy_owner') {
+      const tempPharmacies = await TempPharmacy.find({
+        status: status === 'pending' ? 'pending' : status,
+        $or: [{ userId: { $exists: false } }, { userId: null }]
+      }).sort({ createdAt: -1 });
+
+      const tempPharmacyData = tempPharmacies.map(tp => ({
+        _id: tp._id,
+        firstName: tp.ownerName.split(' ')[0],
+        lastName: tp.ownerName.split(' ').slice(1).join(' ') || '(Owner)',
+        email: tp.email,
+        phone: tp.phone,
+        role: 'pharmacy_owner', // Treat as pharmacy_owner by default from public flow
+        status: tp.status,
+        createdAt: tp.createdAt,
+        applicationDetails: tp.toObject(),
+        isTempOnly: true // Flag to handle approval logic
+      }));
+
+      data = [...data, ...tempPharmacyData];
+    }
+
+    // Sort combined data by date
+    data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Manual pagination for combined results
+    const startIndex = (page - 1) * limit;
+    const paginatedData = data.slice(startIndex, startIndex + parseInt(limit));
 
     res.json({
       success: true,
-      count: filteredData.length,
-      totalPages: Math.ceil(filteredData.length / limit),
-      currentPage: page,
-      data: filteredData
+      count: data.length,
+      totalPages: Math.ceil(data.length / limit),
+      currentPage: parseInt(page),
+      data: paginatedData
     });
   } catch (error) {
     console.error('Error fetching registrations:', error);
@@ -70,7 +101,27 @@ const getRegistrationDetails = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Registration not found' });
     }
 
-    res.json({ success: true, data: registration });
+    // Normalize documents if it's a TempPharmacy format (fields instead of array)
+    const registrationObj = registration.toObject();
+    if (!registrationObj.documents && (registrationObj.licenseDocument || registrationObj.tinDocument)) {
+      registrationObj.documents = [];
+      if (registrationObj.licenseDocument) {
+        registrationObj.documents.push({
+          name: 'Business License',
+          url: registrationObj.licenseDocument,
+          type: 'license'
+        });
+      }
+      if (registrationObj.tinDocument) {
+        registrationObj.documents.push({
+          name: 'TIN Certificate',
+          url: registrationObj.tinDocument,
+          type: 'tin'
+        });
+      }
+    }
+
+    res.json({ success: true, data: registrationObj });
   } catch (error) {
     console.error('Error fetching registration details:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -82,33 +133,107 @@ const getRegistrationDetails = async (req, res) => {
 // @access  Private/Admin
 const approveRegistration = async (req, res) => {
   try {
-    const { reason } = req.body;
-    const user = await User.findById(req.params.id);
+    const { reason, subscriptionPlan = 'PRO' } = req.body;
+    let user = await User.findById(req.params.id);
+    let tempPharmacy = null;
+    let registration = null;
+    let pharmacy = null;
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      // If no user, it might be a direct TempPharmacy registration from public flow
+      tempPharmacy = await TempPharmacy.findById(req.params.id);
+      if (!tempPharmacy) {
+        return res.status(404).json({ success: false, message: 'Registration not found' });
+      }
+
+      if (tempPharmacy.status !== 'pending') {
+        return res.status(400).json({ success: false, message: 'Registration has already been processed' });
+      }
+
+      // Create user for this temp pharmacy
+      const generatePassword = require('../utils/passwordGenerator').generatePassword;
+      const generatedPassword = generatePassword(12);
+
+      user = new User({
+        firstName: tempPharmacy.ownerName.split(' ')[0],
+        lastName: tempPharmacy.ownerName.split(' ').slice(1).join(' ') || '(Owner)',
+        email: tempPharmacy.email,
+        phone: tempPharmacy.phone,
+        password: generatedPassword, // Model will hash it
+        role: 'pharmacy_owner',
+        status: 'active',
+        isEmailVerified: true
+      });
+      await user.save();
+
+      // Create pharmacy from temp registration
+      const pharmacyAddress = {
+        street: tempPharmacy.address?.street || '',
+        city: tempPharmacy.address?.city || '',
+        state: tempPharmacy.address?.state || '',
+        zipCode: tempPharmacy.address?.postalCode || tempPharmacy.address?.zipCode || '0000',
+        country: tempPharmacy.address?.country || 'Ethiopia'
+      };
+
+      pharmacy = new Pharmacy({
+        name: tempPharmacy.pharmacyName,
+        owner: user._id,
+        ownerName: tempPharmacy.ownerName,
+        email: tempPharmacy.email,
+        phone: tempPharmacy.phone,
+        address: pharmacyAddress,
+        licenseNumber: tempPharmacy.licenseNumber,
+        isVerified: true,
+        isActive: true,
+        status: 'approved'
+      });
+      await pharmacy.save();
+
+      // Update user with pharmacyId
+      user.pharmacyId = pharmacy._id;
+      await user.save();
+
+      // Update temp pharmacy
+      tempPharmacy.status = 'approved';
+      tempPharmacy.userId = user._id; // Link back
+      await tempPharmacy.save();
+
+      // Send Welcome Email with password
+      try {
+        const { sendWelcomeEmail } = require('../services/emailService');
+        await sendWelcomeEmail(user.email, tempPharmacy.ownerName, generatedPassword, undefined, 'pharmacy_owner');
+      } catch (err) {
+        console.error('Welcome email failed but proceeding:', err);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Pharmacy registration approved successfully',
+        data: { user, pharmacy }
+      });
     }
 
+    // Existing User-based flow
     if (user.status !== 'pending') {
       return res.status(400).json({ success: false, message: 'Registration has already been processed' });
     }
 
     let result = null;
 
-    if (user.role === 'pharmacy_admin') {
-      const registration = await PendingPharmacy.findOne({ userId: user._id });
+    if (user.role === 'pharmacy_admin' || user.role === 'pharmacy_owner') {
+      registration = await PendingPharmacy.findOne({ userId: user._id }) || await TempPharmacy.findOne({ userId: user._id });
       if (!registration) {
         return res.status(404).json({ success: false, message: 'Pharmacy registration details not found' });
       }
 
       // Create pharmacy from registration
-      const pharmacy = new Pharmacy({
-        name: registration.name,
+      pharmacy = new Pharmacy({
+        name: registration.name || registration.pharmacyName,
         email: registration.email,
-        phone: registration.phone,
+        phone: registration.phone || registration.phone,
         address: registration.address,
         owner: user._id,
-        ownerName: `${user.firstName} ${user.lastName}`,
+        ownerName: registration.ownerName || `${user.firstName} ${user.lastName}`,
         licenseNumber: registration.licenseNumber,
         isVerified: true,
         isActive: true,
@@ -123,9 +248,11 @@ const approveRegistration = async (req, res) => {
       registration.reviewNotes = reason || 'Approved after verification';
       await registration.save();
 
+      // Update user with pharmacyId
+      user.pharmacyId = pharmacy._id;
       result = pharmacy;
     } else if (user.role === 'delivery') {
-      const registration = await DeliveryProfile.findOne({ userId: user._id });
+      registration = await DeliveryProfile.findOne({ userId: user._id });
       if (registration) {
         registration.onboardingStatus = 'approved';
         registration.reviewedAt = new Date();
@@ -187,19 +314,46 @@ const rejectRegistration = async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.params.id);
+    let user = await User.findById(req.params.id);
+    let tempPharmacy = null;
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      // Direct TempPharmacy rejection
+      tempPharmacy = await TempPharmacy.findById(req.params.id);
+      if (!tempPharmacy) {
+        return res.status(404).json({ success: false, message: 'Registration not found' });
+      }
+
+      tempPharmacy.status = 'rejected';
+      tempPharmacy.rejectionReason = reason;
+      await tempPharmacy.save();
+
+      // Send rejection email
+      try {
+        await sendEmail({
+          to: tempPharmacy.email,
+          subject: 'Pharmacy Registration - Application Status',
+          text: `Dear ${tempPharmacy.ownerName},\n\nWe regret to inform you that your pharmacy registration application has not been approved.\n\nReason: ${reason}\n\nIf you have any questions, please contact our support team.\n\nBest regards,\nMediLink Team`
+        });
+      } catch (emailError) {
+        console.error('Rejection email failed but proceeding:', emailError);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Registration rejected successfully',
+        data: tempPharmacy
+      });
     }
 
+    // Existing User-based flow
     if (user.status !== 'pending') {
       return res.status(400).json({ success: false, message: 'Registration has already been processed' });
     }
 
     // Update registration details if they exist
-    if (user.role === 'pharmacy_admin') {
-      const registration = await PendingPharmacy.findOne({ userId: user._id });
+    if (user.role === 'pharmacy_admin' || user.role === 'pharmacy_owner') {
+      const registration = await PendingPharmacy.findOne({ userId: user._id }) || await TempPharmacy.findOne({ userId: user._id });
       if (registration) {
         registration.status = 'rejected';
         registration.reviewedBy = req.user.userId;
@@ -222,11 +376,15 @@ const rejectRegistration = async (req, res) => {
     await user.save();
 
     // Send rejection email
-    await sendEmail({
-      to: user.email,
-      subject: 'Account Registration Rejected - MediLink',
-      text: `Dear ${user.firstName},\n\nWe regret to inform you that your account registration has been rejected.\n\nReason: ${reason}\n\nYou may reapply after addressing the issues mentioned.\n\nBest regards,\nThe MediLink Team`
-    });
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Account Registration Rejected - MediLink',
+        text: `Dear ${user.firstName},\n\nWe regret to inform you that your account registration has been rejected.\n\nReason: ${reason}\n\nYou may reapply after addressing the issues mentioned.\n\nBest regards,\nThe MediLink Team`
+      });
+    } catch (emailError) {
+      console.error('Rejection email failed but proceeding:', emailError);
+    }
 
     // Create audit log
     await AuditLog.create({
@@ -1232,13 +1390,39 @@ const bulkExportData = async (req, res) => {
         });
     }
 
+    // Log the backup record if successful
+    if (format === 'csv' || format === 'json') {
+      try {
+        await Backup.create({
+          filename: `${filename}.${format}`,
+          type: 'manual',
+          size: Buffer.byteLength(csvContent || JSON.stringify(data)),
+          status: 'success',
+          triggeredBy: req.user.id
+        });
+      } catch (logError) {
+        console.error('Failed to log backup metadata:', logError);
+      }
+    }
+
     if (format === 'csv') {
-      // Convert to CSV logic here
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}.csv"`);
-      // CSV conversion logic would go here
-      res.send('CSV export not implemented yet');
-    } else {
+
+      let csvContent = '';
+      if (type === 'users') {
+        const header = 'First Name,Last Name,Email,Phone,Role,Status,Joined\n';
+        const rows = data.map(u =>
+          `"${u.firstName}","${u.lastName}","${u.email}","${u.phone}","${u.role}","${u.status}","${u.createdAt.toISOString()}"`
+        ).join('\n');
+        csvContent = header + rows;
+      } else {
+        csvContent = 'Export type not yet supported for CSV';
+      }
+
+      return res.send(csvContent);
+    }
+    else {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}.json"`);
       res.json({
@@ -1333,15 +1517,24 @@ const getDashboardStats = async (req, res) => {
 
     // Stats from Order model
     const Order = require('../models/Order');
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
     const ordersToday = await Order.countDocuments({
-      createdAt: { $gte: new Date().setHours(0, 0, 0, 0) }
+      createdAt: { $gte: startOfDay }
     });
+
+    const totalOrders = await Order.countDocuments();
 
     const revenueRes = await Order.aggregate([
       { $match: { status: 'delivered', paymentStatus: 'paid' } },
       { $group: { _id: null, total: { $sum: "$finalAmount" } } }
     ]);
     const revenueMonth = revenueRes.length > 0 ? revenueRes[0].total : 0;
+
+    const { getMetrics } = require('../middleware/monitoringMiddleware');
+    const liveMetrics = getMetrics();
+    const healthScore = liveMetrics.errorRate > 5 ? 70 : (liveMetrics.errorRate > 1 ? 90 : 100);
 
     res.json({
       success: true,
@@ -1355,8 +1548,9 @@ const getDashboardStats = async (req, res) => {
           activePharmacies,
           totalPharmacies,
           ordersToday,
+          totalOrders,
           revenueMonth,
-          healthScore: 100 // System is healthy
+          healthScore
         }
       }
     });
@@ -1420,6 +1614,59 @@ const updateUser = async (req, res) => {
   }
 };
 
+
+const Setting = require('../models/Setting');
+const Backup = require('../models/Backup');
+
+// @desc    Toggle platform maintenance mode
+// @route   POST /api/admin/system/maintenance
+// @access  Private/Admin
+const toggleMaintenanceMode = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    let setting = await Setting.findOne({ key: 'maintenance_mode' });
+    if (!setting) {
+      setting = new Setting({ key: 'maintenance_mode', value: status });
+    } else {
+      setting.value = status;
+    }
+
+    setting.updatedBy = req.user.id;
+    await setting.save();
+
+    res.json({
+      success: true,
+      message: `Maintenance mode ${status ? 'enabled' : 'disabled'}`,
+      status
+    });
+  } catch (error) {
+    console.error('Maintenance toggle error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// @desc    Get system-wide settings
+// @route   GET /api/admin/system/settings
+// @access  Private/Admin
+const getSystemSettings = async (req, res) => {
+  try {
+    const settings = await Setting.find();
+    res.json({ success: true, data: settings });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const getBackupHistory = async (req, res) => {
+  try {
+    const backups = await Backup.find().sort({ createdAt: -1 }).limit(20);
+    res.json({ success: true, data: backups });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   // Pharmacy registration management
   getPendingRegistrations,
@@ -1444,6 +1691,11 @@ module.exports = {
   enableUser,
   updateUserRole,
   adminResetPassword,
+
+  // System
+  toggleMaintenanceMode,
+  getSystemSettings,
+  getBackupHistory,
 
   // Bulk operations
   bulkCreateUsers,

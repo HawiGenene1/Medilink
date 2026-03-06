@@ -2,6 +2,7 @@ const { createClient } = require('redis');
 const { promisify } = require('util');
 const mongoose = require('mongoose');
 const Medicine = require('../models/Medicine');
+const Inventory = require('../models/Inventory');
 const Category = require('../models/Category');
 const Pharmacy = require('../models/Pharmacy');
 const Subscription = require('../models/Subscription');
@@ -290,14 +291,46 @@ const getMedicines = async (req, res) => {
       location,
       radius,
       sort = 'relevance',
-      page: pageParam,
-      limit: limitParam,
-      cursor,
-      prevCursor
+      page: pageParam = 1,
+      limit: limitParam = 20
     } = req.query;
 
-    // Build search query
-    const searchQuery = buildSearchQuery(search);
+    const page = Math.max(1, parseInt(pageParam));
+    const limit = Math.min(100, Math.max(1, parseInt(limitParam)));
+    const skip = (page - 1) * limit;
+
+    // 1. Get valid pharmacy IDs (approved + active subscription)
+    const activeSubs = await Subscription.find({
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).select('pharmacy');
+
+    const validPharmIds = activeSubs.map(s => s.pharmacy);
+
+    const approvedPharms = await Pharmacy.find({
+      _id: { $in: validPharmIds },
+      status: 'approved',
+      isActive: true
+    }).select('_id name');
+
+    const finalPharmIds = approvedPharms.map(p => p._id);
+
+    // 1.5 Handle Search across Medicine and Pharmacy
+    let medIdsFromPharmSearch = [];
+    if (search?.trim()) {
+      // Find pharmacies matching the search term
+      const matchingPharmIds = approvedPharms
+        .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+        .map(p => p._id);
+
+      if (matchingPharmIds.length > 0) {
+        // Find medicines in these pharmacies
+        medIdsFromPharmSearch = await Inventory.distinct('medicine', {
+          pharmacy: { $in: matchingPharmIds },
+          isActive: true
+        });
+      }
+    }
 
     // Resolve category names to IDs if filtering by category
     let categoryIds = [];
@@ -322,72 +355,162 @@ const getMedicines = async (req, res) => {
         }
       }
     }
+    const pipeline = [];
 
-    // 1. Get valid pharmacy IDs (approved + active subscription)
-    // Memoization or caching could be added here for performance
-    const activeSubs = await Subscription.find({
-      status: 'active',
-      endDate: { $gt: new Date() }
-    }).select('pharmacy');
+    // Search Step (Enhanced to support Pharmacy search)
+    if (search?.trim()) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { $text: { $search: search } },
+            { _id: { $in: medIdsFromPharmSearch } }
+          ]
+        }
+      });
+      pipeline.push({
+        $addFields: {
+          score: { $meta: 'textScore' }
+        }
+      });
+    }
 
-    const validPharmIds = activeSubs.map(s => s.pharmacy);
+    // Filter Step for Medicine details
+    const medicineFilters = {};
+    if (categoryIds.length > 0) {
+      medicineFilters.category = { $in: categoryIds };
+    }
+    if (requiresPrescription === 'true' || requiresPrescription === 'false') {
+      medicineFilters.prescriptionRequired = requiresPrescription === 'true';
+    }
+    if (type) medicineFilters.type = type;
+    if (brand) medicineFilters.manufacturer = new RegExp(brand, 'i');
 
-    // 2. Further filter those IDs by Pharmacy status
-    const approvedPharms = await Pharmacy.find({
-      _id: { $in: validPharmIds },
-      status: 'approved',
-      isActive: true
-    }).select('_id');
+    if (Object.keys(medicineFilters).length > 0) {
+      pipeline.push({ $match: medicineFilters });
+    }
 
-    const finalPharmIds = approvedPharms.map(p => p._id);
-
-    // 3. Build filter query
-    const filterQuery = buildFilterQuery({
-      categories: categoryIds.length > 0 ? categoryIds : undefined,
-      minPrice,
-      maxPrice,
-      inStock,
-      requiresPrescription,
-      minRating,
-      type,
-      brand,
-      location,
-      radius,
-      pharmacyId: req.query.pharmacyId
+    // 3. Lookup Inventory (Real source of Stock and Price)
+    pipeline.push({
+      $lookup: {
+        from: 'inventories',
+        localField: '_id',
+        foreignField: 'medicine',
+        as: 'inventoryItems'
+      }
     });
 
-    // 4. Combine queries
-    const query = {
-      ...searchQuery,
-      ...filterQuery,
-      isActive: { $ne: false } // Only show active medicines
+    pipeline.push({ $unwind: '$inventoryItems' });
+
+    // 4. Filter Inventory & Valid Pharmacies
+    const inventoryMatch = {
+      'inventoryItems.isActive': true,
+      'inventoryItems.pharmacy': { $in: finalPharmIds }
     };
 
-    // Ensure we only show results from valid pharmacies
-    if (query.pharmacy) {
-      // If filtering by specific pharmacy, ensure it's in the valid list
-      const requestedId = query.pharmacy.toString();
-      const isValid = finalPharmIds.some(id => id.toString() === requestedId);
-      if (!isValid) {
-        query.pharmacy = new mongoose.Types.ObjectId(); // Non-matching ID
+    if (inStock === 'true') {
+      inventoryMatch['inventoryItems.quantity'] = { $gt: 0 };
+    }
+
+    // Filter by specific pharmacy if requested
+    if (req.query.pharmacyId) {
+      try {
+        inventoryMatch['inventoryItems.pharmacy'] = new mongoose.Types.ObjectId(req.query.pharmacyId);
+      } catch (e) { }
+    }
+
+    // Price filters (applied to inventory sellingPrice)
+    if (minPrice || maxPrice) {
+      const priceFilter = {};
+      if (minPrice) priceFilter.$gte = parseFloat(minPrice);
+      if (maxPrice) priceFilter.$lte = parseFloat(maxPrice);
+      inventoryMatch['inventoryItems.sellingPrice'] = priceFilter;
+    }
+
+    pipeline.push({ $match: inventoryMatch });
+
+    // 5. Lookup Pharmacy Details
+    pipeline.push({
+      $lookup: {
+        from: 'pharmacies',
+        localField: 'inventoryItems.pharmacy',
+        foreignField: '_id',
+        as: 'pharmacyDetails'
       }
-    } else {
-      query.pharmacy = { $in: finalPharmIds };
+    });
+
+    pipeline.push({ $unwind: '$pharmacyDetails' });
+
+    // 6. Final Project & Format to match frontend expectations
+    pipeline.push({
+      $project: {
+        _id: 1,
+        inventoryId: '$inventoryItems._id',
+        name: 1,
+        brand: 1,
+        manufacturer: 1,
+        dosageForm: 1,
+        strength: 1,
+        unit: 1,
+        prescriptionRequired: 1,
+        images: 1,
+        imageUrl: 1,
+        category: 1,
+        // Override with inventory specific values
+        price: '$inventoryItems.sellingPrice',
+        quantity: '$inventoryItems.quantity',
+        pharmacy: {
+          _id: '$pharmacyDetails._id',
+          name: '$pharmacyDetails.name',
+          location: '$pharmacyDetails.location',
+          address: '$pharmacyDetails.address',
+          phone: '$pharmacyDetails.phone'
+        },
+        score: { $ifNull: ['$score', 0] }
+      }
+    });
+
+    // 7. Sort
+    const sortObj = {};
+    if (sort === 'priceAsc') sortObj.price = 1;
+    else if (sort === 'priceDesc') sortObj.price = -1;
+    else if (sort === 'relevance' && search?.trim()) sortObj.score = -1;
+    else sortObj.name = 1;
+
+    if (Object.keys(sortObj).length > 0) {
+      pipeline.push({ $sort: sortObj });
     }
 
-    if (process.env.NODE_ENV === 'development') {
-    }
+    // 8. Execute with Count
+    const countPipeline = [...pipeline];
+    countPipeline.push({ $count: 'total' });
 
-    // Build sort options
-    const sortOptions = buildSortOptions(sort, !!search);
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
 
-    // Handle cursor-based pagination
-    if (cursor) {
-      return handleCursorPagination(req, res, query, sortOptions, cursor, prevCursor);
-    }
+    const [items, countResult] = await Promise.all([
+      Medicine.aggregate(pipeline),
+      Medicine.aggregate(countPipeline)
+    ]);
 
-    // Handle offset-based pagination
-    return handleOffsetPagination(req, res, query, sortOptions, pageParam, limitParam, startTime);
+    const total = countResult[0]?.total || 0;
+    const executionTime = Date.now() - startTime;
+
+    return res.json({
+      success: true,
+      data: items,
+      pagination: {
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+        limit,
+        hasMore: (page * limit) < total
+      },
+      meta: {
+        executionTime: `${executionTime}ms`,
+        resultCount: items.length
+      }
+    });
+
   } catch (error) {
     console.error('getMedicines error:', error);
     return res.status(500).json({
@@ -579,9 +702,30 @@ const getMedicineById = async (req, res) => {
       });
     }
 
+    // Fetch all pharmacies carrying this medicine
+    const activeSubs = await Subscription.find({
+      status: 'active',
+      endDate: { $gt: new Date() }
+    }).select('pharmacy');
+    const validPharmIds = activeSubs.map(s => s.pharmacy);
+
+    const inventory = await Inventory.find({
+      medicine: medicine._id,
+      isActive: true,
+      pharmacy: { $in: validPharmIds }
+    }).populate('pharmacy', 'name address phone location rating').lean();
+
     res.json({
       success: true,
-      data: medicine
+      data: {
+        ...medicine.toObject(),
+        availableAt: inventory.map(item => ({
+          ...item.pharmacy,
+          price: item.sellingPrice,
+          quantity: item.quantity,
+          inventoryId: item._id
+        }))
+      }
     });
   } catch (error) {
     if (error.kind === 'ObjectId') {

@@ -1,5 +1,6 @@
 const Inventory = require('../models/Inventory');
 const Medicine = require('../models/Medicine');
+const Pharmacy = require('../models/Pharmacy');
 const Notification = require('../models/Notification');
 const inventoryAlertService = require('../services/inventoryAlertService');
 const mongoose = require('mongoose');
@@ -70,6 +71,17 @@ exports.addInventoryItem = asyncHandler(async (req, res, next) => {
     }
 
     const normalizedPharmacyId = new mongoose.Types.ObjectId(pharmacyIdStr);
+
+    // Check if owner is allowed to manage inventory if role is owner
+    if (req.user?.role?.toLowerCase() === 'pharmacy_owner') {
+        const canManage = req.user.operationalPermissions?.manageInventory === true;
+        if (!canManage) {
+            const pharmacy = await Pharmacy.findById(normalizedPharmacyId);
+            if (pharmacy && !pharmacy.allowOwnerInventoryManagement) {
+                return next(new ErrorResponse('Inventory management is restricted to staff by default. Enable "Inventory Operations" in settings to proceed as owner.', 403));
+            }
+        }
+    }
 
     const {
         medicineId,
@@ -227,6 +239,17 @@ exports.updateInventoryItem = asyncHandler(async (req, res, next) => {
         return next(new ErrorResponse('Not authorized to update this inventory item', 403));
     }
 
+    // Check if owner is allowed to manage inventory if role is owner
+    if (req.user?.role?.toLowerCase() === 'pharmacy_owner') {
+        const canManage = req.user.operationalPermissions?.manageInventory === true;
+        if (!canManage) {
+            const pharmacy = await Pharmacy.findById(pharmacyIdStr);
+            if (pharmacy && !pharmacy.allowOwnerInventoryManagement) {
+                return next(new ErrorResponse('Inventory management is restricted to staff by default. Enable "Inventory Operations" in settings to proceed as owner.', 403));
+            }
+        }
+    }
+
     // Update fields
     if (quantity !== undefined) {
         // Handle last restocked
@@ -318,6 +341,17 @@ exports.deleteInventoryItem = asyncHandler(async (req, res, next) => {
     // Validate ownership (normalize both sides to strings)
     if (inventoryItem.pharmacy.toString() !== pharmacyIdStr) {
         return next(new ErrorResponse('Not authorized to delete this inventory item', 403));
+    }
+
+    // Check if owner is allowed to manage inventory if role is owner
+    if (req.user?.role?.toLowerCase() === 'pharmacy_owner') {
+        const canManage = req.user.operationalPermissions?.manageInventory === true;
+        if (!canManage) {
+            const pharmacy = await Pharmacy.findById(pharmacyIdStr);
+            if (pharmacy && !pharmacy.allowOwnerInventoryManagement) {
+                return next(new ErrorResponse('Inventory management is restricted to staff by default. Enable "Inventory Operations" in settings to proceed as owner.', 403));
+            }
+        }
     }
 
     // Also remove pharmacy from medicine's availableAt list

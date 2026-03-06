@@ -39,8 +39,19 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
         // If not found, try as User (New Flow)
         if (!owner) {
             const user = await User.findById(id);
-            const staffRoles = ['staff', 'cashier', 'pharmacist', 'technician', 'assistant', 'pharmacy_staff'];
-            if (user && (['pharmacy_owner', 'pharmacy_admin', 'system_admin'].includes(user.role) || staffRoles.includes(user.role))) {
+            const allowedRoles = [
+                'pharmacy_owner',
+                'pharmacy_admin',
+                'system_admin',
+                'staff',
+                'pharmacy_staff',
+                'pharmacist',
+                'technician',
+                'assistant',
+                'cashier'
+            ];
+            if (user && allowedRoles.includes(user.role)) {
+                // Normalize User to look like Owner for backward compatibility where possible
                 user.isUserParams = true; // Flag for controllers
                 owner = user;
             }

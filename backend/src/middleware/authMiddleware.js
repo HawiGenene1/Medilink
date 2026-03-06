@@ -44,7 +44,8 @@ const protect = async (req, res, next) => {
               role: 'pharmacy_owner',
               pharmacyId: owner.pharmacyId,
               isActive: owner.isActive !== false,
-              status: owner.isActive === false ? 'suspended' : 'active'
+              status: owner.isActive === false ? 'suspended' : 'active',
+              operationalPermissions: owner.operationalPermissions || {}
             };
           }
         } catch (modelError) {
@@ -68,6 +69,18 @@ const protect = async (req, res, next) => {
         });
       }
 
+      // Check for maintenance mode
+      const Setting = require('../models/Setting');
+      const maintenance = await Setting.findOne({ key: 'maintenance_mode' });
+      if (maintenance && maintenance.value === true) {
+        if (user.role !== 'admin' && user.role !== 'system_admin') {
+          return res.status(503).json({
+            success: false,
+            message: 'System is currently under maintenance. Please try again later.'
+          });
+        }
+      }
+
       // Attach user to request object
       req.user = {
         id: user._id,
@@ -76,7 +89,8 @@ const protect = async (req, res, next) => {
         email: user.email,
         role: user.role,
         pharmacyId: user.pharmacyId,
-        status: user.status
+        status: user.status,
+        operationalPermissions: user.operationalPermissions || {}
       };
 
       next();

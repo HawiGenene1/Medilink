@@ -35,9 +35,9 @@ const getSystemOverview = async (req, res) => {
     const [recentOrders, recentRegistrations, recentLogins] = await Promise.all([
       Order.countDocuments({ createdAt: { $gte: yesterday } }),
       User.countDocuments({ createdAt: { $gte: yesterday } }),
-      AuditLog.countDocuments({ 
-        action: 'LOGIN', 
-        createdAt: { $gte: yesterday } 
+      AuditLog.countDocuments({
+        action: 'LOGIN',
+        createdAt: { $gte: yesterday }
       })
     ]);
 
@@ -100,9 +100,13 @@ const getSystemOverview = async (req, res) => {
   }
 };
 
+const { getMetrics } = require('../middleware/monitoringMiddleware');
+
 // Get detailed system health metrics
 const getSystemHealth = async (req, res) => {
   try {
+    const liveMetrics = getMetrics();
+
     const health = {
       database: {
         status: 'healthy',
@@ -114,8 +118,8 @@ const getSystemHealth = async (req, res) => {
         emailService: 'healthy'
       },
       performance: {
+        ...liveMetrics,
         memoryUsage: process.memoryUsage(),
-        uptime: process.uptime(),
         nodeVersion: process.version
       }
     };
@@ -128,30 +132,6 @@ const getSystemHealth = async (req, res) => {
       health.database.status = 'unhealthy';
       health.database.error = dbError.message;
     }
-
-    // Get system metrics
-    const [slowQueries, errorRate] = await Promise.all([
-      AuditLog.countDocuments({ 
-        status: 'FAILURE',
-        createdAt: { $gte: new Date(Date.now() - 60 * 60 * 1000) }
-      }),
-      AuditLog.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: new Date(Date.now() - 60 * 60 * 1000) }
-          }
-        },
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 }
-          }
-        }
-      ])
-    ]);
-
-    health.performance.errorRate = errorRate.length > 0 ? 
-      (slowQueries / errorRate.reduce((sum, item) => sum + item.count, 0)) * 100 : 0;
 
     res.json({
       success: true,
@@ -171,7 +151,7 @@ const getSystemHealth = async (req, res) => {
 const getUserAnalytics = async (req, res) => {
   try {
     const { period = '7d' } = req.query;
-    
+
     let startDate;
     switch (period) {
       case '1d':
@@ -246,7 +226,7 @@ const getUserAnalytics = async (req, res) => {
 const getPharmacyAnalytics = async (req, res) => {
   try {
     const { period = '7d' } = req.query;
-    
+
     let startDate;
     switch (period) {
       case '1d':
@@ -327,7 +307,7 @@ const getPharmacyAnalytics = async (req, res) => {
 const getOrderAnalytics = async (req, res) => {
   try {
     const { period = '7d' } = req.query;
-    
+
     let startDate;
     switch (period) {
       case '1d':
@@ -379,9 +359,9 @@ const getOrderAnalytics = async (req, res) => {
     // Revenue trends
     const revenueTrends = await Order.aggregate([
       {
-        $match: { 
+        $match: {
           createdAt: { $gte: startDate },
-          status: 'completed'
+          status: { $in: ['completed', 'delivered'] }
         }
       },
       {
@@ -421,7 +401,7 @@ const getOrderAnalytics = async (req, res) => {
 const getRecentAuditLogs = async (req, res) => {
   try {
     const { limit = 50, page = 1, action, entityType } = req.query;
-    
+
     const filter = {};
     if (action) filter.action = action;
     if (entityType) filter.entityType = entityType;

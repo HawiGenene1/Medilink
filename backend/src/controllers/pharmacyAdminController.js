@@ -142,9 +142,29 @@ const getRegistrationDetails = async (req, res) => {
             });
         }
 
+        // Normalize documents into an array for easier frontend rendering
+        const registrationObj = registration.toObject();
+        registrationObj.documents = [];
+
+        if (registration.licenseDocument) {
+            registrationObj.documents.push({
+                name: 'Business License',
+                url: registration.licenseDocument,
+                type: 'license'
+            });
+        }
+
+        if (registration.tinDocument) {
+            registrationObj.documents.push({
+                name: 'TIN Certificate',
+                url: registration.tinDocument,
+                type: 'tin'
+            });
+        }
+
         res.json({
             success: true,
-            data: registration
+            data: registrationObj
         });
     } catch (error) {
         logger.error('Error fetching registration details:', error);
@@ -214,7 +234,6 @@ const approveRegistration = async (req, res) => {
 
         // Check if pharmacy already exists
         let pharmacy = await Pharmacy.findOne({ email: tempPharmacy.email });
-
         if (!pharmacy) {
             const pharmacyAddress = {
                 street: tempPharmacy.address?.street || '',
@@ -241,6 +260,12 @@ const approveRegistration = async (req, res) => {
                 isActive: true,
                 isVerified: true
             });
+            await pharmacy.save();
+        } else {
+            // Update existing pharmacy status
+            pharmacy.status = 'approved';
+            pharmacy.isActive = true;
+            pharmacy.isVerified = true;
             await pharmacy.save();
         }
 

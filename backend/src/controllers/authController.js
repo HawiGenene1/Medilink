@@ -124,14 +124,17 @@ const login = async (req, res) => {
     }
 
     if (user.status !== 'active') {
-      let statusMessage = 'Your account is pending approval.';
-      if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
-      if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';
+      // Allow delivery partners to log in during pending status specifically to complete onboarding
+      if (!(user.role === 'delivery' && user.status === 'pending')) {
+        let statusMessage = 'Your account is pending approval.';
+        if (user.status === 'suspended') statusMessage = 'Your account has been suspended.';
+        if (user.status === 'rejected') statusMessage = 'Your account application was rejected.';
 
-      return res.status(403).json({
-        success: false,
-        message: statusMessage,
-      });
+        return res.status(403).json({
+          success: false,
+          message: statusMessage,
+        });
+      }
     }
 
     // Pharmacy Status Check for pharmacy-related roles
@@ -184,6 +187,7 @@ const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
+      console.log('LOGIN DEBUG: AUTH FAILED - Password mismatch for:', email);
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
@@ -192,6 +196,11 @@ const login = async (req, res) => {
 
     // Generate Token
     const token = generateToken({ userId: user._id, role: user.role });
+
+    // Update last login
+    user.lastLogin = new Date();
+    user.lastLoginIp = req.ip || req.connection.remoteAddress;
+    await user.save();
 
     const { password: _pwd, ...safeUser } = user.toObject();
 
@@ -206,8 +215,6 @@ const login = async (req, res) => {
         email: safeUser.email,
         role: safeUser.role,
         phone: safeUser.phone,
-        status: safeUser.status,
-        avatar: safeUser.avatar,
         status: safeUser.status,
         avatar: safeUser.avatar,
         mustChangePassword: safeUser.mustChangePassword,
@@ -250,7 +257,6 @@ const getCurrentUser = async (req, res) => {
         email: user.email,
         role: user.role, // Fixed: role is a string
         phone: user.phone,
-        status: user.status,
         status: user.status,
         avatar: user.avatar,
         operationalPermissions: user.operationalPermissions && user.operationalPermissions.toObject ? user.operationalPermissions.toObject() : user.operationalPermissions
