@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Layouts
@@ -8,6 +8,8 @@ import CustomerLayout from '../layouts/CustomerLayout';
 import PharmacyAdminLayout from '../layouts/PharmacyAdminLayout';
 import OwnerLayout from '../layouts/OwnerLayout';
 import AdminLayout from '../layouts/AdminLayout';
+import CashierLayout from '../layouts/CashierLayout';
+import DeliveryLayout from '../layouts/DeliveryLayout';
 
 // Components
 import ProtectedRoute from './ProtectedRoute';
@@ -26,6 +28,7 @@ import VerifyEmail from '../pages/auth/VerifyEmail';
 import Home from '../pages/Home';
 import MedicineList from '../pages/medicines/MedicineList';
 import MedicineDetail from '../pages/medicines/MedicineDetail';
+import About from '../pages/About';
 
 // Customer Pages
 import CustomerDashboard from '../pages/customer/Dashboard';
@@ -38,6 +41,7 @@ import PaymentStatus from '../pages/customer/PaymentStatus'; // Payment Verifica
 import InvoicePage from '../pages/customer/InvoicePage'; // Invoice View
 import CustomerOrders from '../pages/customer/Orders';
 import CustomerOrderTracking from '../pages/customer/Orders/OrderTracking';
+import SetOrderLocation from '../pages/customer/Orders/SetOrderLocation';
 import CustomerPrescriptions from '../pages/customer/Prescriptions';
 import CustomerPharmacies from '../pages/customer/Pharmacies';
 import CustomerSettings from '../pages/customer/Settings';
@@ -54,14 +58,11 @@ import PharmacyReports from '../pages/pharmacy-admin/Reports';
 import PharmacySettings from '../pages/pharmacy-admin/Settings';
 import PharmacyAdminProfile from '../pages/pharmacy-admin/Profile';
 
-// Delivery Pages
-import DeliveryLayout from '../layouts/DeliveryLayout';
-import DeliveryDashboard from '../pages/delivery/Dashboard';
-import DeliveryDetails from '../pages/delivery/DeliveryDetails';
-import DeliveryProfile from '../pages/delivery/Profile';
+
 
 // Cashier Pages
 import CashierDashboard from '../pages/cashier/Dashboard';
+import CashierSettings from '../pages/cashier/Dashboard/Settings';
 
 // Owner Pages
 import OwnerDashboard from '../pages/owner/Dashboard';
@@ -79,6 +80,7 @@ import OwnerProfile from '../pages/owner/Profile';
 // Admin Pages
 import AdminDashboard from '../pages/admin/Dashboard';
 import AdminUsers from '../pages/admin/Users';
+import UserDetails from '../pages/admin/Users/UserDetails';
 import AdminPharmacies from '../pages/admin/Pharmacies/PharmacyList';
 import AdminPharmacyDetail from '../pages/admin/Pharmacies/PharmacyDetail';
 import AdminDeliveryRegistrations from '../pages/admin/DeliveryApplications/DeliveryApplicationList';
@@ -92,12 +94,23 @@ import AdminAnalytics from '../pages/admin/Analytics/Analytics';
 import AdminSettings from '../pages/admin/Settings/Settings';
 import OrdersManagement from '../pages/admin/Orders/OrdersList';
 
+// Delivery Pages (Lazy Loaded)
+const DeliveryDashboard = lazy(() => import('../pages/delivery/Dashboard'));
+const DeliveryDetails = lazy(() => import('../pages/delivery/DeliveryDetails'));
+const ActiveDeliveries = lazy(() => import('../pages/delivery/ActiveDeliveries'));
+const DeliveryHistory = lazy(() => import('../pages/delivery/DeliveryHistory'));
+const DeliveryEarnings = lazy(() => import('../pages/delivery/DeliveryEarnings'));
+const DeliverySettings = lazy(() => import('../pages/delivery/DeliverySettings'));
+const DeliveryProfile = lazy(() => import('../pages/delivery/Profile'));
+
 const AppRouter = () => {
   return (
     <Routes>
       {/* Public Routes */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/pharmacies" element={<CustomerPharmacies />} />
         <Route path="/medicines" element={<MedicineList />} />
         <Route path="/medicines/:id" element={<MedicineDetail />} />
       </Route>
@@ -127,6 +140,7 @@ const AppRouter = () => {
           <Route path="/customer/checkout" element={<CustomerCheckout />} />
           <Route path="/customer/orders/:orderId/checkout" element={<OrderCheckout />} />
           <Route path="/customer/orders/:orderId/payment-status" element={<PaymentStatus />} />
+          <Route path="/customer/orders/:orderId/set-location" element={<SetOrderLocation />} />
           <Route path="/customer/orders/:orderId/invoice" element={<InvoicePage />} />
           <Route path="/customer/prescriptions" element={<CustomerPrescriptions />} />
           <Route path="/customer/orders" element={<CustomerOrders />} />
@@ -142,16 +156,25 @@ const AppRouter = () => {
       {/* Protected Routes - Delivery */}
       <Route element={<ProtectedRoute allowedRoles={['delivery']} />}>
         <Route element={<DeliveryLayout />}>
-          <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
-          <Route path="/delivery/details/:id" element={<DeliveryDetails />} />
-          <Route path="/delivery/profile" element={<DeliveryProfile />} />
+          <Route path="/delivery/dashboard" element={<Suspense fallback={<div>Loading...</div>}><DeliveryDashboard /></Suspense>} />
+          <Route path="/delivery/details/:id" element={<Suspense fallback={<div>Loading...</div>}><DeliveryDetails /></Suspense>} />
+          <Route path="/delivery/active" element={<Suspense fallback={<div>Loading...</div>}><ActiveDeliveries /></Suspense>} />
+          <Route path="/delivery/history" element={<Suspense fallback={<div>Loading...</div>}><DeliveryHistory /></Suspense>} />
+          <Route path="/delivery/earnings" element={<Suspense fallback={<div>Loading...</div>}><DeliveryEarnings /></Suspense>} />
+          <Route path="/delivery/settings" element={<Suspense fallback={<div>Loading...</div>}><DeliverySettings /></Suspense>} />
+          <Route path="/delivery/profile" element={<Suspense fallback={<div>Loading...</div>}><DeliveryProfile /></Suspense>} />
         </Route>
       </Route>
 
       {/* Protected Routes - Cashier */}
       <Route element={<ProtectedRoute allowedRoles={['cashier']} />}>
-        {/* Using MainLayout or creating a specific CashierLayout if needed. */}
-        <Route path="/cashier/dashboard" element={<CashierDashboard />} />
+        <Route element={<CashierLayout />}>
+          <Route path="/cashier/dashboard" element={<CashierDashboard view="dashboard" />} />
+          <Route path="/cashier/approved" element={<CashierDashboard view="approved" />} />
+          <Route path="/cashier/transactions" element={<CashierDashboard view="transactions" />} />
+          <Route path="/cashier/reports" element={<CashierDashboard view="reports" />} />
+          <Route path="/cashier/settings" element={<CashierSettings />} />
+        </Route>
       </Route>
 
       {/* Protected Routes - Pharmacy Admin */}
@@ -172,6 +195,7 @@ const AppRouter = () => {
         <Route element={<AdminLayout />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/users/:id" element={<UserDetails />} />
           <Route path="/admin/pharmacies" element={<AdminPharmacies />} />
           <Route path="/admin/pharmacies/:id" element={<AdminPharmacyDetail />} />
           <Route path="/admin/registrations/pending" element={<AdminDeliveryRegistrations />} />

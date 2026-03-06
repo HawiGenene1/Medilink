@@ -43,7 +43,8 @@ export const CartProvider = ({ children }) => {
                 priceValue,
                 prescriptionId: medicine.prescriptionId,
                 prescriptionImage: medicine.prescriptionImage,
-                prescriptionRequired: medicine.requiresPrescription
+                prescriptionRequired: medicine.prescriptionRequired || medicine.requiresPrescription,
+                rxStatus: medicine.prescriptionId ? 'uploaded' : undefined
             }];
         });
     };

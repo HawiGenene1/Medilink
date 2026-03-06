@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+export const BASE_URL = API_URL.split('/api')[0];
 
 const api = axios.create({
   baseURL: API_URL,
@@ -127,7 +128,8 @@ export const inventoryAPI = {
 export const orderProcessingAPI = {
   getOrders: () => api.get('/order-processing'),
   updateStatus: (id, data) => api.put(`/order-processing/${id}/status`, data),
-  verifyPrescription: (id) => api.put(`/order-processing/${id}/verify-prescription`)
+  verifyPrescription: (id, data) => api.put(`/order-processing/${id}/verify-prescription`, data),
+  requestPhysicalPrescription: (id, data) => api.put(`/order-processing/${id}/request-physical-prescription`, data)
 };
 
 export default api;

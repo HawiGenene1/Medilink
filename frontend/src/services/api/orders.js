@@ -9,4 +9,5 @@ export const ordersAPI = {
   // New Methods
   createOrder: (orderData) => api.post('/orders', orderData),
   initializeChapaPayment: (paymentData) => api.post('/payments/chapa/initialize', paymentData),
+  updateOrderAddress: (id, addressData) => api.patch(`/orders/${id}/address`, addressData),
 };

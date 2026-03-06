@@ -1,9 +1,8 @@
 /* Footer Styles */
 .footer-section {
-  background: #f8f9fa;
-  /* Light Gray Background */
-  padding: 15px 0 5px;
-  border-top: 1px solid #e9ecef;
+  background: var(--bg-card);
+  padding: 60px 0 20px;
+  border-top: 1px solid var(--border-color);
   margin-top: auto;
 }
 
@@ -68,9 +67,9 @@
 }
 
 .footer-bottom {
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid #e9ecef;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;

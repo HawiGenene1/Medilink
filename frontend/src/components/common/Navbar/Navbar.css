@@ -11,7 +11,7 @@
   transition: all 0.3s ease;
   border-radius: 50px;
   /* Pill shape */
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--navbar-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
@@ -27,7 +27,7 @@
 }
 
 .navbar.scrolled {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--navbar-bg-scrolled);
   box-shadow: 0 8px 32px rgba(67, 97, 238, 0.1);
   top: 10px;
   /* Slight movement on scroll */
@@ -146,7 +146,7 @@
 .mobile-actions {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {

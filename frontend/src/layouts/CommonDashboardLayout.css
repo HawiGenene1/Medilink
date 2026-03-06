@@ -1,15 +1,14 @@
 /* Common Dashboard Layout Styling - Modern Clinical Theme */
 :root {
-    --primary-color: #1E88E5;
-    --primary-light: #E3F2FD;
-    --secondary-color: #43A047;
-    --text-main: #2D3748;
-    --text-secondary: #718096;
-    --bg-main: #ffffff;
-    /* Changed to white for full use */
-    --border-color: #F0F0F0;
-    --card-shadow: none;
-    /* Seamless look */
+    --primary-color: #4361EE;
+    --primary-light: #EEF2FF;
+    --primary-soft: rgba(67, 97, 238, 0.08);
+    --secondary-color: #06D6A0;
+    --text-main: #0F172A;
+    --text-secondary: #64748B;
+    --bg-main: #F8FAFC;
+    --border-color: #E2E8F0;
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 /* Main Layout Container */
@@ -26,19 +25,34 @@
 .desktop-sider {
     box-shadow: 1px 0 0 0 var(--border-color);
     z-index: 1010 !important;
-    background: #f9fafb !important;
+    background: var(--bg-sidebar) !important;
     height: 100vh;
-    overflow-y: auto;
     border-right: 1px solid var(--border-color);
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.desktop-sider .ant-layout-sider-children {
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
 }
 
 .sidebar-logo {
-    height: 80px;
+    height: 64px;
     display: flex;
     align-items: center;
-    padding: 0 24px;
+    padding: 0 20px;
     border-bottom: 1px solid var(--border-color);
     gap: 12px;
+    transition: all 0.2s;
+    line-height: 64px;
+    /* Ensure line-height matches */
+    box-sizing: border-box;
+}
+
+.ant-layout-sider-collapsed .sidebar-logo {
+    padding: 0;
+    justify-content: center;
 }
 
 .logo-icon-box {
@@ -55,10 +69,11 @@
 }
 
 .logo-text {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 800;
     color: var(--text-main);
-    font-family: 'Montserrat', sans-serif;
+    font-family: 'Poppins', sans-serif;
+    letter-spacing: -0.5px;
 }
 
 .sidebar-menu {
@@ -67,16 +82,35 @@
     background: transparent !important;
 }
 
+/* Removed restrictive width and margin to allow Ant Design's default sizing in collapsed mode */
 .sidebar-menu .ant-menu-item {
-    width: calc(100% - 32px) !important;
-    margin: 4px 16px !important;
+    margin: 4px 12px;
     border-radius: 8px !important;
     font-weight: 500;
     color: var(--text-secondary);
 }
 
+/* Ant Design's collapsed mode needs standard widths to center icons */
+.ant-layout-sider-collapsed .sidebar-menu {
+    width: 100%;
+}
+
+.ant-layout-sider-collapsed .sidebar-menu .ant-menu-item {
+    padding: 0 24px !important;
+    /* Ant Design default for collapsed */
+    margin: 4px 0 !important;
+    width: 100% !important;
+}
+
+.ant-layout-sider-collapsed .ant-menu-item .anticon {
+    font-size: 18px !important;
+    line-height: 40px !important;
+    margin: 0 !important;
+    display: block !important;
+}
+
 .sidebar-menu .ant-menu-item-selected {
-    background-color: var(--primary-light) !important;
+    background-color: var(--primary-soft) !important;
     color: var(--primary-color) !important;
     font-weight: 600;
 }
@@ -103,18 +137,21 @@
 
 /* Header */
 .dashboard-header {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--bg-card);
     backdrop-filter: blur(10px);
-    padding: 0 32px;
+    padding: 0 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
     border-bottom: 1px solid var(--border-color);
-    height: 80px;
+    height: 64px;
+    line-height: 64px;
+    /* Ensure line-height matches */
     flex-shrink: 0;
     /* Header should not shrink */
     z-index: 1001;
+    box-sizing: border-box;
 }
 
 /* ... (header styles kept same) ... */
@@ -138,7 +175,7 @@
 
 .header-search {
     flex: 1;
-    max-width: 450px;
+    max-width: 600px;
 }
 
 .search-input {
@@ -150,8 +187,8 @@
 
 .search-input:hover,
 .search-input:focus {
-    background: #ffffff !important;
-    box-shadow: 0 0 0 2px var(--primary-light) !important;
+    background: var(--bg-card) !important;
+    box-shadow: 0 0 0 2px var(--primary-soft) !important;
 }
 
 .header-right {
@@ -161,26 +198,29 @@
 }
 
 .header-location {
-    padding: 8px 16px;
+    padding: 4px 12px;
     background: var(--bg-main);
-    border-radius: 20px;
+    border-radius: 12px;
     display: none;
     cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 600;
-    font-size: 13px;
-    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 12px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    height: 32px;
+    margin: 0 4px;
 }
 
 .header-location:hover {
-    background: #ffffff;
+    background: var(--bg-card);
     border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.1);
 }
 
 @media(min-width: 768px) {
     .header-location {
-        display: block;
+        display: flex;
     }
 }
 
@@ -192,6 +232,7 @@
     padding: 6px 12px;
     border-radius: 12px;
     transition: background 0.3s;
+    margin-right: 20px;
 }
 
 .user-profile-trigger:hover {
@@ -206,8 +247,8 @@
 
 .dashboard-content {
     background: transparent;
-    padding: 32px;
-    min-height: calc(100vh - 80px);
+    padding: 24px;
+    min-height: calc(100vh - 64px);
     overflow-y: auto;
 }
 

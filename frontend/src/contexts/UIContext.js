@@ -14,6 +14,10 @@ export const UIProvider = ({ children }) => {
     localStorage.setItem('appTheme', newTheme);
   };
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   return (
     <UIContext.Provider value={{ theme, toggleTheme }}>
       {children}

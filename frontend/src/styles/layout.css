@@ -15,7 +15,7 @@
 .main-content {
   flex: 1;
   padding: 20px;
-  background-color: #f5f5f5;
+  background-color: var(--bg-main);
 }
 
 /* Ensure footer is at the bottom */
@@ -26,7 +26,7 @@
 
 .auth-layout {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, #2b45cc 100%);
 }
 
 /* Container */

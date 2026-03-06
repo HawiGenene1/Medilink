@@ -38,11 +38,6 @@ const AdminLayout = () => {
             label: 'Pending Registrations',
         },
         {
-            key: '/admin/pharmacies',
-            icon: <ShopOutlined />,
-            label: 'Pharmacies',
-        },
-        {
             key: '/admin/orders',
             icon: <ShoppingCartOutlined />,
             label: 'Orders',
