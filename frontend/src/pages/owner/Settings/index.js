@@ -101,12 +101,23 @@ const OwnerSettings = () => {
             }
 
             setLoading(true);
-            const response = await pharmacyOwnerAPI.updateProfile({
+
+            // 1. Update Profile Operational Permissions (User model)
+            const profilePromise = pharmacyOwnerAPI.updateProfile({
                 operationalPermissions: values
             });
-            if (response.data.success) {
-                message.success('Operational permissions updated');
-                if (updateUser) updateUser(response.data.owner);
+
+            // 2. Update Pharmacy Policy (Pharmacy model)
+            // This ensures backend allowOwnerInventoryManagement check passes
+            const pharmacyPromise = pharmacyOwnerAPI.updatePharmacy({
+                allowOwnerInventoryManagement: values.manageInventory
+            });
+
+            const [profileRes, pharmacyRes] = await Promise.all([profilePromise, pharmacyPromise]);
+
+            if (profileRes.data.success && pharmacyRes.data.success) {
+                message.success('Operational permissions and business policy updated');
+                if (updateUser) updateUser(profileRes.data.owner);
             }
         } catch (error) {
             const errorMsg = error.response?.data?.message || 'Failed to update operational permissions';

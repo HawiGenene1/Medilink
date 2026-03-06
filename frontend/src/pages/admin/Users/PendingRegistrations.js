@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Tag, Button, Space, Card, Typography, Modal, Input, message, Tabs, Descriptions, Divider } from 'antd';
 import { CheckOutlined, CloseOutlined, EyeOutlined, UserOutlined, ShopOutlined, CarOutlined } from '@ant-design/icons';
-import api from '../../../services/api';
+import api, { BASE_URL } from '../../../services/api';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -20,7 +20,7 @@ const PendingRegistrations = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await api.get(`/admin/registrations/pending`, { params: { role: activeTab } });
+            const response = await api.get(`/ admin / registrations / pending`, { params: { role: activeTab } });
             if (response.data.success) {
                 setData(response.data.data);
             }
@@ -44,7 +44,7 @@ const PendingRegistrations = () => {
 
         setLoading(true);
         try {
-            const url = `/admin/registrations/${selectedUser._id}/${actionType}`;
+            const url = `/ admin / registrations / ${selectedUser._id}/${actionType}`;
             const response = await api.post(url, { reason });
 
             if (response.data.success) {
@@ -123,12 +123,12 @@ const PendingRegistrations = () => {
             title: 'Pharmacy Name',
             dataIndex: 'applicationDetails',
             key: 'pharmacyName',
-            render: (details) => details?.name || 'N/A'
+            render: (details) => details?.name || details?.pharmacyName || 'N/A'
         },
         {
             title: 'Owner',
             key: 'owner',
-            render: (_, record) => `${record.firstName} ${record.lastName}`
+            render: (_, record) => record.applicationDetails?.ownerName || `${record.firstName} ${record.lastName}`
         },
         {
             title: 'License Number',
@@ -207,24 +207,52 @@ const PendingRegistrations = () => {
                     )}
                 </Space>
             );
-        } else if (user.role === 'pharmacy_admin') {
+        } else if (user.role === 'pharmacy_admin' || user.role === 'pharmacy_owner') {
+            const getZip = (addr) => addr?.zipCode || addr?.postalCode || 'N/A';
             return (
                 <Space direction="vertical" style={{ width: '100%' }} size="middle">
                     <Descriptions title="Pharmacy Information" bordered column={1} size="small">
-                        <Descriptions.Item label="Pharmacy Name">{details.name}</Descriptions.Item>
+                        <Descriptions.Item label="Pharmacy Name">{details.name || details.pharmacyName}</Descriptions.Item>
                         <Descriptions.Item label="Pharmacy Email">{details.email}</Descriptions.Item>
                         <Descriptions.Item label="Pharmacy Phone">{details.phone}</Descriptions.Item>
                         <Descriptions.Item label="Business License">{details.licenseNumber}</Descriptions.Item>
                         <Descriptions.Item label="Address">
-                            {details.address ? `${details.address.street || ''}, ${details.address.city || ''}, ${details.address.state || ''} ${details.address.postalCode || ''}, ${details.address.country || ''}` : 'N/A'}
+                            {details.address ? `${details.address.street || ''}, ${details.address.city || ''}, ${details.address.state || ''} ${getZip(details.address)}, ${details.address.country || ''}` : 'N/A'}
                         </Descriptions.Item>
+                        {details.tinNumber && <Descriptions.Item label="TIN Number">{details.tinNumber}</Descriptions.Item>}
                     </Descriptions>
 
-                    {details.licenseFile && (
-                        <Card size="small" title="Registration Documents">
-                            <Button type="link" onClick={() => window.open(details.licenseFile)}>View Business License (PDF)</Button>
-                        </Card>
-                    )}
+                    <Card size="small" title="Registration Documents">
+                        <Space wrap>
+                            {details.documents && details.documents.length > 0 ? (
+                                details.documents.map((doc, index) => (
+                                    <Button
+                                        key={index}
+                                        type="link"
+                                        onClick={() => {
+                                            const url = typeof doc === 'string' ? doc : doc.url;
+                                            const absoluteUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
+                                            window.open(absoluteUrl, '_blank');
+                                        }}
+                                    >
+                                        View {typeof doc === 'string' ? 'Document' : doc.name}
+                                    </Button>
+                                ))
+                            ) : (
+                                <>
+                                    {details.licenseFile && (
+                                        <Button type="link" onClick={() => window.open(details.licenseFile.startsWith('http') ? details.licenseFile : `${BASE_URL}${details.licenseFile}`, '_blank')}>View Business License (PDF)</Button>
+                                    )}
+                                    {details.licenseDocument && (
+                                        <Button type="link" onClick={() => window.open(details.licenseDocument.startsWith('http') ? details.licenseDocument : `${BASE_URL}${details.licenseDocument}`, '_blank')}>View License</Button>
+                                    )}
+                                    {details.tinDocument && (
+                                        <Button type="link" onClick={() => window.open(details.tinDocument.startsWith('http') ? details.tinDocument : `${BASE_URL}${details.tinDocument}`, '_blank')}>View TIN Doc</Button>
+                                    )}
+                                </>
+                            )}
+                        </Space>
+                    </Card>
                 </Space>
             );
         }

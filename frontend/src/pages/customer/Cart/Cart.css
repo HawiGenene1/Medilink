@@ -24,7 +24,7 @@
 }
 
 .cart-item-avatar {
-    background: #f8fafc;
+    background: var(--bg-main);
     border-radius: 12px !important;
 }
 
@@ -75,7 +75,7 @@
 .prescription-check-card {
     border-radius: 16px !important;
     border: 1px solid var(--border-color) !important;
-    background: #fefce8 !important;
+    background: var(--warning-soft) !important;
     /* Extremely soft yellow tint */
 }
 
@@ -101,16 +101,17 @@
 }
 
 .checkout-btn {
-    height: 52px !important;
+    height: 48px !important;
     font-weight: 700 !important;
-    border-radius: 12px !important;
-    font-size: 16px !important;
+    border-radius: 10px !important;
+    padding: 0 12px !important;
+    font-size: 13.5px !important;
 }
 
 .cart-guarantee {
     margin-top: 24px;
     padding: 16px;
-    background: #ffffff;
+    background: var(--bg-card);
     border: 1px dashed var(--border-color);
     border-radius: 12px;
 }

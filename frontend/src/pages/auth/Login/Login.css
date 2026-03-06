@@ -1,26 +1,63 @@
 .login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-main);
+  padding: 40px 20px;
 }
 
 .login-card {
-  width: 450px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
+  width: 480px;
+  max-width: 95vw;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  border-radius: 24px;
+  overflow: hidden;
+  border: none;
+  margin: 0 auto;
 }
 
-.login-card .ant-card-head {
+.login-card .ant-card-body {
+  padding: 0;
+}
+
+.login-form-side {
+  padding: 48px;
+  background: var(--bg-card);
+}
+
+.login-header {
+  margin-bottom: 32px;
   text-align: center;
-  font-size: 24px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 8px 8px 0 0;
 }
 
-.login-card .ant-card-head-title {
-  color: white;
+.login-title {
+  margin-bottom: 8px !important;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.login-subtitle {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.clinical-input {
+  border-radius: 12px;
+  height: 48px;
+  border-color: var(--border-color);
+}
+
+.clinical-input:hover, .clinical-input:focus {
+  border-color: #4361ee;
+}
+
+.text-secondary {
+  color: #94a3b8;
+}
+
+@media (max-width: 576px) {
+  .login-form-side {
+    padding: 32px 24px;
+  }
 }

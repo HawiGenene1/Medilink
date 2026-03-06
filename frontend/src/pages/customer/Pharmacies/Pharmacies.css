@@ -1,17 +1,17 @@
 /* Pharmacies Page Styles - Premium Redesign */
 .pharmacies-page {
-    min-height: 100vh;
-    padding-top: 80px;
-    /* Offset for fixed floating navbar - reduced */
-    background: #f8f9fa;
+    /* No padding-top needed as it's inside dashboard-content */
+    background: var(--bg-main);
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .pharmacies-layout {
     display: flex;
     flex: 1;
-    max-height: calc(100vh - 80px);
+    height: calc(100vh - 64px - 48px);
+    /* Full height minus header and content padding */
     overflow: hidden;
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.03);
 }
@@ -19,8 +19,8 @@
 
 .pharmacy-sidebar {
     width: 420px;
-    background: white;
-    border-right: 1px solid #E2E8F0;
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     z-index: 10;
@@ -28,30 +28,30 @@
 }
 
 .sidebar-header {
-    padding: 32px 24px;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .pharmacy-list-scroll {
     flex: 1;
     overflow-y: auto;
-    background: #fff;
+    background: var(--bg-card);
 }
 
 .pharmacy-list-card {
     padding: 20px 24px;
     cursor: pointer;
     transition: all 0.2s ease;
-    border-bottom: 1px solid #f9f9f9;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .pharmacy-list-card:hover {
-    background: #f1f5f9;
+    background: var(--bg-main);
 }
 
 .pharmacy-list-card.selected {
     border-left: 4px solid #1E88E5;
-    background: #eff6ff;
+    background: var(--primary-soft);
 }
 
 .ph-name {
@@ -63,14 +63,14 @@
 
 .ph-meta {
     font-size: 12px;
-    color: #64748B;
+    color: var(--text-muted);
     margin-bottom: 8px;
 }
 
 .pharmacy-map-area {
     flex: 1;
     position: relative;
-    background: #ffffff;
+    background: var(--bg-card);
 }
 
 .selected-pharmacy-floating-card {
@@ -81,7 +81,8 @@
     z-index: 1000;
     border-radius: 20px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
     backdrop-filter: blur(10px);
 }
 
@@ -96,7 +97,7 @@
     width: 14px;
     height: 14px;
     background: #1E88E5;
-    border: 3px solid white;
+    border: 3px solid var(--bg-card);
     border-radius: 50%;
     position: relative;
     box-shadow: 0 0 0 rgba(30, 136, 229, 0.4);

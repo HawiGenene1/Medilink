@@ -196,24 +196,38 @@ const Checkout = () => {
                     quantity: item.quantity,
                     price: item.priceValue
                 })),
-                shippingAddress: address.fullAddress,
-                paymentMethod: 'chapa', // Force Chapa as generic provider
-                deliveryFee: 50
+                shippingAddress: locationLabel, // Use confirmed location label
+                paymentMethod: paymentMethod === 'cash' ? 'cash' : 'chapa',
+                deliveryFee: 50,
+                coordinates: {
+                    latitude: selectedAddressCoords[0],
+                    longitude: selectedAddressCoords[1]
+                }
             };
 
             const orderRes = await ordersAPI.createOrder(orderPayload);
-            const order = orderRes.data.data || orderRes.data; // Adjust based on API response structure
+            const order = orderRes.data.data || orderRes.data;
             const orderId = order._id || order.id || order.orderId;
 
             if (!orderId) throw new Error('Failed to create order');
 
-            // 2. Initialize Chapa Payment (To create DB record & get keys)
+            // 2. Handle Payment Flow
+            if (paymentMethod === 'cash') {
+                // Cash on Delivery - Bypass Chapa
+                clearCart();
+                setCurrentStep(4); // Show success overlay
+                setLoading(false);
+                message.success('Order placed successfully! Cash on Delivery selected.');
+                return;
+            }
+
+            // Chapa Initialization
             const paymentPayload = {
                 orderId: orderId,
                 amount: subtotal + 50,
-                paymentMethod: paymentMethod, // Selected specific provider (telebirr, etc)
+                paymentMethod: paymentMethod, // provider
                 returnUrl: `${window.location.origin}/payment/success?orderId=${orderId}`,
-                phoneNumber: '0911234567' // TODO: Get from user profile
+                phoneNumber: '0911234567'
             };
 
             const paymentRes = await ordersAPI.initializeChapaPayment(paymentPayload);

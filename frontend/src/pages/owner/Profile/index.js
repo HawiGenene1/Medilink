@@ -84,7 +84,7 @@ const OwnerProfile = () => {
         <div style={{ padding: '24px' }}>
             <div className="page-header" style={{ marginBottom: '24px' }}>
                 <Space size="large">
-                    <Avatar size={84} icon={<UserOutlined />} src={user?.avatar} />
+                    <Avatar size={84} icon={<UserOutlined />} src={user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}?t=${new Date().getTime()}`) : null} />
                     <div>
                         <Title level={2} style={{ marginBottom: 4 }}>{user?.fullName || user?.name || 'Staff Member'}</Title>
                         <Space>

@@ -8,32 +8,105 @@ import {
   ArrowLeftOutlined,
   SafetyCertificateOutlined,
   UploadOutlined,
-  ArrowRightOutlined
+  ArrowRightOutlined,
+  InboxOutlined,
+  FileProtectOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { message } from 'antd';
+import { message, Modal, Upload, Input, Spin } from 'antd';
+import { getPrescriptions, uploadPrescription } from '../../../services/api/prescriptions';
 import api from '../../../services/api';
 import { useCart } from '../../../contexts/CartContext';
 import './Cart.css';
 
+const { Dragger } = Upload;
 const { Title, Text } = Typography;
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { cartItems, removeFromCart, updateQuantity, getCartGroups, subtotal, clearCart } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, getCartGroups, subtotal, clearCart, setCartItems } = useCart();
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+
+  // Rx Modal State
+  const [isRxModalVisible, setIsRxModalVisible] = useState(false);
+  const [activeItemForRx, setActiveItemForRx] = useState(null);
+  const [userPrescriptions, setUserPrescriptions] = useState([]);
+  const [loadingRx, setLoadingRx] = useState(false);
+  const [fileList, setFileList] = useState([]);
+  const [uploadingRx, setUploadingRx] = useState(false);
+  const [rxNotes, setRxNotes] = useState('');
+  
+  const fetchUserPrescriptions = async () => {
+    setLoadingRx(true);
+    try {
+      const response = await getPrescriptions({ status: 'approved' });
+      if (response.success) {
+        setUserPrescriptions(response.data.prescriptions || []);
+      }
+    } catch (error) {
+      console.error('Error fetching prescriptions:', error);
+    } finally {
+      setLoadingRx(false);
+    }
+  };
+
+  const handleOpenRxModal = (item, pharmacyId) => {
+    setActiveItemForRx({ item, pharmacyId });
+    setIsRxModalVisible(true);
+    fetchUserPrescriptions();
+  };
+
+  const attachPrescriptionToItem = (rxId, rxUrl) => {
+    // This updates the local storage immediately since we don't have updateCartItem exported yet
+    const updatedCart = cartItems.map(cartItem => {
+      if (cartItem.id === activeItemForRx.item.id && cartItem.pharmacyId === activeItemForRx.pharmacyId) {
+        return {
+          ...cartItem,
+          prescriptionId: rxId,
+          prescriptionImage: rxUrl,
+          rxStatus: 'uploaded'
+        };
+      }
+      return cartItem;
+    });
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    window.location.reload(); // Simple refresh to apply cart changes
+  };
+
+  const handleUploadRx = async () => {
+    if (fileList.length === 0) return;
+    setUploadingRx(true);
+    const formData = new FormData();
+    formData.append('prescription', fileList[0]);
+    formData.append('notes', rxNotes);
+
+    try {
+      const response = await uploadPrescription(formData);
+      if (response.success) {
+        message.success('Prescription uploaded successfully!');
+        attachPrescriptionToItem(response.data.prescriptionId, response.data.imageUrl);
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Error uploading prescription.');
+    } finally {
+      setUploadingRx(false);
+    }
+  };
 
   const handleCheckout = async (group) => {
     try {
       setIsCreatingOrder(true);
 
-      // Transform cart items to backend format for this specific pharmacy
       const orderItems = group.items.map(item => ({
         medicine: item.id,
         name: item.name,
         quantity: item.quantity,
-        price: item.priceValue
+        price: item.priceValue,
+        prescriptionId: item.prescriptionId || null
       }));
+
+      // Find first prescription ID in the groiup to attach to order level
+      const groupPrescriptionId = group.items.find(i => i.prescriptionRequired && i.prescriptionId)?.prescriptionId;
 
       const payload = {
         pharmacyId: group.pharmacyId,
@@ -44,7 +117,8 @@ const Cart = () => {
           geojson: { type: 'Point', coordinates: [38.7492, 9.0113] } // Dummy but required
         },
         paymentMethod: 'card',
-        notes: 'Order via Web Cart'
+        notes: 'Order via Web Cart',
+        prescriptionId: groupPrescriptionId // Attach main prescription ID to the order
       };
 
       const response = await api.post('/orders', payload);
@@ -68,7 +142,7 @@ const Cart = () => {
   const cartGroups = getCartGroups();
 
   const hasMissingRx = cartGroups.some(group =>
-    group.items.some(item => item.rxRequired && item.rxStatus !== 'uploaded')
+    group.items.some(item => (item.prescriptionRequired || item.requiresPrescription) && !item.prescriptionId)
   );
 
   return (
@@ -90,7 +164,7 @@ const Cart = () => {
           {cartGroups.map((group, gIdx) => (
             <Card
               key={gIdx}
-              title={<Space><ShopOutlined /> <Text strong>{group.pharmacyName}</Text></Space>}
+              title={<Space><ShopOutlined /> <Text strong>{typeof group.pharmacyName === 'object' ? group.pharmacyName?.name : (group.pharmacyName || 'Pharmacy')}</Text></Space>}
               className="cart-group-card"
               style={{ marginBottom: '24px' }}
               extra={
@@ -119,12 +193,12 @@ const Cart = () => {
                       <div className="cart-item-info">
                         <Text strong style={{ fontSize: '16px' }}>{item.name}</Text>
                         <div style={{ marginTop: '4px' }}>
-                          {item.rxRequired ? (
+                          {(item.prescriptionRequired || item.requiresPrescription) ? (
                             <Tag
-                              color={item.rxStatus === 'uploaded' ? "success" : "warning"}
+                              color={item.prescriptionId ? "success" : "warning"}
                               icon={<SafetyCertificateOutlined />}
                             >
-                              {item.rxStatus === 'uploaded' ? 'Prescription Attached' : 'Missing Prescription'}
+                              {item.prescriptionId ? 'Prescription Attached' : 'Missing Prescription'}
                             </Tag>
                           ) : (
                             <Tag color="cyan">OTC Medicine</Tag>
@@ -164,13 +238,17 @@ const Cart = () => {
                       />
                     </Col>
                   </Row>
-                  {item.rxRequired && item.rxStatus !== 'uploaded' && (
+                  {(item.prescriptionRequired || item.requiresPrescription) && !item.prescriptionId && (
                     <div className="rx-missing-alert">
                       <Alert
                         message="Prescription missing"
                         type="warning"
                         showIcon
-                        action={<Button size="small" type="primary" icon={<UploadOutlined />}>Upload Now</Button>}
+                        action={
+                          <Button size="small" type="primary" icon={<UploadOutlined />} onClick={() => handleOpenRxModal(item, group.pharmacyId)}>
+                            Upload Now
+                          </Button>
+                        }
                         style={{ marginTop: '16px', borderRadius: '8px' }}
                       />
                     </div>
@@ -235,6 +313,87 @@ const Cart = () => {
           </Card>
         </Col>
       </Row>
+
+      <Modal
+        title="Upload or Select Prescription"
+        open={isRxModalVisible}
+        onCancel={() => setIsRxModalVisible(false)}
+        footer={null}
+        width={700}
+      >
+        <div style={{ marginBottom: '20px' }}>
+          <Text strong>Attach Prescription for: </Text>
+          <Text type="secondary">{activeItemForRx?.item?.name}</Text>
+        </div>
+        
+        <Title level={5} style={{ marginTop: '20px' }}>Select Existing Approved Prescription</Title>
+        <List
+          loading={loadingRx}
+          dataSource={userPrescriptions}
+          renderItem={rx => (
+            <List.Item
+              actions={[
+                <Button 
+                  type="primary" 
+                  onClick={() => {
+                    attachPrescriptionToItem(rx._id, rx.imageUrl);
+                    setIsRxModalVisible(false);
+                    message.success('Prescription selected successfully!');
+                  }}
+                >
+                  Select
+                </Button>
+              ]}
+            >
+              <List.Item.Meta
+                avatar={<Avatar icon={<FileProtectOutlined />} style={{ background: '#E3F2FD', color: '#1E88E5' }} />}
+                title={rx.originalName}
+                description={`Uploaded on ${new Date(rx.uploadedAt).toLocaleDateString()}`}
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: <div style={{ padding: '20px', textAlign: 'center' }}><Text type="secondary">No approved prescriptions found.</Text></div> }}
+          style={{ marginBottom: '32px' }}
+        />
+
+        <Divider>OR</Divider>
+
+        <Title level={5}>Upload New Prescription</Title>
+        <div style={{ padding: '10px 0' }}>
+          <Dragger
+            multiple={false}
+            fileList={fileList}
+            beforeUpload={file => {
+              setFileList([file]);
+              return false;
+            }}
+            onRemove={() => setFileList([])}
+          >
+            <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#1E88E5' }} /></p>
+            <p className="ant-upload-text">Click or drag prescription image to this area</p>
+          </Dragger>
+          
+          <Input.TextArea
+            rows={3}
+            placeholder="Additional notes for the pharmacist..."
+            style={{ marginTop: '16px', borderRadius: '8px' }}
+            value={rxNotes}
+            onChange={e => setRxNotes(e.target.value)}
+          />
+          
+          <Button
+            type="primary"
+            block
+            size="large"
+            style={{ marginTop: '20px' }}
+            onClick={handleUploadRx}
+            loading={uploadingRx}
+            disabled={fileList.length === 0}
+          >
+            Upload and Attach
+          </Button>
+        </div>
+      </Modal>    
     </div>
   );
 };

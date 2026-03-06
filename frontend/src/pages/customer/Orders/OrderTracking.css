@@ -20,7 +20,7 @@
     bottom: 24px;
     left: 24px;
     right: 24px;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--navbar-bg-scrolled);
     backdrop-filter: blur(10px);
     padding: 16px;
     border-radius: 16px;
@@ -50,9 +50,16 @@
     margin-top: 24px;
 }
 
-/* Fix Leaflet Z-index vs Ant Design */
+/* Fix Leaflet Z-index & Background (Removes default teal "coat") */
 .leaflet-container {
     z-index: 1;
+    background-color: var(--bg-main) !important;
+}
+
+.custom-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 @media (max-width: 992px) {
@@ -61,16 +68,15 @@
     }
 }
 
-/* Soft Blue Map Theme */
-.soft-blue-map .leaflet-tile-container {
-    filter: hue-rotate(10deg) saturate(0.8) brightness(1.05) contrast(1.05);
-    /* Same theme as checkout */
+/* Standard Map Theme (Clean) */
+.leaflet-tile-container {
+    filter: none !important;
 }
 
 /* Pulsing Custom Marker */
 .pulse-marker {
     background: #1E88E5;
-    border: 3px solid white;
+    border: 3px solid var(--bg-card);
     border-radius: 50%;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -101,7 +107,7 @@
 
 .customer-destination-marker {
     background: #4361ee;
-    border: 2px solid white;
+    border: 2px solid var(--bg-card);
     border-radius: 50%;
     display: flex;
     align-items: center;

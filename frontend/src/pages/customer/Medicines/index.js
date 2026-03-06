@@ -72,7 +72,7 @@ const MedicineSearch = () => {
                         <Input
                             size="large"
                             placeholder="Search by medicine name or pharmacy (e.g. Kenema)..."
-                            prefix={<SearchOutlined style={{ color: 'var(--primary-main)' }} />}
+                            prefix={<SearchOutlined style={{ color: 'var(--primary-color)' }} />}
                             onChange={e => setSearchQuery(e.target.value)}
                             className="search-input-premium"
                         />
@@ -139,7 +139,7 @@ const MedicineSearch = () => {
                                         <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                                             <div>
                                                 <Text style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', fontWeight: 600 }}>Best Price</Text>
-                                                <Text strong style={{ fontSize: '18px', color: 'var(--primary-main)' }}>
+                                                <Text strong style={{ fontSize: '18px', color: 'var(--primary-color)' }}>
                                                     {parseFloat(item.price || 0).toLocaleString()} ETB
                                                 </Text>
                                             </div>
@@ -155,7 +155,7 @@ const MedicineSearch = () => {
                                 <div style={{ background: 'var(--bg-soft)', padding: '10px', borderRadius: '10px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <ShopOutlined style={{ color: 'var(--primary-main)' }} />
+                                            <ShopOutlined style={{ color: 'var(--primary-color)' }} />
                                             <Text strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{item.pharmacy?.name}</Text>
                                         </div>
                                         <Text type="secondary" style={{ fontSize: '11px' }}>{item.distance || 'nearby'}</Text>

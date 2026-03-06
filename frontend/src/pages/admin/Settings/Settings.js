@@ -125,6 +125,33 @@ const Settings = () => {
         </div>
     );
 
+    const RecommendedFeatureWrapper = ({ title, children }) => (
+        <div style={{
+            border: '2px dashed #faad14',
+            borderRadius: '12px',
+            padding: '24px',
+            backgroundColor: '#fffbe6',
+            position: 'relative',
+            marginTop: '16px'
+        }}>
+            <div style={{
+                position: 'absolute',
+                top: '-12px',
+                left: '24px',
+                backgroundColor: '#faad14',
+                color: 'white',
+                padding: '2px 12px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase'
+            }}>
+                Recommended Feature
+            </div>
+            {children}
+        </div>
+    );
+
     return (
         <div className="settings-page">
             <Title level={2}>System Configuration</Title>
@@ -141,12 +168,20 @@ const Settings = () => {
                         {
                             key: '2',
                             label: <span><LockOutlined /> Security & Auth</span>,
-                            children: <SecuritySettings />
+                            children: (
+                                <RecommendedFeatureWrapper title="Security & Auth">
+                                    <SecuritySettings />
+                                </RecommendedFeatureWrapper>
+                            )
                         },
                         {
                             key: '3',
                             label: <span><ToolOutlined /> Maintenance</span>,
-                            children: <MaintenanceSettings />
+                            children: (
+                                <RecommendedFeatureWrapper title="Maintenance">
+                                    <MaintenanceSettings />
+                                </RecommendedFeatureWrapper>
+                            )
                         }
                     ]}
                 />

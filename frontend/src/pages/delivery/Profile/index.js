@@ -64,7 +64,7 @@ const DeliveryProfile = () => {
                         <Avatar
                             size={120}
                             icon={<UserOutlined />}
-                            src={user?.avatar}
+                            src={user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}?t=${new Date().getTime()}`) : null}
                             style={{ marginBottom: '16px', backgroundColor: '#1E88E5' }}
                         />
                         <Title level={3} style={{ marginBottom: 0 }}>{user?.firstName} {user?.lastName}</Title>

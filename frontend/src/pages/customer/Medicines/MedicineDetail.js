@@ -123,7 +123,7 @@ const MedicineDetail = () => {
                     <Title level={5}>Description</Title>
                     <Paragraph type="secondary">{medicine.description}</Paragraph>
                     <Title level={5}>Category</Title>
-                    <Tag>{medicine.category?.name || medicine.category || 'General'}</Tag>
+                    <Tag>{medicine.category?.name || (typeof medicine.category === 'string' ? medicine.category : 'General')}</Tag>
                 </div>
             ),
         },
@@ -223,7 +223,7 @@ const MedicineDetail = () => {
                             <Col xs={24} md={16}>
                                 <div className="product-header-info">
                                     <div style={{ marginBottom: '12px' }}>
-                                        {medicine.requiresPrescription && (
+                                        {medicine.prescriptionRequired && (
                                             <Tag icon={<SafetyCertificateOutlined />} color="error">Prescription Required</Tag>
                                         )}
                                         <Tag icon={<CheckCircleOutlined />} color="success">Verified Product</Tag>
@@ -330,19 +330,20 @@ const MedicineDetail = () => {
                                 block
                                 icon={<ShoppingCartOutlined />}
                                 className="add-to-cart-btn"
-                                disabled={medicine.requiresPrescription && !selectedRx}
+                                disabled={medicine.prescriptionRequired && !selectedRx}
                                 onClick={() => {
                                     addToCart({
                                         ...medicine,
                                         id: medicine._id,
                                         priceValue: medicine.price,
                                         prescriptionId: selectedRx?.id,
-                                        prescriptionImage: selectedRx?.url
+                                        prescriptionImage: selectedRx?.url,
+                                        rxStatus: selectedRx ? 'uploaded' : undefined
                                     }, quantity, medicine.pharmacy?._id, medicine.pharmacy?.name || 'Pharmacy');
                                     notification.success({ message: 'Added to cart' });
                                 }}
                             >
-                                {medicine.requiresPrescription && !selectedRx ? 'Attach Rx First' : 'Add to Cart'}
+                                {medicine.prescriptionRequired && !selectedRx ? 'Attach Rx First' : 'Add to Cart'}
                             </Button>
 
                             <Button
@@ -350,14 +351,15 @@ const MedicineDetail = () => {
                                 block
                                 style={{ background: '#f59e0b', color: 'white', border: 'none' }}
                                 icon={<ArrowRightOutlined />}
-                                disabled={medicine.requiresPrescription && !selectedRx}
+                                disabled={medicine.prescriptionRequired && !selectedRx}
                                 onClick={() => {
                                     addToCart({
                                         ...medicine,
                                         id: medicine._id,
                                         priceValue: medicine.price,
                                         prescriptionId: selectedRx?.id,
-                                        prescriptionImage: selectedRx?.url
+                                        prescriptionImage: selectedRx?.url,
+                                        rxStatus: selectedRx ? 'uploaded' : undefined
                                     }, quantity, medicine.pharmacy?._id, medicine.pharmacy?.name || 'Pharmacy');
                                     navigate('/customer/checkout');
                                 }}

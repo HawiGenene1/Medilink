@@ -1,8 +1,7 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Tabs, Card, List, Tag, Button, Typography, Input, Select,
-    Modal, Form, Space, Badge, Avatar, Divider, message
+    Modal, Form, Space, Badge, Avatar, Divider, message, Popconfirm
 } from 'antd';
 import {
     MessageOutlined,
@@ -11,8 +10,9 @@ import {
     PlusOutlined,
     UserOutlined,
     SendOutlined,
-    CheckCircleOutlined
+    DeleteOutlined
 } from '@ant-design/icons';
+import api from '../../../services/api';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -20,8 +20,53 @@ const { Option } = Select;
 
 const Communication = () => {
     const [isComposeVisible, setIsComposeVisible] = useState(false);
+    const [announcements, setAnnouncements] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [form] = Form.useForm();
 
-    // Mock Messages (Support Inbox)
+    const fetchAnnouncements = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/admin/announcements');
+            if (res.data.success) {
+                setAnnouncements(res.data.data);
+            }
+        } catch (error) {
+            message.error('Failed to load announcements');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAnnouncements();
+    }, []);
+
+    const handleCreateAnnouncement = async (values) => {
+        try {
+            const res = await api.post('/admin/announcements', values);
+            if (res.data.success) {
+                message.success('Announcement broadcasted successfully!');
+                setIsComposeVisible(false);
+                form.resetFields();
+                fetchAnnouncements();
+            }
+        } catch (error) {
+            message.error('Failed to create announcement');
+        }
+    };
+
+    const handleDeleteAnnouncement = async (id) => {
+        try {
+            await api.delete(`/admin/announcements/${id}`);
+            message.success('Announcement deleted');
+            fetchAnnouncements();
+        } catch (error) {
+            message.error('Failed to delete announcement');
+        }
+    };
+
+    // Mock Messages (Support Inbox - TODO: Persistent in later phase)
     const messages = [
         {
             id: 1,
@@ -31,44 +76,6 @@ const Communication = () => {
             status: 'Open',
             time: '10 mins ago',
             type: 'Support'
-        },
-        {
-            id: 2,
-            sender: 'Pharmacy A',
-            subject: 'License Verification Request',
-            preview: 'Attached documents for review...',
-            status: 'Pending',
-            time: '2 hours ago',
-            type: 'Verification'
-        },
-        {
-            id: 3,
-            sender: 'System Admin',
-            subject: 'Database Maintenance Alert',
-            preview: 'Scheduled downtime on Sunday...',
-            status: 'Closed',
-            time: '1 day ago',
-            type: 'System'
-        },
-    ];
-
-    // Mock Announcements
-    const announcements = [
-        {
-            id: 1,
-            title: 'Version 2.0 Update',
-            target: 'All Users',
-            content: 'We represent the new dashboard features...',
-            date: '2024-01-15',
-            status: 'Published'
-        },
-        {
-            id: 2,
-            title: 'Pharmacy Policy Change',
-            target: 'Pharmacy Owners',
-            content: 'Updated guidelines for prescription handling...',
-            date: '2024-01-10',
-            status: 'Draft'
         }
     ];
 
@@ -89,7 +96,6 @@ const Communication = () => {
                 renderItem={item => (
                     <List.Item
                         actions={[<Button type="link">View Thread</Button>]}
-                        style={{ cursor: 'pointer', '&:hover': { background: '#fafafa' } }}
                     >
                         <List.Item.Meta
                             avatar={
@@ -119,7 +125,7 @@ const Communication = () => {
     );
 
     const AnnouncementsTab = () => (
-        <Card bordered={false}>
+        <Card bordered={false} loading={loading}>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsComposeVisible(true)}>
                     New Announcement
@@ -134,45 +140,70 @@ const Communication = () => {
                         <Card
                             type="inner"
                             title={item.title}
-                            extra={<Tag color={item.status === 'Published' ? 'blue' : 'orange'}>{item.status}</Tag>}
+                            extra={
+                                <Space>
+                                    <Tag color={item.status === 'published' ? 'blue' : 'orange'}>{item.status.toUpperCase()}</Tag>
+                                    <Popconfirm title="Delete this announcement?" onConfirm={() => handleDeleteAnnouncement(item._id)}>
+                                        <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+                                    </Popconfirm>
+                                </Space>
+                            }
                         >
                             <Space direction="vertical" style={{ width: '100%' }}>
-                                <Space>
+                                <Space wrap>
                                     <Text type="secondary">Target:</Text>
-                                    <Tag>{item.target}</Tag>
+                                    <Tag color="cyan">{item.targetAudience.toUpperCase()}</Tag>
+                                    <Divider type="vertical" />
+                                    <Text type="secondary">Priority:</Text>
+                                    <Tag color={item.priority === 'high' ? 'red' : 'default'}>{item.priority.toUpperCase()}</Tag>
                                     <Divider type="vertical" />
                                     <Text type="secondary">Date:</Text>
-                                    <Text>{item.date}</Text>
+                                    <Text>{new Date(item.createdAt).toLocaleDateString()}</Text>
                                 </Space>
-                                <Paragraph ellipsis={{ rows: 2 }}>{item.content}</Paragraph>
-                                <Button size="small">Edit / Manage</Button>
+                                <Paragraph>{item.content}</Paragraph>
+                                <Text type="secondary" style={{ fontSize: 12 }}>Author: {item.author?.email}</Text>
                             </Space>
                         </Card>
                     </List.Item>
                 )}
+                locale={{ emptyText: 'No announcements found' }}
             />
         </Card>
     );
 
     return (
         <div className="communication-page">
-            <Title level={2}>Communication Center</Title>
+            <Title level={2} style={{ marginBottom: 24 }}>Platform Communication</Title>
 
-            <Tabs
-                defaultActiveKey="1"
-                items={[
-                    {
-                        key: '1',
-                        label: <span><MessageOutlined /> Inbox & Support</span>,
-                        children: <InboxTab />
-                    },
-                    {
-                        key: '2',
-                        label: <span><NotificationOutlined /> Announcements</span>,
-                        children: <AnnouncementsTab />
-                    }
-                ]}
-            />
+            <Card
+                title={<Title level={4}><MessageOutlined /> Recommended Feature: Advanced Engagement</Title>}
+                style={{
+                    borderRadius: 16,
+                    border: '1px solid #e6f7ff',
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f0f5ff 100%)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                }}
+            >
+                <Paragraph>
+                    Manage all system communications, support tickets, and public announcements from this centralized hub.
+                </Paragraph>
+
+                <Tabs
+                    defaultActiveKey="1"
+                    items={[
+                        {
+                            key: '1',
+                            label: <span><MessageOutlined /> Inbox & Support</span>,
+                            children: <InboxTab />
+                        },
+                        {
+                            key: '2',
+                            label: <span><NotificationOutlined /> Announcements</span>,
+                            children: <AnnouncementsTab />
+                        }
+                    ]}
+                />
+            </Card>
 
             <Modal
                 title="Compose Announcement"
@@ -180,31 +211,29 @@ const Communication = () => {
                 onCancel={() => setIsComposeVisible(false)}
                 footer={[
                     <Button key="cancel" onClick={() => setIsComposeVisible(false)}>Cancel</Button>,
-                    <Button key="draft">Save Draft</Button>,
-                    <Button key="send" type="primary" icon={<SendOutlined />} onClick={() => {
-                        message.success('Announcement broadcasted successfully!');
-                        setIsComposeVisible(false);
-                    }}>Broadcast</Button>
+                    <Button key="send" type="primary" icon={<SendOutlined />} onClick={() => form.submit()}>Broadcast</Button>
                 ]}
             >
-                <Form layout="vertical">
-                    <Form.Item label="Subject">
+                <Form form={form} layout="vertical" onFinish={handleCreateAnnouncement} initialValues={{ targetAudience: 'all', priority: 'normal', status: 'published' }}>
+                    <Form.Item label="Subject" name="title" rules={[{ required: true, message: 'Please enter a title' }]}>
                         <Input placeholder="Enter announcement title" />
                     </Form.Item>
-                    <Form.Item label="Target Audience">
-                        <Select defaultValue="all">
+                    <Form.Item label="Target Audience" name="targetAudience">
+                        <Select>
                             <Option value="all">All Users</Option>
                             <Option value="customers">Customers Only</Option>
                             <Option value="pharmacies">Pharmacy Owners Only</Option>
+                            <Option value="delivery">Delivery Partners Only</Option>
                         </Select>
                     </Form.Item>
-                    <Form.Item label="Message Content">
+                    <Form.Item label="Message Content" name="content" rules={[{ required: true, message: 'Please enter content' }]}>
                         <TextArea rows={4} placeholder="Type your message here..." />
                     </Form.Item>
-                    <Form.Item label="Priority">
-                        <Select defaultValue="normal">
+                    <Form.Item label="Priority" name="priority">
+                        <Select>
                             <Option value="normal">Normal</Option>
-                            <Option value="high">High (Push Notification)</Option>
+                            <Option value="high">High (Priority)</Option>
+                            <Option value="urgent">Urgent</Option>
                         </Select>
                     </Form.Item>
                 </Form>

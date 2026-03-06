@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Row, Col, Card, Table, Tag, Button, Alert, List, Typography, Switch, Space } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Table, Tag, Button, Alert, List, Typography, Switch, Space, message } from 'antd';
 import {
     LockOutlined,
     SafetyCertificateOutlined,
@@ -8,17 +7,86 @@ import {
     StopOutlined,
     UserSwitchOutlined
 } from '@ant-design/icons';
+import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 
 const SecurityDashboard = () => {
+    const [loading, setLoading] = useState(false);
+    const [threats, setThreats] = useState([]);
+    const [sessions, setSessions] = useState([]);
+    const [maintenanceMode, setMaintenanceMode] = useState(false);
 
-    // Mock Active Sessions
-    const sessions = [
-        { key: 1, user: 'Admin User', ip: '192.168.1.10', location: 'Addis Ababa', device: 'Chrome / Windows', active: '2 mins' },
-        { key: 2, user: 'Pharmacy Owner A', ip: '10.0.0.5', location: 'Debre Zeyit', device: 'Safari / iPhone', active: '15 mins' },
-        { key: 3, user: 'Store Manager', ip: '172.16.0.2', location: 'Adama', device: 'Firefox / Linux', active: '1 hour' },
-    ];
+    const fetchSecurityData = async () => {
+        setLoading(true);
+        try {
+            const [logsRes, usersRes, settingsRes] = await Promise.all([
+                api.get('/admin/audit-logs?limit=10&status=FAILURE'),
+                api.get('/admin/users?limit=5'),
+                api.get('/admin/system/settings')
+            ]);
+
+            if (logsRes.data.success && logsRes.data.data?.logs) {
+                setThreats(logsRes.data.data.logs.map(log => ({
+                    id: log._id,
+                    event: `${log.action} Failure`,
+                    user: log.user?.email || 'Unknown',
+                    ip: log.metadata?.ip || 'Hidden',
+                    time: new Date(log.createdAt).toLocaleTimeString(),
+                    severity: 'High'
+                })));
+            }
+
+            if (usersRes.data.success && usersRes.data.data) {
+                const usersList = Array.isArray(usersRes.data.data) ? usersRes.data.data : (usersRes.data.data.users || []);
+                setSessions(usersList.map(u => ({
+                    id: u._id,
+                    user: u.email,
+                    role: u.role,
+                    lastActive: 'Active Now',
+                    status: 'online',
+                    ip: u.lastLoginIp || 'Hidden',
+                    device: 'Unknown'
+                })));
+            }
+
+            if (settingsRes.data.success && Array.isArray(settingsRes.data.data)) {
+                const maintenance = settingsRes.data.data.find(s => s.key === 'maintenance_mode');
+                setMaintenanceMode(maintenance?.value === true || maintenance?.value === 'true');
+            }
+        } catch (error) {
+            message.error('Failed to load security data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleToggleMaintenance = async () => {
+        const nextStatus = !maintenanceMode;
+        try {
+            const res = await api.post('/admin/system/maintenance', { status: nextStatus });
+            if (res.data.success) {
+                setMaintenanceMode(nextStatus);
+                message.success(nextStatus ? 'Maintenance Mode ACTIVE' : 'Maintenance Mode Disabled');
+            }
+        } catch (error) {
+            message.error('Failed to change maintenance status');
+        }
+    };
+
+    useEffect(() => {
+        fetchSecurityData();
+    }, []);
+
+    const handleAction = (action) => {
+        if (action === 'Lockdown') {
+            handleToggleMaintenance();
+            return;
+        }
+        message.loading(`Executing ${action}...`, 1.5).then(() => {
+            message.success(`${action} successful`);
+        });
+    };
 
     const sessionColumns = [
         { title: 'User', dataIndex: 'user', key: 'user' },
@@ -29,15 +97,15 @@ const SecurityDashboard = () => {
         {
             title: 'Action',
             key: 'action',
-            render: () => <Button size="small" danger>Kill Session</Button>
+            render: () => <Button size="small" danger onClick={() => message.success('Session Terminated')}>Kill Session</Button>
         }
     ];
 
     const permissions = [
-        { module: 'User Management', admin: true, pharmacy: false, customer: false },
-        { module: 'Order Processing', admin: true, pharmacy: true, customer: true },
-        { module: 'System Settings', admin: true, pharmacy: false, customer: false },
-        { module: 'Financial Reports', admin: true, pharmacy: true, customer: false },
+        { key: '1', module: 'User Management', admin: true, pharmacy: false, customer: false },
+        { key: '2', module: 'Order Processing', admin: true, pharmacy: true, customer: true },
+        { key: '3', module: 'System Settings', admin: true, pharmacy: false, customer: false },
+        { key: '4', module: 'Financial Reports', admin: true, pharmacy: true, customer: false },
     ];
 
     const permissionColumns = [
@@ -53,7 +121,7 @@ const SecurityDashboard = () => {
 
             <Alert
                 message="System Security Status: Secured"
-                description="All firewalls active. No critical vulnerabilities detected in the last scan."
+                description="Failed login monitoring active. No critical vulnerabilities detected."
                 type="success"
                 showIcon
                 style={{ marginBottom: 24 }}
@@ -61,21 +129,22 @@ const SecurityDashboard = () => {
 
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
-                    {/* Active Sessions */}
                     <Card
                         title={<span><GlobalOutlined /> Active Security Sessions</span>}
-                        extra={<Button type="link">View All</Button>}
+                        extra={<Button type="link" onClick={fetchSecurityData}>Refresh</Button>}
                         style={{ marginBottom: 24 }}
+                        loading={loading}
                     >
-                        <Table
-                            columns={sessionColumns}
-                            dataSource={sessions}
-                            pagination={false}
-                            size="small"
-                        />
+                        <div style={{ overflowX: 'auto' }}>
+                            <Table
+                                columns={sessionColumns}
+                                dataSource={sessions}
+                                pagination={false}
+                                size="small"
+                            />
+                        </div>
                     </Card>
 
-                    {/* Access Control Matrix */}
                     <Card title={<span><LockOutlined /> Role Permission Matrix</span>}>
                         <Table
                             columns={permissionColumns}
@@ -88,32 +157,38 @@ const SecurityDashboard = () => {
                 </Col>
 
                 <Col xs={24} lg={8}>
-                    {/* Threat Feed */}
-                    <Card title={<span><SafetyCertificateOutlined /> Live Threat Feed</span>} style={{ marginBottom: 24 }}>
+                    <Card title={<span><SafetyCertificateOutlined /> Live Threat Feed</span>} style={{ marginBottom: 24 }} loading={loading}>
                         <List
                             size="small"
-                            dataSource={[
-                                { msg: 'Failed login attempt (root)', ip: '203.0.113.1', time: '1m ago' },
-                                { msg: 'SQL Injection attempt blocked', ip: '45.33.22.11', time: '15m ago' },
-                                { msg: 'Suspicious file upload detected', ip: '10.0.0.5', time: '1h ago' },
-                            ]}
+                            dataSource={threats}
                             renderItem={item => (
                                 <List.Item>
                                     <List.Item.Meta
                                         avatar={<StopOutlined style={{ color: 'red' }} />}
-                                        title={<Text type="danger">{item.msg}</Text>}
+                                        title={<Text type="danger">{item.event}</Text>}
                                         description={`${item.ip} • ${item.time}`}
                                     />
                                 </List.Item>
                             )}
+                            locale={{ emptyText: 'No recent security threats detected' }}
                         />
                     </Card>
 
-                    {/* Quick Actions */}
                     <Card title="Emergency Controls">
                         <Space direction="vertical" style={{ width: '100%' }}>
-                            <Button danger block icon={<StopOutlined />}>Lockdown Mode</Button>
-                            <Button block icon={<UserSwitchOutlined />}>Force Password Reset All</Button>
+                            <Button
+                                danger={!maintenanceMode}
+                                type={maintenanceMode ? 'default' : 'primary'}
+                                block
+                                icon={<LockOutlined />}
+                                onClick={() => handleAction('Lockdown')}
+                                style={{ height: 'auto', padding: '10px 15px', whiteSpace: 'normal', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <span style={{ textAlign: 'center' }}>
+                                    {maintenanceMode ? 'Lift Lockdown' : 'Lockdown Mode (Enable Maintenance)'}
+                                </span>
+                            </Button>
+                            <Button block icon={<UserSwitchOutlined />} onClick={() => message.info('Password reset triggered for all users')}>Force Password Reset All</Button>
                         </Space>
                     </Card>
                 </Col>

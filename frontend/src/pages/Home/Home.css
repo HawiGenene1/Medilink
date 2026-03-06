@@ -4,7 +4,7 @@
 .hero-section {
   padding: 110px 0 60px;
   /* Account for fixed navbar */
-  background: linear-gradient(135deg, #f8f9fa 0%, #eef2ff 100%);
+  background: linear-gradient(135deg, var(--bg-main) 0%, var(--bg-card) 100%);
   position: relative;
   overflow: hidden;
 }
@@ -20,7 +20,7 @@
   font-size: 3.5rem !important;
   line-height: 1.2 !important;
   margin-bottom: 24px !important;
-  color: var(--text-main);
+  color: var(--text-main) !important;
 }
 
 .text-gradient {
@@ -61,7 +61,7 @@
 .divider-vertical {
   width: 1px;
   height: 40px;
-  background-color: #e0e0e0;
+  background-color: var(--border-color);
 }
 
 /* Hero Image & Blobs */
@@ -96,10 +96,11 @@
 
 .floating-card {
   position: absolute;
-  background: white;
+  background: var(--bg-card);
   padding: 16px 24px;
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -131,12 +132,16 @@
   padding: 100px 0;
 }
 
-.bg-white {
-  background: #ffffff;
+.patients-section {
+  background: var(--bg-card) !important;
 }
 
-.bg-gray {
-  background: #f8f9fa;
+.pharmacies-section {
+  background: var(--bg-main) !important;
+}
+
+.delivery-section {
+  background: var(--bg-card) !important;
 }
 
 .section-header {
@@ -159,7 +164,7 @@
 .feature-card {
   height: 100%;
   text-align: center;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-color);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -215,26 +220,45 @@
 }
 
 .cta-box {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #3f37c9 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, #2b45cc 100%);
   border-radius: 24px;
   padding: 60px 24px;
   text-align: center;
   color: white;
-  box-shadow: 0 20px 40px rgba(67, 97, 238, 0.3);
+  box-shadow: 0 20px 40px rgba(67, 97, 238, 0.2);
+}
+
+.cta-box h2 {
+  color: white !important;
 }
 
 .btn-white {
-  background: white;
-  color: var(--primary-color);
-  border: none;
-  font-weight: 600;
+  background: var(--bg-main) !important;
+  color: var(--primary-color) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  height: 50px !important;
+  padding: 0 32px !important;
+  border-radius: 12px !important;
+  transition: all 0.3s ease !important;
 }
 
 .btn-white:hover {
-  background: #f8f9fa;
-  color: var(--primary-color);
+  background: var(--bg-soft) !important;
+  color: #2b45cc !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.btn-get-started {
+  height: 50px;
+  padding: 0 40px;
+  font-size: 16px;
+  border-radius: 12px;
+  background: var(--primary-color);
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 10px 20px rgba(67, 97, 238, 0.15);
 }
 
 /* Responsive */

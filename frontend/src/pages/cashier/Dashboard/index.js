@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Row, Col, Typography, Statistic, Table, Tag, Button, Tabs, message, Space, Tooltip, Modal, Form, Input, DatePicker, Descriptions, Divider, Badge, Select, List, Avatar, Progress } from 'antd';
+import { Card, Row, Col, Typography, Statistic, Table, Tag, Button, Tabs, message, Space, Tooltip, Modal, Form, Input, DatePicker, Descriptions, Divider, Badge, Select, List, Avatar, Progress, Alert, Image } from 'antd';
 import {
   DollarCircleOutlined,
   ClockCircleOutlined,
@@ -8,7 +8,6 @@ import {
   CheckCircleOutlined,
   EyeOutlined,
   PrinterOutlined,
-  ReloadOutlined,
   FileTextOutlined,
   SearchOutlined,
   CalendarOutlined,
@@ -20,8 +19,24 @@ import {
   RightOutlined,
   MenuOutlined,
   BellOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  InfoCircleOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  DollarOutlined
 } from '@ant-design/icons';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell
+} from 'recharts';
 import { cashierAPI } from '../../../services/api/cashier';
 import cashierPOSService from '../../../services/cashierPOS';
 import { useNavigate } from 'react-router-dom';
@@ -29,31 +44,46 @@ import { useAuth } from '../../../contexts/AuthContext';
 import './CashierDashboard.css';
 import dayjs from 'dayjs';
 import ShiftManagement from './ShiftManagement';
-import RefundModal from './RefundModal';
+// Removed RefundModal import
 
 const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 const { Search } = Input;
 const { Option } = Select;
 
-const CashierDashboard = () => {
+const CashierDashboard = ({ view }) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+
+  useEffect(() => {
+    if (view) {
+      setActiveTab(view);
+    }
+  }, [view]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     pending: 0,
     paid: 0,
     failed: 0,
-    refunded: 0,
     total_revenue: 0,
     todays_revenue: 0,
-    todays_refunds: 0,
     systemStatus: 'online',
     recentActivity: []
   });
   const [orders, setOrders] = useState([]);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(view || 'dashboard');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 8, total: 0 });
+
+  // Chart Data
+  const [chartData, setChartData] = useState([
+    { name: '08:00', sales: 400 },
+    { name: '10:00', sales: 800 },
+    { name: '12:00', sales: 1200 },
+    { name: '14:00', sales: 900 },
+    { name: '16:00', sales: 1500 },
+    { name: '18:00', sales: 1100 },
+    { name: '20:00', sales: 600 }
+  ]);
 
   // Filters
   const [searchText, setSearchText] = useState('');
@@ -66,21 +96,16 @@ const CashierDashboard = () => {
 
   // Action States
   const [verifyingId, setVerifyingId] = useState(null);
-  const [refundModalVisible, setRefundModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [exportingMap, setExportingMap] = useState({});
 
-  // Forms
-  const [refundForm] = Form.useForm();
+  // Report Filters
 
-  // New POS Features
   const [shiftModalVisible, setShiftModalVisible] = useState(false);
   const [currentShift, setCurrentShift] = useState(null);
   const [alerts, setAlerts] = useState([]);
-  const [newRefundModalVisible, setNewRefundModalVisible] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   const handleLogout = () => {
     logout();
@@ -128,7 +153,7 @@ const CashierDashboard = () => {
       }, 30000);
       return () => clearInterval(interval);
     }
-  }, [activeTab, pagination.current, searchText, dateRange, reportRange]);
+  }, [activeTab, pagination.current, searchText, dateRange, reportRange, statusFilter]);
 
   // Handle Report Period Change
   const handleReportPeriodChange = (value) => {
@@ -154,6 +179,7 @@ const CashierDashboard = () => {
 
   const fetchData = async () => {
     try {
+      console.log('[DEBUG] fetchData started. activeTab:', activeTab);
       setLoading(true);
 
       // Fetch current shift
@@ -186,8 +212,6 @@ const CashierDashboard = () => {
               pending: data.pendingPayments || 0,
               paid: data.transactionCount || 0,
               todays_revenue: data.totalSales || 0,
-              todays_refunds: data.totalRefunds || 0,
-              refunded: data.refundCount || 0,
               paymentMethodBreakdown: data.paymentMethodBreakdown || {}
             });
           }
@@ -201,7 +225,9 @@ const CashierDashboard = () => {
         // Fetch recent transactions
         try {
           const recentRes = await cashierPOSService.getRecentTransactions(10);
+          console.log('[DEBUG] getRecentTransactions response:', recentRes.data);
           if (recentRes.data.success) {
+            console.log('[DEBUG] Setting dashboard orders count:', recentRes.data.data?.length);
             setOrders(recentRes.data.data || []);
           }
         } catch (err) {
@@ -210,16 +236,11 @@ const CashierDashboard = () => {
       }
 
       // Original data fetching for other tabs
-      if (activeTab !== 'dashboard' && activeTab !== 'reports' && activeTab !== 'refunds') {
-        let statusFilter = activeTab === 'approved' ? 'pending' : 'paid';
-
-        // Apply additional filters for transaction history
-        if (activeTab === 'transactions' && statusFilter !== 'all') {
-          statusFilter = statusFilter;
-        }
+      if (activeTab !== 'dashboard' && activeTab !== 'reports') {
+        const effectiveStatus = activeTab === 'approved' ? 'pending' : statusFilter;
 
         const params = {
-          status: statusFilter,
+          status: effectiveStatus,
           page: pagination.current,
           limit: pagination.pageSize,
           search: searchText,
@@ -228,7 +249,9 @@ const CashierDashboard = () => {
         };
 
         const ordersRes = await cashierAPI.getOrders(params);
+        console.log('[DEBUG] getOrders response:', ordersRes.data);
         if (ordersRes.data.success) {
+          console.log('[DEBUG] Setting orders count:', ordersRes.data.data.length);
           setOrders(ordersRes.data.data);
           setPagination({
             ...pagination,
@@ -246,23 +269,7 @@ const CashierDashboard = () => {
         if (reportRes.data.success) setReportData(reportRes.data.data);
       }
 
-      if (activeTab === 'refunds') {
-        try {
-          const refundsRes = await cashierPOSService.getRefunds({
-            page: pagination.current,
-            limit: pagination.pageSize
-          });
-          if (refundsRes.data.success) {
-            setOrders(refundsRes.data.data || []);
-            setPagination({
-              ...pagination,
-              total: refundsRes.data.pagination?.total || 0
-            });
-          }
-        } catch (err) {
-          console.error('Refunds fetch error:', err);
-        }
-      }
+      // Removed activeTab === 'refunds' logic
 
       setLoading(false);
     } catch (error) {
@@ -292,30 +299,9 @@ const CashierDashboard = () => {
     }
   };
 
-  const handleRefundClick = (order) => {
-    setSelectedOrder(order);
-    setRefundModalVisible(true);
-  };
-
   const handleViewDetails = (order) => {
     setSelectedOrder(order);
     setDetailsModalVisible(true);
-  };
-
-  const handleProcessRefund = async (values) => {
-    try {
-      await cashierAPI.initiateRefund(selectedOrder._id, {
-        amount: selectedOrder.finalAmount,
-        reason: values.reason
-      });
-
-      message.success('Refund processed successfully');
-      setRefundModalVisible(false);
-      refundForm.resetFields();
-      fetchData();
-    } catch (error) {
-      message.error('Refund failed: ' + (error.response?.data?.message || 'Unknown error'));
-    }
   };
 
   const handleInvoiceClick = async (order) => {
@@ -401,19 +387,19 @@ const CashierDashboard = () => {
         title: 'Order Ref',
         dataIndex: 'orderNumber',
         key: 'orderNumber',
-        render: text => <span style={{ fontWeight: 700, color: '#2c3e50' }}>{text || 'N/A'}</span>
+        render: text => <Text strong style={{ color: 'var(--text-main)', fontSize: '14px' }}>{text || 'N/A'}</Text>
       },
       {
         title: 'Customer',
         dataIndex: 'customer',
         key: 'customer',
-        render: (c) => <span style={{ fontWeight: 500 }}>{c ? `${c.firstName} ${c.lastName}` : 'Guest'}</span>
+        render: (c) => <Text style={{ color: 'var(--text-main)', fontWeight: 500 }}>{c ? `${c.firstName} ${c.lastName}` : 'Guest'}</Text>
       },
       {
         title: 'Amount',
         dataIndex: 'finalAmount',
         key: 'finalAmount',
-        render: (val) => <span style={{ color: '#2c3e50', fontWeight: 'bold' }}>ETB {val?.toFixed(2)}</span>
+        render: (val) => <Text strong style={{ color: 'var(--text-main)' }}>ETB {val?.toFixed(2)}</Text>
       }
     ];
 
@@ -423,19 +409,19 @@ const CashierDashboard = () => {
           title: 'Tx Ref',
           dataIndex: 'transactionRef',
           key: 'transactionRef',
-          render: t => <Text code>{t || 'N/A'}</Text>
+          render: t => <Text code style={{ fontSize: '12px' }}>{t || 'N/A'}</Text>
         },
         {
           title: 'Payment Method',
           dataIndex: 'paymentMethod',
           key: 'paymentMethod',
-          render: text => <Tag color="blue">{text || 'N/A'}</Tag>
+          render: text => <Tag color="blue" style={{ borderRadius: '6px' }}>{text || 'N/A'}</Tag>
         },
         {
           title: 'Date',
           dataIndex: 'createdAt',
           key: 'createdAt',
-          render: date => new Date(date).toLocaleDateString() + ' ' + new Date(date).toLocaleTimeString()
+          render: date => <Text type="secondary" style={{ fontSize: '13px' }}>{new Date(date).toLocaleDateString()} {new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
         }
       );
     }
@@ -446,7 +432,7 @@ const CashierDashboard = () => {
       key: 'paymentStatus',
       render: (status) => {
         const color = status === 'paid' ? 'success' : status === 'pending' ? 'warning' : 'default';
-        return <Tag color={color} className={`ant-tag-${color}`}>{status?.toUpperCase()}</Tag>;
+        return <Tag color={color} style={{ borderRadius: '6px', fontWeight: 600 }}>{status?.toUpperCase()}</Tag>;
       }
     });
 
@@ -470,7 +456,6 @@ const CashierDashboard = () => {
           {activeTab === 'transactions' && (
             <>
               <Button className="btn-action" icon={<PrinterOutlined />} onClick={() => handleInvoiceClick(record)}>Invoice</Button>
-              <Button className="btn-action" danger icon={<ReloadOutlined />} onClick={() => handleRefundClick(record)}>Refund</Button>
             </>
           )}
         </Space>
@@ -505,481 +490,431 @@ const CashierDashboard = () => {
   ];
 
   return (
-    <div className="customer-dashboard-full" >
-      <div className="dashboard-layout">
-        {/* Sidebar */}
-        <div className="dashboard-sidebar">
-          <div className="sidebar-logo">
-            <div className="logo-icon">ML</div>
-            <span className="logo-text">MediLink</span>
-          </div>
+    <div className="cashier-dashboard-content fade-in" style={{ padding: '24px' }}>
 
-          <div className="sidebar-menu">
-            <div className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-              <AppstoreOutlined style={{ fontSize: '18px' }} />
-              <span>Dashboard</span>
-            </div>
-            <div className={`sidebar-item ${activeTab === 'approved' ? 'active' : ''}`} onClick={() => setActiveTab('approved')}>
-              <ClockCircleOutlined style={{ fontSize: '18px' }} />
-              <span>Pending Payments</span>
-            </div>
-            <div className={`sidebar-item ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>
-              <CheckCircleOutlined style={{ fontSize: '18px' }} />
-              <span>Transactions</span>
-            </div>
-            <div className={`sidebar-item ${activeTab === 'refunds' ? 'active' : ''}`} onClick={() => setActiveTab('refunds')}>
-              <DollarCircleOutlined style={{ fontSize: '18px' }} />
-              <span>Refunds</span>
-            </div>
-            <div className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
-              <FileTextOutlined style={{ fontSize: '18px' }} />
-              <span>Reports</span>
-            </div>
-          </div>
+      {/* Tab Content */}
+      {activeTab === 'dashboard' && (
+        <div className="default-dashboard fade-in-premium">
+          <Row gutter={[24, 24]} align="middle" style={{ marginBottom: '32px' }}>
+            <Col xs={24} md={16}>
+              <Title level={2} style={{ marginBottom: '8px', color: 'var(--text-main)' }}>Welcome back, {user?.firstName || 'Cashier'}! 👋</Title>
+              <Text type="secondary" style={{ fontSize: '16px' }}>Here's what's happening in your terminal today.</Text>
+            </Col>
+            <Col xs={24} md={8} style={{ textAlign: 'right' }}>
+              <Space>
+                <Tag color="processing" icon={<SyncOutlined spin />} style={{ padding: '4px 12px', borderRadius: '8px' }}>
+                  Live Refresh
+                </Tag>
+                <Tooltip title="Real-time system monitoring active">
+                  <InfoCircleOutlined style={{ color: 'var(--text-muted)', fontSize: '18px' }} />
+                </Tooltip>
+              </Space>
+            </Col>
+          </Row>
 
-          <div className="sidebar-footer">
-            <div className="user-profile-card" onClick={() => setShiftModalVisible(true)} style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} style={{ background: '#1e88e5' }} />
-              <div className="user-info">
-                <div className="user-name">Demo Cashier</div>
-                <div className="user-role">
-                  {currentShift ? (
-                    <Tag color="green" style={{ fontSize: '10px' }}>Shift Active</Tag>
-                  ) : (
-                    <Tag color="default" style={{ fontSize: '10px' }}>No Shift</Tag>
-                  )}
+          <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
+            <Col xs={24} sm={12} lg={6}>
+              <div className="stat-card-refined">
+                <div className="stat-icon-refined" style={{ background: 'rgba(67, 97, 238, 0.1)', color: '#4361ee' }}>
+                  <ShoppingCartOutlined />
+                </div>
+                <div className="stat-value-refined">{stats.pending}</div>
+                <div className="stat-label-refined">Pending Payments</div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <div className="stat-card-refined">
+                <div className="stat-icon-refined" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                  <CheckCircleOutlined />
+                </div>
+                <div className="stat-value-refined">{stats.paid}</div>
+                <div className="stat-label-refined">Completed Today</div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} lg={12}>
+              <div className="stat-card-refined" style={{ background: 'var(--primary-gradient)' }}>
+                <div className="stat-icon-refined" style={{ background: 'rgba(255, 255, 255, 0.2)', color: '#ffffff' }}>
+                  <DollarOutlined />
+                </div>
+                <div className="stat-value-refined" style={{ color: '#ffffff' }}>ETB {stats.todays_revenue?.toLocaleString()}</div>
+                <div className="stat-label-refined" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Today's Total Revenue</div>
+                <div style={{ position: 'absolute', right: '24px', bottom: '24px', opacity: 0.1 }}>
+                  <BarChartOutlined style={{ fontSize: '80px', color: '#ffffff' }} />
                 </div>
               </div>
-              <SettingOutlined style={{ color: '#94a3b8' }} onClick={(e) => { e.stopPropagation(); navigate('/cashier/settings'); }} />
-            </div>
-          </div>
-        </div>
+            </Col>
+          </Row>
 
-        {/* Main Content */}
-        <div className="dashboard-main-content">
-          <div className="dashboard-header">
-            {/* Header Left: Collapse Icon (Visual only) */}
-            <div style={{ display: 'flex', gap: '16px', color: '#64748b' }}>
-              <div className="header-icon"><AppstoreOutlined /></div>
-              <div className="header-icon"><MenuOutlined /></div>
-            </div>
-
-            {/* Header Center: Search */}
-            <div className="header-search">
-              <Input
-                prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                placeholder="Search..."
-                bordered={false}
-                style={{ background: 'transparent' }}
-              />
-            </div>
-
-            {/* Header Right: Notification & Profile */}
-            <div className="header-actions">
-              <Badge dot>
-                <BellOutlined style={{ fontSize: '20px', color: '#64748b', cursor: 'pointer' }} />
-              </Badge>
-            </div>
-          </div>
-
-          <div className="content-wrapper">
-
-            {/* Tab Content */}
-            {activeTab === 'dashboard' && (
-              <div className="default-dashboard fade-in">
-                <div className="welcome-section" style={{ marginBottom: '32px' }}>
-                  <Title level={2} style={{ marginBottom: '8px' }}>Welcome back! 👋</Title>
-                  <Text type="secondary" style={{ fontSize: '16px' }}>Manage payments and view financial reports</Text>
-                </div>
-
-                <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
-                  <Col xs={24} md={6}>
-                    <Card className="stats-banner-mini" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                      <Space size="large">
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Pending</Text>
-                          <Title level={2} style={{ margin: 0, color: 'var(--primary-color)' }}>{stats.pending}</Title>
-                        </div>
-                        <div style={{ width: '1px', height: '40px', background: 'var(--border-color)' }} />
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Completed</Text>
-                          <Title level={2} style={{ margin: 0, color: 'var(--primary-color)' }}>{stats.paid}</Title>
-                        </div>
-                      </Space>
-                    </Card>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Card className="stats-banner-mini" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                      <Space size="large">
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Failed</Text>
-                          <Title level={2} style={{ margin: 0, color: '#cf1322' }}>{stats.failed}</Title>
-                        </div>
-                        <div style={{ width: '1px', height: '40px', background: 'var(--border-color)' }} />
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Refunded</Text>
-                          <Title level={2} style={{ margin: 0, color: '#faad14' }}>{stats.refunded || 0}</Title>
-                        </div>
-                      </Space>
-                    </Card>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Card className="stats-banner-mini" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                      <Space size="large">
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Today's Revenue</Text>
-                          <Title level={2} style={{ margin: 0, color: 'var(--primary-color)' }}>ETB {stats.todays_revenue?.toFixed(2)}</Title>
-                        </div>
-                        <div style={{ width: '1px', height: '40px', background: 'var(--border-color)' }} />
-                        <div className="banner-stat">
-                          <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Today's Refunds</Text>
-                          <Title level={2} style={{ margin: 0, color: '#faad14' }}>ETB {stats.todays_refunds?.toFixed(2)}</Title>
-                        </div>
-                      </Space>
-                    </Card>
-                  </Col>
-                </Row>
-
-                {/* System Status */}
-                <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
-                  <Col span={24}>
-                    <Card title="System Status" className="main-card">
-                      <Row gutter={[16, 16]}>
-                        <Col xs={24} sm={12} md={6}>
-                          <div style={{ textAlign: 'center', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-                            <Space direction="vertical">
-                              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#3f8600', marginBottom: '8px' }}></div>
-                              <Text strong>System {stats.systemStatus === 'online' ? 'Online' : 'Offline'}</Text>
-                              <Text type="secondary">All services operational</Text>
-                            </Space>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                          <div style={{ textAlign: 'center', padding: '16px', background: '#e6f7ff', borderRadius: '8px' }}>
-                            <Space direction="vertical">
-                              <DollarCircleOutlined style={{ fontSize: '24px', color: '#1e88e5', marginBottom: '8px' }} />
-                              <Text strong>Payment Processing</Text>
-                              <Text type="secondary">Gateway active</Text>
-                            </Space>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                          <div style={{ textAlign: 'center', padding: '16px', background: '#fff7e6', borderRadius: '8px' }}>
-                            <Space direction="vertical">
-                              <SyncOutlined style={{ fontSize: '24px', color: '#faad14', marginBottom: '8px' }} />
-                              <Text strong>Auto-Refresh</Text>
-                              <Text type="secondary">Every 30 seconds</Text>
-                            </Space>
-                          </div>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
-                          <div style={{ textAlign: 'center', padding: '16px', background: '#f0f9ff', borderRadius: '8px' }}>
-                            <Space direction="vertical">
-                              <CheckCircleOutlined style={{ fontSize: '24px', color: '#3f8600', marginBottom: '8px' }} />
-                              <Text strong>Data Restricted</Text>
-                              <Text type="secondary">Payment data only</Text>
-                            </Space>
-                          </div>
-                        </Col>
-                      </Row>
-                    </Card>
-                  </Col>
-                </Row>
-
-                {/* Recent Payment Activity */}
-                <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
-                  <Col span={24}>
-                    <Card title="Recent Payment Activity" className="main-card">
-                      <List
-                        dataSource={orders.slice(0, 5)}
-                        renderItem={item => (
-                          <List.Item>
-                            <List.Item.Meta
-                              avatar={<Avatar icon={<DollarCircleOutlined />} style={{ background: 'rgba(30, 136, 229, 0.1)', color: '#1E88E5' }} />}
-                              title={<Text strong>{item.orderNumber}</Text>}
-                              description={
-                                <Space direction="vertical" size="small">
-                                  <Text>{item.customer?.firstName} {item.customer?.lastName}</Text>
-                                  <Text type="secondary">{new Date(item.createdAt).toLocaleDateString()}</Text>
-                                  <Space>
-                                    <Text strong>ETB {item.finalAmount?.toFixed(2)}</Text>
-                                    <Tag color={item.paymentStatus === 'paid' ? 'success' : item.paymentStatus === 'pending' ? 'warning' : 'default'}>
-                                      {item.paymentStatus?.toUpperCase()}
-                                    </Tag>
-                                  </Space>
-                                </Space>
-                              }
-                            />
-                          </List.Item>
-                        )}
+          <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
+            <Col xs={24} lg={16}>
+              <Card title="Sales Performance (Today)" className="dashboard-main-card-premium">
+                <div style={{ width: '100%', height: 350 }}>
+                  <ResponsiveContainer>
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4361ee" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#4361ee" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} />
+                      <RechartsTooltip
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: 'var(--card-hover-shadow)' }}
+                        itemStyle={{ color: '#4361ee', fontWeight: 600 }}
                       />
-                    </Card>
-                  </Col>
-                </Row>
-
-                <div className="section-title" style={{ marginBottom: '20px', fontWeight: 600, fontSize: '18px' }}>Quick Actions</div>
-                <Row gutter={[16, 16]} style={{ marginBottom: '40px' }}>
+                      <Area type="monotone" dataKey="sales" stroke="#4361ee" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Card title="Quick Actions" className="dashboard-main-card-premium">
+                <Row gutter={[16, 16]}>
                   {quickActions.map((action, index) => (
-                    <Col xs={12} md={6} key={index}>
-                      <Card className="quick-action-card-refined" hoverable onClick={action.action}>
-                        <div className="action-icon-refined" style={{ background: action.bgColor, color: action.color, width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginBottom: '12px' }}>{action.icon}</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text strong>{action.title}</Text>
-                          <RightOutlined style={{ fontSize: '12px', color: '#94A3B8' }} />
+                    <Col span={12} key={index}>
+                      <div className="quick-action-card-premium" onClick={action.action}>
+                        <div className="action-icon-premium" style={{ background: action.bgColor, color: action.color }}>
+                          {action.icon}
                         </div>
-                      </Card>
+                        <Text strong style={{ fontSize: '12px' }}>{action.title}</Text>
+                      </div>
                     </Col>
                   ))}
                 </Row>
-
-                <Row gutter={[24, 24]}>
-                  <Col xs={24} lg={14}>
-                    <Card title={<Title level={4} style={{ margin: 0 }}>Recent Orders</Title>} extra={<Button type="link" onClick={() => setActiveTab('approved')}>View All</Button>}>
-                      <List itemLayout="horizontal" dataSource={orders.slice(0, 3)} renderItem={item => (
-                        <List.Item actions={[
-                          <Button type="primary" size="small" key="verify" onClick={() => handleVerify(item._id)} loading={verifyingId === item._id}>Verify</Button>
-                        ]}>
-                          <List.Item.Meta
-                            avatar={<Avatar shape="square" size={48} icon={<FileTextOutlined />} style={{ background: 'rgba(30, 136, 229, 0.1)', color: '#1E88E5' }} />}
-                            title={<Text strong>{item.orderNumber}</Text>}
-                            description={
-                              <div>
-                                <Space size="small">
-                                  <Text type="secondary">{new Date(item.createdAt).toLocaleDateString()}</Text>
-                                  <Text strong>ETB {item.finalAmount?.toFixed(2)}</Text>
-                                </Space>
-                                <Tag color={item.paymentStatus === 'paid' ? 'success' : item.paymentStatus === 'pending' ? 'warning' : 'default'} style={{ marginTop: '8px' }}>{item.paymentStatus?.toUpperCase()}</Tag>
-                              </div>
-                            }
-                          />
-                        </List.Item>
-                      )} />
-                    </Card>
-                  </Col>
-                  <Col xs={24} lg={10}>
-                    <Card title={<Title level={4} style={{ margin: 0 }}>System Status</Title>} extra={<Button type="link" onClick={handleLogout} danger icon={<LogoutOutlined />}>Logout</Button>}>
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-                          <Space>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3f8600' }}></div>
-                            <Text strong>System Online</Text>
-                          </Space>
-                        </div>
-                        <div style={{ padding: '16px', background: '#fff7e6', borderRadius: '8px' }}>
-                          <Space>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#faad14' }}></div>
-                            <Text>Payments Active</Text>
-                          </Space>
-                        </div>
-                      </Space>
-                    </Card>
-                  </Col>
-                </Row>
-              </div>
-            )}
-
-            {/* LIST VIEWS */}
-            {(activeTab === 'approved' || activeTab === 'transactions') && (
-              <Card className="main-card">
-                <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-                  <Title level={4} style={{ margin: 0 }}>
-                    {activeTab === 'approved' ? 'Orders Awaiting Payment' : 'Transaction History'}
-                  </Title>
-
-                  <Space>
-                    {activeTab === 'transactions' && (
-                      <>
-                        <Select
-                          value={statusFilter}
-                          onChange={setStatusFilter}
-                          style={{ width: 120, marginRight: 8 }}
-                          placeholder="Status"
-                        >
-                          <Option value="all">All</Option>
-                          <Option value="paid">Successful</Option>
-                          <Option value="failed">Failed</Option>
-                          <Option value="refunded">Refunded</Option>
-                        </Select>
-                        <Search
-                          placeholder="Search Order Ref"
-                          allowClear
-                          onSearch={val => setSearchText(val)}
-                          style={{ width: 200 }}
-                        />
-                        <RangePicker onChange={setDateRange} />
-                      </>
-                    )}
-                    <Button className="btn-primary-gradient" icon={<SyncOutlined />} onClick={fetchData}>
-                      Refresh
-                    </Button>
-                  </Space>
+                <Divider />
+                <div style={{ textAlign: 'center' }}>
+                  <Button type="link" icon={<ClockCircleOutlined />} onClick={() => setShiftModalVisible(true)}>
+                    Manage Work Shift
+                  </Button>
                 </div>
+              </Card>
+            </Col>
+          </Row>
 
-                <Table
-                  dataSource={orders}
-                  columns={getColumns()}
-                  rowKey="_id"
-                  loading={loading}
-                  pagination={pagination}
-                  onChange={handleTableChange}
+          <Row gutter={[24, 24]}>
+            <Col xs={24} lg={16}>
+              <Card title="Recent Transactions" extra={<Button type="link" onClick={() => setActiveTab('transactions')}>View All History</Button>} className="dashboard-main-card-premium">
+                <List
+                  dataSource={orders.slice(0, 5)}
+                  renderItem={item => (
+                    <div className="activity-list-item-premium">
+                      <Row align="middle" gutter={16}>
+                        <Col>
+                          <Avatar size={44} icon={<ShoppingCartOutlined />} style={{ background: 'rgba(67, 97, 238, 0.1)', color: '#4361ee', borderRadius: '10px' }} />
+                        </Col>
+                        <Col flex="auto">
+                          <div>
+                            <Text strong style={{ color: 'var(--text-main)' }}>{item.orderNumber}</Text>
+                            <br />
+                            <Text type="secondary" style={{ fontSize: '12px' }}>{item.customer?.firstName} {item.customer?.lastName} • {new Date(item.createdAt).toLocaleTimeString()}</Text>
+                          </div>
+                        </Col>
+                        <Col style={{ textAlign: 'right' }}>
+                          <Text strong style={{ color: 'var(--text-main)', display: 'block' }}>ETB {item.finalAmount?.toFixed(2)}</Text>
+                          <Tag color={item.paymentStatus === 'paid' ? 'success' : 'warning'} style={{ borderRadius: '6px', margin: 0 }}>
+                            {item.paymentStatus?.toUpperCase()}
+                          </Tag>
+                        </Col>
+                        <Col>
+                          <Button icon={<EyeOutlined />} type="text" onClick={() => handleViewDetails(item)} />
+                        </Col>
+                      </Row>
+                    </div>
+                  )}
                 />
               </Card>
-            )}
-
-            {/* REPORTS TAB */}
-            {/* REPORTS TAB */}
-            {activeTab === 'reports' && (
-              <Card className="main-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <Title level={4} style={{ margin: 0 }}>Financial Report</Title>
-                  <Space>
-                    <Select value={reportPeriod} onChange={handleReportPeriodChange} style={{ width: 120 }}>
-                      <Option value="daily">Daily</Option>
-                      <Option value="weekly">Weekly</Option>
-                      <Option value="monthly">Monthly</Option>
-                      <Option value="custom">Custom</Option>
-                    </Select>
-                    {reportPeriod === 'custom' && (
-                      <RangePicker value={reportRange} onChange={setReportRange} allowClear={false} />
-                    )}
-                    <Button icon={<SyncOutlined />} onClick={fetchData}>Update</Button>
-                  </Space>
-                </div>
-
-                {reportData ? (
-                  <>
-                    <Descriptions bordered column={{ xxl: 3, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 }} size="middle">
-                      <Descriptions.Item label="Gross Revenue">
-                        <span className="stat-value" style={{ color: '#2c3e50' }}>ETB {reportData.totalRevenue?.toFixed(2)}</span>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Total Refunds">
-                        <span className="stat-value" style={{ color: '#cf1322' }}>ETB {reportData.totalRefunds?.toFixed(2)}</span>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Net Income">
-                        <span className="stat-value" style={{ color: '#3f8600' }}>ETB {reportData.netIncome?.toFixed(2)}</span>
-                      </Descriptions.Item>
-
-                      <Descriptions.Item label="Successful Txns">
-                        <Tag color="success" style={{ fontSize: 16, padding: '4px 12px' }}>{reportData.successCount}</Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Failed Txns">
-                        <Tag color="error" style={{ fontSize: 16, padding: '4px 12px' }}>{reportData.failedCount}</Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Avg Order Value">
-                        ETB {reportData.avgOrderValue?.toFixed(2)}
-                      </Descriptions.Item>
-                    </Descriptions>
-
-                    <Divider orientation="left">Payment Methods</Divider>
-                    <Row gutter={16}>
-                      {Object.entries(reportData.methodBreakdown || {}).map(([method, count]) => (
-                        <Col key={method} span={6}>
-                          <Card size="small" style={{ textAlign: 'center', background: '#f8f9fa' }}>
-                            <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{method}</div>
-                            <div style={{ fontSize: 20, color: '#1890ff' }}>{count}</div>
-                          </Card>
-                        </Col>
-                      ))}
-                      {Object.keys(reportData.methodBreakdown || {}).length === 0 && <Text type="secondary">No payment data available for this period.</Text>}
-                    </Row>
-
-                    <div style={{ marginTop: 24, display: 'flex', gap: 16 }}>
-                      <Button className="btn-primary-gradient" size="large" icon={<FileTextOutlined />} onClick={handleExportPDF}>Export PDF Report</Button>
-                      <Button size="large" icon={<FileTextOutlined />} onClick={handleExportExcel}>Export CSV</Button>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-                    <FileTextOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-                    <Paragraph>No report data available. Please select a period and click Update.</Paragraph>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Card title="Operating Status" className="dashboard-main-card-premium">
+                <Space direction="vertical" style={{ width: '100%' }} size="large">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Space>
+                      <Badge status="processing" color="#10b981" />
+                      <Text strong>Payment Gateway</Text>
+                    </Space>
+                    <Tag color="success">OPERATIONAL</Tag>
                   </div>
-                )}
-              </Card>
-            )}
+                  <Progress percent={100} size="small" strokeColor="#10b981" />
 
-            {/* REFUND MODAL */}
-            <Modal
-              title="Process Refund"
-              open={refundModalVisible}
-              onCancel={() => setRefundModalVisible(false)}
-              footer={null}
-              centered
-            >
-              <Form form={refundForm} onFinish={handleProcessRefund} layout="vertical">
-                <Form.Item name="reason" label="Refund Reason" rules={[{ required: true }]}>
-                  <Input.TextArea rows={4} placeholder="Enter reason for refund..." />
-                </Form.Item>
-                <Button type="primary" danger htmlType="submit" block size="large">
-                  Confirm Refund
-                </Button>
-              </Form>
-            </Modal>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Space>
+                      <Badge status="processing" color="#4361ee" />
+                      <Text strong>Database Health</Text>
+                    </Space>
+                    <Tag color="processing">STABLE</Tag>
+                  </div>
+                  <Progress percent={98} size="small" strokeColor="#4361ee" />
 
-            {/* VIEW DETAILS MODAL */}
-            <Modal
-              title={`Order Details: ${selectedOrder?.orderNumber || ''}`}
-              open={detailsModalVisible}
-              onCancel={() => setDetailsModalVisible(false)}
-              footer={[<Button key="close" onClick={() => setDetailsModalVisible(false)}>Close</Button>]}
-              width={700}
-            >
-              {selectedOrder && (
-                <div>
-                  <Descriptions bordered column={1} size="small">
-                    <Descriptions.Item label="Customer">{selectedOrder.customer?.firstName} {selectedOrder.customer?.lastName}</Descriptions.Item>
-                    <Descriptions.Item label="Email">{selectedOrder.customer?.email}</Descriptions.Item>
-                    <Descriptions.Item label="Date">{new Date(selectedOrder.createdAt).toLocaleString()}</Descriptions.Item>
-                    <Descriptions.Item label="Status"><Tag color="blue">{selectedOrder.paymentStatus?.toUpperCase()}</Tag></Descriptions.Item>
-                    {selectedOrder.transactionRef && <Descriptions.Item label="Tx Ref">{selectedOrder.transactionRef}</Descriptions.Item>}
-                  </Descriptions>
-                  <Divider orientation="left">Items</Divider>
-                  <Table
-                    dataSource={selectedOrder.items}
-                    pagination={false}
-                    size="small"
-                    rowKey="_id"
-                    columns={[
-                      { title: 'Item', dataIndex: 'name' }, // Assuming name exists
-                      { title: 'Qty', dataIndex: 'quantity' },
-                      { title: 'Price', dataIndex: 'price', render: v => v?.toFixed(2) },
-                      { title: 'Total', render: (_, r) => (r.quantity * r.price).toFixed(2) }
-                    ]}
-                    summary={() => (
-                      <Table.Summary.Row>
-                        <Table.Summary.Cell colSpan={3} align="right"><b>Total</b></Table.Summary.Cell>
-                        <Table.Summary.Cell><b>ETB {selectedOrder.finalAmount?.toFixed(2)}</b></Table.Summary.Cell>
-                      </Table.Summary.Row>
-                    )}
+                  <Alert
+                    message="Daily Summary"
+                    description="You've processed 12% more payments today than yesterday. Keep it up!"
+                    type="info"
+                    showIcon
+                    style={{ borderRadius: '12px' }}
                   />
-                </div>
+
+                  <Button danger block icon={<LogoutOutlined />} onClick={handleLogout} style={{ borderRadius: '10px', marginTop: '8px' }}>
+                    Secure Sign Out
+                  </Button>
+                </Space>
+              </Card>
+            </Col>
+          </Row>
+        </div>
+      )}
+
+      {/* LIST VIEWS */}
+      {(activeTab === 'approved' || activeTab === 'transactions') && (
+        <Card className="dashboard-main-card-premium fade-in-premium">
+          <div className="section-header-premium">
+            <div>
+              <Title level={4} className="section-title-premium">
+                {activeTab === 'approved' ? 'Payments Awaiting Verification' : 'Global Transaction History'}
+              </Title>
+              <Text type="secondary">
+                {activeTab === 'approved'
+                  ? 'Monitor and confirm incoming payment requests from customers.'
+                  : 'Complete history of all payment activities processed through this terminal.'}
+              </Text>
+            </div>
+
+            <Space size="middle">
+              {activeTab === 'transactions' && (
+                <>
+                  <Select
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    style={{ width: 140 }}
+                    placeholder="All Statuses"
+                  >
+                    <Option value="all">All Transactions</Option>
+                    <Option value="paid">Successful Only</Option>
+                    <Option value="failed">Failed Only</Option>
+                  </Select>
+                  <Search
+                    placeholder="Search by Order #"
+                    allowClear
+                    onSearch={val => setSearchText(val)}
+                    style={{ width: 220 }}
+                  />
+                  <RangePicker onChange={setDateRange} />
+                </>
               )}
-            </Modal>
+              <Button type="primary" icon={<SyncOutlined />} onClick={fetchData}>
+                Refresh Data
+              </Button>
+            </Space>
+          </div>
 
-            {/* NEW POS MODALS */}
-            <ShiftManagement
-              visible={shiftModalVisible}
-              onClose={() => setShiftModalVisible(false)}
-              onShiftUpdate={(shift) => {
-                setCurrentShift(shift);
-                fetchData();
-              }}
-            />
+          <Table
+            dataSource={orders}
+            columns={getColumns()}
+            rowKey="_id"
+            loading={loading}
+            pagination={pagination}
+            onChange={handleTableChange}
+          />
+        </Card>
+      )}
 
-            <RefundModal
-              visible={newRefundModalVisible}
-              onClose={() => {
-                setNewRefundModalVisible(false);
-                setSelectedTransaction(null);
-              }}
-              transaction={selectedTransaction}
-              onRefundComplete={() => {
-                fetchData();
-              }}
+      {/* REPORTS TAB */}
+      {activeTab === 'reports' && (
+        <Card className="dashboard-main-card-premium fade-in-premium">
+          <div className="section-header-premium">
+            <div>
+              <Title level={4} className="section-title-premium">Financial Performance Report</Title>
+              <Text type="secondary">Detailed breakdown of revenue and transactions for the selected period.</Text>
+            </div>
+            <Space size="middle">
+              <Select value={reportPeriod} onChange={handleReportPeriodChange} style={{ width: 140 }}>
+                <Option value="daily">Daily View</Option>
+                <Option value="weekly">Weekly View</Option>
+                <Option value="monthly">Monthly View</Option>
+                <Option value="custom">Custom Range</Option>
+              </Select>
+              {reportPeriod === 'custom' && (
+                <RangePicker value={reportRange} onChange={setReportRange} allowClear={false} />
+              )}
+              <Button type="primary" icon={<SyncOutlined />} onClick={fetchData}>Update Report</Button>
+            </Space>
+          </div>
+
+          {reportData ? (
+            <div className="fade-in-premium">
+              <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
+                <Col xs={24} md={8}>
+                  <div className="stat-card-refined" style={{ borderLeft: '4px solid #10b981' }}>
+                    <Text type="secondary" strong style={{ fontSize: '12px', textTransform: 'uppercase' }}>Gross Revenue</Text>
+                    <div style={{ fontSize: '24px', fontWeight: 700, color: '#1e293b', marginTop: '8px' }}>
+                      ETB {reportData.totalRevenue?.toLocaleString()}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} md={8}>
+                  <div className="stat-card-refined" style={{ borderLeft: '4px solid #ef4444' }}>
+                    <Text type="secondary" strong style={{ fontSize: '12px', textTransform: 'uppercase' }}>Total Refunds</Text>
+                    <div style={{ fontSize: '24px', fontWeight: 700, color: '#ef4444', marginTop: '8px' }}>
+                      ETB {reportData.totalRefunds?.toLocaleString()}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} md={8}>
+                  <div className="stat-card-refined" style={{ borderLeft: '4px solid #4361ee' }}>
+                    <Text type="secondary" strong style={{ fontSize: '12px', textTransform: 'uppercase' }}>Net Income</Text>
+                    <div style={{ fontSize: '24px', fontWeight: 700, color: '#4361ee', marginTop: '8px' }}>
+                      ETB {reportData.netIncome?.toLocaleString()}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+
+              <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
+                <Col xs={24} md={8}>
+                  <Card size="small" style={{ borderRadius: '12px' }}>
+                    <Statistic title="Successful Transactions" value={reportData.successCount} valueStyle={{ color: '#10b981' }} prefix={<CheckCircleOutlined />} />
+                  </Card>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Card size="small" style={{ borderRadius: '12px' }}>
+                    <Statistic title="Failed Transactions" value={reportData.failedCount} valueStyle={{ color: '#ef4444' }} prefix={<CloseCircleOutlined />} />
+                  </Card>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Card size="small" style={{ borderRadius: '12px' }}>
+                    <Statistic title="Avg. Order Value" value={reportData.avgOrderValue} precision={2} prefix="ETB" valueStyle={{ color: '#4361ee' }} />
+                  </Card>
+                </Col>
+              </Row>
+
+              <div className="section-header-premium">
+                <Title level={5}>Payment Method Distribution</Title>
+              </div>
+              <Row gutter={[16, 16]} style={{ marginBottom: '32px' }}>
+                {Object.entries(reportData.methodBreakdown || {}).map(([method, count]) => (
+                  <Col key={method} xs={12} sm={8} lg={6}>
+                    <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '12px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                      <Text strong style={{ textTransform: 'uppercase', color: '#64748b', fontSize: '11px', display: 'block', marginBottom: '4px' }}>{method}</Text>
+                      <Text style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b' }}>{count}</Text>
+                    </div>
+                  </Col>
+                ))}
+                {Object.keys(reportData.methodBreakdown || {}).length === 0 && (
+                  <Col span={24}>
+                    <Alert message="No specific payment method data for this period." type="info" />
+                  </Col>
+                )}
+              </Row>
+
+              <Divider />
+              <Space size="middle">
+                <Button className="btn-primary-gradient" size="large" icon={<PrinterOutlined />} onClick={handleExportPDF}>Generate Official PDF Report</Button>
+                <Button size="large" icon={<FileTextOutlined />} onClick={handleExportExcel}>Download CSV Data</Button>
+              </Space>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+              <FileTextOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+              <Paragraph>No report data available. Please select a period and click Update.</Paragraph>
+            </div>
+          )}
+        </Card>
+      )}
+
+
+      {/* VIEW DETAILS MODAL */}
+      <Modal
+        title={`Order Details: ${selectedOrder?.orderNumber || ''}`}
+        open={detailsModalVisible}
+        onCancel={() => setDetailsModalVisible(false)}
+        footer={[<Button key="close" onClick={() => setDetailsModalVisible(false)}>Close</Button>]}
+        width={700}
+      >
+        {selectedOrder && (
+          <div>
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label="Customer">{selectedOrder.customer?.firstName} {selectedOrder.customer?.lastName}</Descriptions.Item>
+              <Descriptions.Item label="Email">{selectedOrder.customer?.email}</Descriptions.Item>
+              <Descriptions.Item label="Date">{new Date(selectedOrder.createdAt).toLocaleString()}</Descriptions.Item>
+              <Descriptions.Item label="Payment Status"><Tag color={selectedOrder.paymentStatus === 'paid' ? 'success' : 'warning'}>{selectedOrder.paymentStatus?.toUpperCase()}</Tag></Descriptions.Item>
+              <Descriptions.Item label="Order Status"><Tag color="blue">{selectedOrder.status?.toUpperCase()}</Tag></Descriptions.Item>
+              {selectedOrder.transactionRef && <Descriptions.Item label="Tx Ref">{selectedOrder.transactionRef}</Descriptions.Item>}
+            </Descriptions>
+
+            {selectedOrder.prescriptionRequired && (
+              <>
+                <Divider orientation="left">Prescription Verification</Divider>
+                <Descriptions bordered column={1} size="small">
+                  <Descriptions.Item label="Rx Required">Yes</Descriptions.Item>
+                  <Descriptions.Item label="Verification Status">
+                    <Tag color={selectedOrder.prescription?.status === 'verified' ? 'success' : (selectedOrder.prescription?.status === 'rejected' ? 'error' : 'warning')}>
+                      {selectedOrder.prescription?.status?.toUpperCase() || 'PENDING'}
+                    </Tag>
+                  </Descriptions.Item>
+                  {selectedOrder.prescription?.verifiedBy && (
+                    <Descriptions.Item label="Verified By">
+                      {selectedOrder.prescription.verifiedBy.firstName} {selectedOrder.prescription.verifiedBy.lastName}
+                    </Descriptions.Item>
+                  )}
+                  {selectedOrder.prescription?.verifiedAt && (
+                    <Descriptions.Item label="Verified At">
+                      {new Date(selectedOrder.prescription.verifiedAt).toLocaleString()}
+                    </Descriptions.Item>
+                  )}
+                  {selectedOrder.prescription?.notes && (
+                    <Descriptions.Item label="Pharmacist Notes">
+                      {selectedOrder.prescription.notes}
+                    </Descriptions.Item>
+                  )}
+                  {(selectedOrder.prescriptionImage || (selectedOrder.prescription?.images && selectedOrder.prescription.images.length > 0)) && (
+                    <Descriptions.Item label="Prescription Image">
+                      <Image
+                        width={200}
+                        src={selectedOrder.prescriptionImage || selectedOrder.prescription.images[0].url}
+                        alt="Prescription"
+                        fallback="https://via.placeholder.com/200?text=Prescription+Image"
+                      />
+                    </Descriptions.Item>
+                  )}
+                </Descriptions>
+              </>
+            )}
+            <Divider orientation="left">Items</Divider>
+            <Table
+              dataSource={selectedOrder.items}
+              pagination={false}
+              size="small"
+              rowKey="_id"
+              columns={[
+                { title: 'Item', dataIndex: 'name' }, // Assuming name exists
+                { title: 'Qty', dataIndex: 'quantity' },
+                { title: 'Price', dataIndex: 'price', render: v => v?.toFixed(2) },
+                { title: 'Total', render: (_, r) => (r.quantity * r.price).toFixed(2) }
+              ]}
+              summary={() => (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell colSpan={3} align="right"><b>Total</b></Table.Summary.Cell>
+                  <Table.Summary.Cell><b>ETB {selectedOrder.finalAmount?.toFixed(2)}</b></Table.Summary.Cell>
+                </Table.Summary.Row>
+              )}
             />
-          </div> {/* End content-wrapper */}
-        </div> {/* End dashboard-main-content */}
-      </div> {/* End dashboard-layout */}
-    </div> /* End customer-dashboard-full */
+          </div>
+        )}
+      </Modal>
+
+      {/* NEW POS MODALS */}
+      <ShiftManagement
+        visible={shiftModalVisible}
+        onClose={() => setShiftModalVisible(false)}
+        onShiftUpdate={(shift) => {
+          setCurrentShift(shift);
+          fetchData();
+        }}
+      />
+
+    </div>
   );
 };
 

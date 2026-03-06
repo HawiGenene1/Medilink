@@ -8,16 +8,19 @@ import {
   SafetyOutlined,
   WarningOutlined,
   ArrowUpOutlined,
-  ArrowDownOutlined
+  ArrowDownOutlined,
+  ShoppingCartOutlined
 } from '@ant-design/icons';
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -27,30 +30,68 @@ const AdminDashboard = () => {
     healthScore: 100
   });
 
+  const [userGrowthData, setUserGrowthData] = useState([]);
+  const [revenueData, setRevenueData] = useState([]);
+  const [orderStatusData, setOrderStatusData] = useState([]);
+  const [securityAlerts, setSecurityAlerts] = useState([]);
+
   const fetchStats = async () => {
-    setLoading(true);
     try {
       const response = await api.get('/admin/dashboard/stats');
       if (response.data.success) {
-        setStats(response.data.data.stats);
+        setStats(prev => ({
+          ...prev,
+          ...response.data.data.stats
+        }));
       }
     } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error);
-      message.error('Failed to load real-time statistics');
-    } finally {
-      setLoading(false);
+      console.error('Failed to fetch stats:', error);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const [usersRes, ordersRes, logsRes] = await Promise.all([
+        api.get('/admin/analytics/users?period=30d'),
+        api.get('/admin/analytics/orders?period=30d'),
+        api.get('/admin/audit-logs?limit=5')
+      ]);
+
+      if (usersRes.data.success) {
+        setUserGrowthData(usersRes.data.data.registrationTrends.map(item => ({
+          name: item._id,
+          users: item.count
+        })));
+      }
+
+      if (ordersRes.data.success) {
+        setOrderStatusData(ordersRes.data.data.statusDistribution.map(item => ({
+          name: item._id.toUpperCase(),
+          value: item.count
+        })));
+        setRevenueData(ordersRes.data.data.revenueTrends.map(item => ({
+          name: item._id,
+          revenue: item.revenue
+        })));
+      }
+
+      if (logsRes.data.success) {
+        setSecurityAlerts(logsRes.data.data.logs.map(log => ({
+          id: log._id,
+          type: log.status === 'FAILURE' ? 'error' : 'warning',
+          message: `${log.action} - ${log.user?.email || 'System'}`,
+          time: new Date(log.createdAt).toLocaleString()
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
     }
   };
 
   useEffect(() => {
-    fetchStats();
+    if (typeof fetchStats === 'function') fetchStats();
+    if (typeof fetchAnalytics === 'function') fetchAnalytics();
   }, []);
-
-  // All chart data comes from real-time stats API
-  const userGrowthData = [];
-  const revenueData = [];
-  const orderStatusData = [];
-  const securityAlerts = [];
 
   return (
     <div className="admin-dashboard">
@@ -72,39 +113,49 @@ const AdminDashboard = () => {
           <Card bordered={false} hoverable>
             <Statistic
               title="Total Users"
-              value={stats.totalUsers}
+              value={stats.totalUsers || 0}
               prefix={<UserOutlined />}
               valueStyle={{ color: '#3f8600' }}
               suffix={<span style={{ fontSize: '12px', color: '#3f8600' }}><ArrowUpOutlined /> 12%</span>}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6} xl={5}>
+        <Col xs={24} sm={12} lg={6} xl={4}>
           <Card bordered={false} hoverable>
             <Statistic
               title="Active Pharmacies"
-              value={stats.activePharmacies}
+              value={stats.activePharmacies || 0}
               prefix={<ShopOutlined />}
               valueStyle={{ color: '#1890ff' }}
               suffix={<span style={{ fontSize: '12px', color: '#1890ff' }}><ArrowUpOutlined /> 5%</span>}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6} xl={5}>
+        <Col xs={24} sm={12} lg={6} xl={4}>
+          <Card bordered={false} hoverable>
+            <Statistic
+              title="Total Orders"
+              value={stats.totalOrders || 0}
+              prefix={<ShoppingCartOutlined />}
+              valueStyle={{ color: '#faad14' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6} xl={4}>
           <Card bordered={false} hoverable>
             <Statistic
               title="Orders Today"
-              value={stats.ordersToday}
+              value={stats.ordersToday || 0}
               prefix={<ShoppingOutlined />}
               valueStyle={{ color: '#722ed1' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6} xl={5}>
+        <Col xs={24} sm={12} lg={6} xl={4}>
           <Card bordered={false} hoverable>
             <Statistic
               title="Revenue (Month)"
-              value={stats.revenueMonth}
+              value={stats.revenueMonth || 0}
               precision={2}
               prefix="ETB"
               groupSeparator=","
@@ -114,7 +165,13 @@ const AdminDashboard = () => {
         </Col>
         <Col xs={24} sm={12} lg={24} xl={4}>
           {/* System Alert Summary Widget */}
-          <Card bordered={false} style={{ background: '#fff1f0', borderColor: '#ffa39e' }} bodyStyle={{ padding: '12px' }}>
+          <Card
+            bordered={false}
+            style={{ background: '#fff1f0', borderColor: '#ffa39e', cursor: 'pointer' }}
+            bodyStyle={{ padding: '12px' }}
+            onClick={() => navigate('/admin/audit')}
+            hoverable
+          >
             <Statistic
               title={<span style={{ color: '#cf1322' }}>Critical Alerts</span>}
               value={3}

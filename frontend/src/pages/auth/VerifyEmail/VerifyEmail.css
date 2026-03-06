@@ -12,7 +12,7 @@
 }
 
 .ant-result {
-    background: white;
+    background: var(--bg-card);
     padding: 48px 32px;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);

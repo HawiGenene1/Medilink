@@ -31,6 +31,19 @@ const PaymentStatus = () => {
         }
     }, [orderId, searchParams]);
 
+    useEffect(() => {
+        let interval;
+        if (paymentStatus === 'pending' || !paymentStatus) {
+            interval = setInterval(() => {
+                checkOrderStatus();
+            }, 5000); // Poll every 5 seconds
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [paymentStatus, orderId]);
+
     const verifyPayment = async (txRef, transactionId, status) => {
         try {
             setVerifying(true);
@@ -127,7 +140,16 @@ const PaymentStatus = () => {
                             <Button key="invoice" onClick={() => navigate(`/customer/orders/${orderId}/invoice`)}>
                                 Medilink Invoice
                             </Button>,
-                            <Button type="primary" key="orders" onClick={() => navigate('/customer/orders')}>
+                            <Button
+                                type="primary"
+                                key="location"
+                                onClick={() => navigate(`/customer/orders/${orderId}/set-location`)}
+                                danger
+                                size="middle"
+                            >
+                                Set Delivery Location
+                            </Button>,
+                            <Button key="orders" onClick={() => navigate('/customer/orders')}>
                                 View My Orders
                             </Button>,
                             <Button key="home" onClick={() => navigate('/')}>

@@ -201,7 +201,19 @@ const OrderCheckout = () => {
                     />
                 )}
 
-                {!initializing && (
+                {!initializing && (order.status === 'awaiting_prescription' || order.status === 'awaiting_physical_prescription') && (
+                    <Alert
+                        message="Prescription Verification Pending"
+                        description={order.status === 'awaiting_physical_prescription' 
+                            ? "The pharmacist has requested to see your physical prescription in person. Please bring it to the pharmacy to complete your order."
+                            : "The pharmacy staff needs to verify your prescription before you can proceed with payment. We will notify you once it's approved."}
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 24 }}
+                    />
+                )}
+
+                {!initializing && order.status !== 'awaiting_prescription' && order.status !== 'awaiting_physical_prescription' && (
                     <Alert
                         message="Review Your Order"
                         description="Please review your order details before proceeding to payment."
@@ -314,10 +326,12 @@ const OrderCheckout = () => {
                         size="large"
                         onClick={handleProceedToPayment}
                         loading={initializing}
-                        disabled={initializing}
+                        disabled={initializing || order.status === 'awaiting_prescription' || order.status === 'awaiting_physical_prescription'}
                         style={{ minWidth: 200 }}
                     >
-                        {initializing ? 'Initializing Payment...' : `Proceed to Payment - ETB ${order.finalAmount?.toFixed(2)}`}
+                        {['awaiting_prescription', 'awaiting_physical_prescription'].includes(order.status)
+                            ? (order.status === 'awaiting_physical_prescription' ? 'Awaiting Physical Rx' : 'Awaiting Verification') 
+                            : (initializing ? 'Initializing Payment...' : `Proceed to Payment - ETB ${order.finalAmount?.toFixed(2)}`)}
                     </Button>
                 </div>
             </Card>

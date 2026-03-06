@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Tag, Button, Space, Card, Typography, Modal, Descriptions, Input, Form, message, List, Spin, Alert, Row, Col, Statistic, Select } from 'antd';
 import { SearchOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, FileTextOutlined } from '@ant-design/icons';
+import { BASE_URL } from '../../../services/api';
 import pharmacyAdminService from '../../../services/pharmacyAdminService';
 
 const { Title, Text } = Typography;
@@ -322,9 +323,26 @@ const PharmacyRegistration = () => {
                   bordered
                   dataSource={selectedRequest.documents}
                   renderItem={(doc) => (
-                    <List.Item>
-                      <FileTextOutlined style={{ marginRight: 8 }} />
-                      {doc}
+                    <List.Item
+                      extra={
+                        <Button
+                          type="link"
+                          icon={<EyeOutlined />}
+                          onClick={() => {
+                            const url = typeof doc === 'string' ? doc : doc.url;
+                            const absoluteUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
+                            window.open(absoluteUrl, '_blank');
+                          }}
+                        >
+                          View
+                        </Button>
+                      }
+                    >
+                      <List.Item.Meta
+                        avatar={<FileTextOutlined style={{ fontSize: '20px', color: '#1890ff' }} />}
+                        title={typeof doc === 'string' ? 'Registration Document' : doc.name}
+                        description={typeof doc === 'string' ? 'Pharmacy Attachment' : `${doc.type.toUpperCase()} Certificate`}
+                      />
                     </List.Item>
                   )}
                 />

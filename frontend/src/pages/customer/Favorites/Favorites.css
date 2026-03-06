@@ -15,7 +15,7 @@
     border-radius: 12px;
     overflow: hidden;
     transition: all 0.3s ease;
-    border: 1px solid #f0f0f0;
+    border: 1px solid var(--border-color);
 }
 
 .favorite-medicine-card:hover {
@@ -25,7 +25,7 @@
 
 .fav-card-cover {
     height: 160px;
-    background: #f8fafc;
+    background: var(--bg-main);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -37,14 +37,14 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    background: white !important;
+    background: var(--bg-card) !important;
     border: none !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .favorite-medicine-card .ant-card-actions {
-    background: #fafafa;
-    border-top: 1px solid #f0f0f0;
+    background: var(--bg-soft);
+    border-top: 1px solid var(--border-color);
 }
 
 .favorite-medicine-card .ant-card-actions li:not(:last-child) {

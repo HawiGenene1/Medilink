@@ -18,28 +18,41 @@ import {
     TeamOutlined,
     InfoCircleOutlined
 } from '@ant-design/icons';
+import { pharmacyOwnerAPI } from '../../../services/api/pharmacyOwner';
 
 const { Title, Text, Paragraph } = Typography;
 
 const Analytics = () => {
     const [loading, setLoading] = useState(true);
-
-    // Data for the chart (will be fetched from API in production)
+    const [stats, setStats] = useState({
+        totalRevenue: 0,
+        totalOrders: 0,
+        staffCount: 0
+    });
     const [salesData, setSalesData] = useState([]);
 
     useEffect(() => {
-        // Fetch analytics data
         fetchAnalytics();
     }, []);
 
     const fetchAnalytics = async () => {
         try {
             setLoading(true);
-            // API call would go here
-            // const response = await pharmacyOwnerAPI.getAnalytics();
-            // if (response.data.success) {
-            //     setSalesData(response.data.data);
-            // }
+            const response = await pharmacyOwnerAPI.getAnalytics();
+            if (response.data.success) {
+                const { summary, trends } = response.data.data;
+                setStats(summary);
+                
+                // Format trends for the chart
+                if (trends && trends.salesOverTime) {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const formattedTrends = trends.salesOverTime.map(item => ({
+                        month: months[item._id.month - 1],
+                        sales: item.total
+                    }));
+                    setSalesData(formattedTrends);
+                }
+            }
         } catch (error) {
             console.error('Fetch Analytics Error:', error);
         } finally {
@@ -47,7 +60,7 @@ const Analytics = () => {
         }
     };
 
-    const maxSales = Math.max(...salesData.map(d => d.sales));
+    const maxSales = salesData.length > 0 ? Math.max(...salesData.map(d => d.sales)) : 0;
 
     if (loading) {
         return (
@@ -71,34 +84,34 @@ const Analytics = () => {
             {/* 1. Summary Cards */}
             <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
                 <Col xs={24} sm={8}>
-                    <Card bordered={false} hoverable>
+                    <Card bordered={false} hoverable className="stat-card-premium">
                         <Statistic
                             title={<Space>Total Sales (Monthly) <Tooltip title="Gross revenue for the current calendar month"><InfoCircleOutlined /></Tooltip></Space>}
-                            value={0}
+                            value={stats.totalRevenue || 0}
                             precision={2}
                             prefix={<DollarOutlined />}
                             suffix="ETB"
-                            valueStyle={{ color: '#1890ff' }}
+                            valueStyle={{ color: '#4361ee', fontWeight: '700' }}
                         />
                     </Card>
                 </Col>
                 <Col xs={24} sm={8}>
-                    <Card bordered={false} hoverable>
+                    <Card bordered={false} hoverable className="stat-card-premium">
                         <Statistic
                             title="Total Orders"
-                            value={0}
+                            value={stats.totalOrders || 0}
                             prefix={<ShoppingCartOutlined />}
-                            valueStyle={{ color: '#52c41a' }}
+                            valueStyle={{ color: '#06d6a0', fontWeight: '700' }}
                         />
                     </Card>
                 </Col>
                 <Col xs={24} sm={8}>
-                    <Card bordered={false} hoverable>
+                    <Card bordered={false} hoverable className="stat-card-premium">
                         <Statistic
                             title="Staff Count"
-                            value={0}
+                            value={stats.staffCount || 0}
                             prefix={<TeamOutlined />}
-                            valueStyle={{ color: '#722ed1' }}
+                            valueStyle={{ color: '#722ed1', fontWeight: '700' }}
                         />
                     </Card>
                 </Col>
@@ -108,18 +121,34 @@ const Analytics = () => {
             <Card
                 title={<Space><LineChartOutlined /> Sales Over Time</Space>}
                 bordered={false}
-                style={{ borderRadius: '8px' }}
+                className="chart-card-premium"
+                style={{ borderRadius: '16px', overflow: 'hidden' }}
             >
                 {salesData.length > 0 ? (
-                    <div style={{ padding: '20px 0' }}>
+                    <div style={{ padding: '24px 0' }}>
                         <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'flex-end',
-                            height: '250px',
-                            paddingBottom: '10px',
-                            borderBottom: '1px solid #f0f0f0'
+                            height: '300px',
+                            padding: '0 20px 40px',
+                            position: 'relative',
+                            background: 'rgba(67, 97, 238, 0.02)',
+                            borderRadius: '12px'
                         }}>
+                            {/* Gridlines */}
+                            {[0, 0.25, 0.5, 0.75, 1].map((p) => (
+                                <div key={p} style={{
+                                    position: 'absolute',
+                                    bottom: `${p * 100}%`,
+                                    left: 0,
+                                    right: 0,
+                                    height: '1px',
+                                    background: 'rgba(0,0,0,0.05)',
+                                    zIndex: 0
+                                }} />
+                            ))}
+
                             {salesData.map((data, index) => (
                                 <div key={index} style={{
                                     textAlign: 'center',
@@ -127,29 +156,48 @@ const Analytics = () => {
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
-                                    height: '100%'
+                                    height: '100%',
+                                    position: 'relative',
+                                    zIndex: 1
                                 }}>
                                     <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%', justifyContent: 'center' }}>
                                         <Tooltip title={`ETB ${data.sales.toLocaleString()}`}>
                                             <div style={{
-                                                width: '40%',
-                                                height: `${(data.sales / maxSales) * 100}%`,
-                                                background: 'linear-gradient(180deg, #1890ff 0%, #69c0ff 100%)',
-                                                borderRadius: '4px 4px 0 0',
-                                                transition: 'height 0.3s ease'
-                                            }} />
+                                                width: '50%',
+                                                maxWidth: '60px',
+                                                height: `${maxSales > 0 ? (data.sales / maxSales) * 100 : 5}%`,
+                                                background: 'linear-gradient(180deg, #4361ee 0%, #4cc9f0 100%)',
+                                                borderRadius: '8px 8px 0 0',
+                                                transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                                boxShadow: '0 4px 12px rgba(67, 97, 238, 0.2)',
+                                                cursor: 'pointer'
+                                            }} 
+                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scaleY(1.05)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scaleY(1)'}
+                                            />
                                         </Tooltip>
                                     </div>
-                                    <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px' }}>{data.month}</Text>
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: '-30px',
+                                        width: '100%'
+                                    }}>
+                                        <Text strong style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{data.month}</Text>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                        <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                            <Text type="secondary" italic>Showing sales trends for the last 6 months</Text>
+                        <div style={{ marginTop: '48px', textAlign: 'center' }}>
+                            <Text type="secondary" italic style={{ fontSize: '13px' }}>
+                                <InfoCircleOutlined style={{ marginRight: '6px' }} />
+                                Showing revenue trends for the last 6 months based on verified transactions.
+                            </Text>
                         </div>
                     </div>
                 ) : (
-                    <Empty description="No sales data available to chart" />
+                    <div style={{ padding: '60px 0' }}>
+                        <Empty description="No sales data available to chart" />
+                    </div>
                 )}
             </Card>
 

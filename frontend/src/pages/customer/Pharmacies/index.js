@@ -355,9 +355,9 @@ const Pharmacies = () => {
                                             Try adjusting filters or expanding your radius.
                                         </Text>
 
-                                        <div style={{ marginTop: '24px', textAlign: 'left', background: '#f8f9fa', padding: '16px', borderRadius: '12px', border: '1px solid #eee' }}>
+                                        <div style={{ marginTop: '24px', textAlign: 'left', background: 'var(--bg-main)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                                             <Text strong style={{ fontSize: '13px' }}>Quick Tips:</Text>
-                                            <ul style={{ paddingLeft: '20px', marginTop: '12px', fontSize: '12px', color: '#666', lineHeight: '1.8' }}>
+                                            <ul style={{ paddingLeft: '20px', marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.8' }}>
                                                 <li>Check spelling or try generic names</li>
                                                 <li>Increase radius up to 20km</li>
                                                 <li>Enable GPS for accurate local results</li>

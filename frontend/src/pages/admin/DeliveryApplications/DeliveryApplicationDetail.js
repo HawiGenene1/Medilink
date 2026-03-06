@@ -149,28 +149,50 @@ const DeliveryApplicationDetail = () => {
             <Card title="Vehicle Information" bordered={false} style={{ marginBottom: '16px' }}>
                 <Descriptions bordered column={{ xxl: 4, xl: 3, lg: 3, md: 3, sm: 2, xs: 1 }}>
                     <Descriptions.Item label="Type">{(application.vehicleDetails?.vehicleType || 'N/A').toUpperCase()}</Descriptions.Item>
-                    <Descriptions.Item label="License Plate">{application.vehicleDetails?.licensePlate || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label="Model">{application.vehicleDetails?.model || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label="Year">{application.vehicleDetails?.year || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label="Color">{application.vehicleDetails?.color || 'N/A'}</Descriptions.Item>
+                    {application.vehicleDetails?.licensePlate && <Descriptions.Item label="License Plate">{application.vehicleDetails.licensePlate}</Descriptions.Item>}
+                    {application.vehicleDetails?.model && <Descriptions.Item label="Model">{application.vehicleDetails.model}</Descriptions.Item>}
+                    {application.vehicleDetails?.year && <Descriptions.Item label="Year">{application.vehicleDetails.year}</Descriptions.Item>}
+                    {application.vehicleDetails?.color && <Descriptions.Item label="Color">{application.vehicleDetails.color}</Descriptions.Item>}
                 </Descriptions>
             </Card>
 
             <Card title="Documents" bordered={false}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-                    {application.documents && Object.entries(application.documents).map(([key, value], index) => {
-                        if (!value) return null;
+                    {(() => {
+                        // Gather all documents from different sections
+                        const allDocs = [];
 
-                        const renderDocumentCard = (docPath, docIndex = null) => {
+                        // From documents object
+                        if (application.documents) {
+                            Object.entries(application.documents).forEach(([key, value]) => {
+                                if (value) allDocs.push({ key, value });
+                            });
+                        }
+
+                        // From paymentInfo
+                        if (application.paymentInfo?.chequePhoto) {
+                            allDocs.push({ key: 'CHEQUE PHOTO', value: application.paymentInfo.chequePhoto });
+                        }
+
+                        // From inspection
+                        if (application.inspection?.inspectionPhotos?.length > 0) {
+                            application.inspection.inspectionPhotos.forEach((path, idx) => {
+                                allDocs.push({ key: `INSPECTION PHOTO ${idx + 1}`, value: path });
+                            });
+                        }
+
+                        if (allDocs.length === 0) return <Text type="secondary">No documents uploaded</Text>;
+
+                        const renderDocumentCard = (docPath, title, index) => {
                             if (typeof docPath !== 'string') return null;
                             const fileName = docPath.split('/').pop() || 'Document';
-                            const title = docIndex !== null ? `${key.replace(/([A-Z])/g, ' $1').toUpperCase()} - ${docIndex + 1}` : key.replace(/([A-Z])/g, ' $1').toUpperCase();
+                            const displayTitle = title.replace(/([A-Z])/g, ' $1').toUpperCase();
 
                             return (
                                 <Card
-                                    key={docIndex !== null ? `${index}-${docIndex}` : index}
+                                    key={`${title}-${index}`}
                                     type="inner"
-                                    title={title}
+                                    title={displayTitle}
                                     size="small"
                                 >
                                     <div style={{ textAlign: 'center', padding: '10px' }}>
@@ -189,13 +211,13 @@ const DeliveryApplicationDetail = () => {
                             );
                         };
 
-                        if (Array.isArray(value)) {
-                            return value.map((path, idx) => renderDocumentCard(path, idx));
-                        }
-
-                        return renderDocumentCard(value);
-                    })}
-                    {(!application.documents || Object.keys(application.documents).length === 0) && <Text type="secondary">No documents uploaded</Text>}
+                        return allDocs.map((doc, idx) => {
+                            if (Array.isArray(doc.value)) {
+                                return doc.value.map((path, pIdx) => renderDocumentCard(path, doc.key, `${idx}-${pIdx}`));
+                            }
+                            return renderDocumentCard(doc.value, doc.key, idx);
+                        });
+                    })()}
                 </div>
             </Card>
 

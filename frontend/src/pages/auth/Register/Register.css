@@ -1,47 +1,69 @@
 .register-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-main);
+  padding: 40px 20px;
 }
 
 .register-card {
   width: 500px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
+  max-width: 95vw;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  border-radius: 24px;
+  overflow: hidden;
+  border: none;
+  margin: 0 auto;
 }
 
-.register-card .ant-card-head {
+.register-card .ant-card-body {
+  padding: 0;
+}
+
+.register-form-side {
+  padding: 48px;
+  background: var(--bg-card);
+}
+
+.register-header {
+  margin-bottom: 32px;
   text-align: center;
-  font-size: 24px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 8px 8px 0 0;
 }
 
-.register-card .ant-card-head-title {
-  color: white;
+.register-title {
+  margin-bottom: 8px !important;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.register-subtitle {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.clinical-input {
+  border-radius: 12px;
+  height: 48px;
+  border-color: var(--border-color);
 }
 
 .info-message {
   display: flex;
-  align-items: center;
-  background-color: #f0f7ff;
-  border: 1px solid #91d5ff;
-  border-radius: 4px;
-  padding: 10px 15px;
-  margin-bottom: 16px;
-  color: #1890ff;
+  gap: 12px;
+  padding: 14px;
+  background: var(--info-soft);
+  border-radius: 12px;
+  color: var(--info-color);
+  font-size: 13px;
 }
 
-.info-message .anticon {
-  margin-right: 8px;
-  font-size: 16px;
+.text-secondary {
+  color: #94a3b8;
 }
 
-.info-message span {
-  font-size: 14px;
+@media (max-width: 576px) {
+  .register-form-side {
+    padding: 32px 24px;
+  }
 }

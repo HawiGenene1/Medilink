@@ -3,7 +3,7 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background: #f8fafc;
+    background: var(--bg-main);
     position: relative;
     overflow: hidden;
 }
@@ -18,7 +18,7 @@
 .delivery-info-sheet {
     flex: 3;
     /* ~40% */
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: 32px 32px 0 0;
     box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.1);
     padding: 24px;
@@ -32,7 +32,7 @@
     top: 24px;
     left: 24px;
     z-index: 1001;
-    background: #ffffff !important;
+    background: var(--bg-card) !important;
     border: none !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
@@ -53,7 +53,7 @@
 }
 
 .action-card {
-    background: #f0f7ff;
+    background: var(--info-soft);
     border-radius: 16px;
     padding: 16px;
     margin-bottom: 16px;
@@ -91,9 +91,9 @@
 }
 
 .signature-pad-container {
-    border: 1px solid #d9d9d9;
+    border: 1px solid var(--border-color);
     border-radius: 12px;
-    background: #fff;
+    background: var(--bg-card);
     margin-top: 12px;
     position: relative;
     overflow: hidden;

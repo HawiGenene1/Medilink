@@ -5,6 +5,8 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import './Login.css';
 
+const { Title, Text } = Typography;
+
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
@@ -140,79 +142,83 @@ const Login = () => {
 
   return (
     <div className="login-container">
-      <Card
-        title="Login to MediLink"
-        className="login-card"
-      >
-        <Form
-          name="login"
-          onFinish={onFinish}
-          autoComplete="off"
-          layout="vertical"
-        >
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: 'Please input your email!' },
-              { type: 'email', message: 'Please enter a valid email!' }
-            ]}
-          >
-            <Input
-              prefix={<UserOutlined />}
-              placeholder="Enter your email"
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Password"
-            name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Enter your password"
-              size="large"
-            />
-          </Form.Item>
-
-          <div style={{ textAlign: 'right', marginBottom: '16px' }}>
-            <Link to="/auth/forgot-password" style={{ fontSize: '13px' }}>
-              Forgot password?
-            </Link>
+      <Card className="login-card">
+        <div className="login-form-side">
+          <div className="login-header">
+            <Title level={3} className="login-title">Login</Title>
+            <Text className="login-subtitle">Please enter your credentials to continue</Text>
           </div>
 
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading}
-              block
-              size="large"
+          <Form
+            name="login"
+            onFinish={onFinish}
+            autoComplete="off"
+            layout="vertical"
+          >
+            <Form.Item
+              label="Email"
+              name="email"
+              rules={[
+                { required: true, message: 'Please input your email!' },
+                { type: 'email', message: 'Please enter a valid email!' }
+              ]}
             >
-              Log in
-            </Button>
-          </Form.Item>
+              <Input
+                prefix={<UserOutlined className="text-secondary" />}
+                placeholder="name@example.com"
+                size="large"
+                className="clinical-input"
+              />
+            </Form.Item>
 
-          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-            <Link to="/auth/register">
-              Don't have an account? Register
-            </Link>
-          </div>
+            <Form.Item
+              label="Password"
+              name="password"
+              rules={[{ required: true, message: 'Please input your password!' }]}
+            >
+              <Input.Password
+                prefix={<LockOutlined className="text-secondary" />}
+                placeholder="••••••••"
+                size="large"
+                className="clinical-input"
+              />
+            </Form.Item>
 
-          <div style={{ textAlign: 'center', padding: '12px', borderTop: '1px solid #f1f5f9' }}>
-            <span style={{ color: '#64748b' }}>Want to earn with MediLink? </span>
-            <Link to="/auth/delivery/register" style={{ fontWeight: 600, color: '#1E88E5' }}>
-              Become a Delivery Partner
-            </Link>
-          </div>
-        </Form>
+            <div style={{ textAlign: 'right', marginBottom: '24px' }}>
+              <Link to="/auth/forgot-password" style={{ fontSize: '14px', fontWeight: 500 }}>
+                Forgot password?
+              </Link>
+            </div>
+
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                block
+                size="large"
+                style={{ height: '48px', borderRadius: '12px', fontWeight: 600 }}
+              >
+                Sign In
+              </Button>
+            </Form.Item>
+
+            <div style={{ textAlign: 'center', marginTop: '24px' }}>
+              <Text type="secondary">Don't have an account? </Text>
+              <Link to="/auth/register" style={{ fontWeight: 600 }}>Create Account</Link>
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '32px', padding: '16px', borderRadius: '12px', background: '#f8fafc' }}>
+              <Text type="secondary" style={{ fontSize: '13px' }}>Want to earn with MediLink? </Text>
+              <Link to="/auth/delivery/register" style={{ fontWeight: 600, fontSize: '13px' }}>
+                Become a Partner
+              </Link>
+            </div>
+          </Form>
+        </div>
       </Card>
     </div>
   );
 };
-
-const { Text } = Typography;
 
 export default Login;

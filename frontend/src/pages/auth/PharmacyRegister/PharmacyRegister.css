@@ -4,7 +4,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f0f2f5;
+  background-color: var(--bg-main);
   padding: 20px;
 }
 
@@ -26,16 +26,16 @@
 }
 
 .register-header p {
-  color: #666;
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .form-section {
   margin-bottom: 24px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--bg-soft);
   border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-color);
 }
 
 .form-section h3 {
@@ -43,7 +43,7 @@
   margin-top: 0;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .form-row {
@@ -72,7 +72,7 @@
 }
 
 .login-link {
-  color: #666;
+  color: var(--text-muted);
 }
 
 .login-link a {
@@ -81,7 +81,7 @@
 }
 
 .document-note {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 14px;
   margin-bottom: 16px;
 }

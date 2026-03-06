@@ -14,7 +14,7 @@
 }
 
 .tab-content {
-    background: #ffffff;
+    background: var(--bg-card);
     padding: 24px;
     border-radius: 0 0 16px 16px;
     border: 1px solid var(--border-color);
@@ -38,7 +38,7 @@
 
 /* Pharmacy Selection Items */
 .pharmacy-availability-list {
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: 0 0 16px 16px;
     border: 1px solid var(--border-color);
     border-top: none;
@@ -99,7 +99,7 @@
     justify-content: space-between;
     align-items: baseline;
     padding: 12px;
-    background: #f8fafc;
+    background: var(--bg-main);
     border-radius: 8px;
 }
 
@@ -112,7 +112,7 @@
 .trust-badges {
     margin-top: 24px;
     padding: 16px;
-    background: #f0fdf4;
+    background: var(--success-soft);
     border-radius: 12px;
 }
 

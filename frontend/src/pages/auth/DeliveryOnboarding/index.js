@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import dayjs from 'dayjs';
 import { Steps, Button, Card, Form, Input, Select, DatePicker, Checkbox, Upload, Row, Col, Typography, message, Result, Space, Descriptions } from 'antd';
 import {
     UserOutlined,
@@ -57,9 +58,52 @@ const DeliveryOnboarding = () => {
                 setCurrent(profileData.currentStep - 1);
 
                 // Pre-fill form if data exists
-                if (profileData.currentStep === 2) {
-                    form.setFieldsValue(profileData.personalDetails);
+                if (profileData.personalDetails || profileData.vehicleDetails || profileData.paymentInfo || profileData.documents) {
+                    const formattedValues = {
+                        ...profileData.personalDetails,
+                        ...profileData.vehicleDetails,
+                        ...profileData.paymentInfo,
+                        ...profileData.documents,
+                        type: profileData.vehicleDetails?.vehicleType // Map vehicleType to 'type' for the form
+                    };
+
+                    if (formattedValues.dateOfBirth) {
+                        formattedValues.dateOfBirth = dayjs(formattedValues.dateOfBirth);
+                    }
+
+                    // Format path strings into FileList arrays for AntD Upload
+                    const fileFields = [
+                        'governmentId', 'workEligibility', 'driversLicense',
+                        'vehicleRegistration', 'insuranceProof', 'bicycleOwnership',
+                        'chequePhoto'
+                    ];
+
+                    fileFields.forEach(field => {
+                        if (formattedValues[field] && typeof formattedValues[field] === 'string') {
+                            formattedValues[field] = [{
+                                uid: `-${field}`,
+                                name: formattedValues[field].split('/').pop(),
+                                status: 'done',
+                                url: `http://localhost:5000/${formattedValues[field]}`
+                            }];
+                        }
+                    });
+
+                    // Handle inspectionPhotos array
+                    if (profileData.inspection?.inspectionPhotos) {
+                        formattedValues.inspectionPhotos = profileData.inspection.inspectionPhotos.map((path, idx) => ({
+                            uid: `-inspection-${idx}`,
+                            name: path.split('/').pop(),
+                            status: 'done',
+                            url: `http://localhost:5000/${path}`
+                        }));
+                    }
+
+                    form.setFieldsValue(formattedValues);
                 }
+
+                // Set current step
+                setCurrent(profileData.currentStep - 1);
             }
         } catch (error) {
             console.error('Error fetching status:', error);
@@ -76,13 +120,26 @@ const DeliveryOnboarding = () => {
             formData.append('step', stepNum);
 
             if (values) {
-                // If the values contain file objects (for Step 4, 6, 8)
-                // We'll handle them specifically
-                if ([4, 6, 8].includes(stepNum)) {
+                // Steps that contain files: 
+                // 4: Documents (Identity), 6: Payment Info (Cheque), 7: Inspection Photos
+                const fileSteps = [4, 6, 7];
+
+                if (fileSteps.includes(stepNum)) {
                     Object.keys(values).forEach(key => {
-                        if (values[key] && values[key].fileList) {
-                            values[key].fileList.forEach(file => {
-                                formData.append(key, file.originFileObj);
+                        const val = values[key];
+                        // AntD Upload with valuePropName="fileList" returns an array directly
+                        if (Array.isArray(val)) {
+                            val.forEach(file => {
+                                if (file.originFileObj) {
+                                    formData.append(key, file.originFileObj);
+                                }
+                            });
+                        } else if (val && val.fileList) {
+                            // Fallback for different upload configurations
+                            val.fileList.forEach(file => {
+                                if (file.originFileObj) {
+                                    formData.append(key, file.originFileObj);
+                                }
                             });
                         }
                     });
@@ -98,7 +155,11 @@ const DeliveryOnboarding = () => {
 
             if (response.data.success) {
                 message.success(`Step ${stepNum} completed!`);
-                setCurrent(current + 1);
+
+                // Determine next step
+                let nextStepIndex = current + 1;
+
+                setCurrent(nextStepIndex);
                 setProfile(response.data.data);
             }
         } catch (error) {
@@ -206,7 +267,7 @@ const DeliveryOnboarding = () => {
 
             case 2: // Vehicle Selection
                 return (
-                    <Form layout="vertical" onFinish={next}>
+                    <Form form={form} layout="vertical" onFinish={next}>
                         <Title level={4}>Vehicle Details</Title>
                         <Form.Item label="Delivery Mode" name="type" rules={[{ required: true }]}>
                             <Select size="large" placeholder="Select your vehicle type" onChange={(val) => {
@@ -230,7 +291,7 @@ const DeliveryOnboarding = () => {
                         {/* We'll use a functional check or useWatch if available. Here we verify state driven approach */}
                         {/* Let's grab the value directly from form if profile state lags or initial */}
                         {(() => {
-                            const vType = form.getFieldValue('type') || profile?.vehicleDetails?.type;
+                            const vType = form.getFieldValue('type') || profile?.vehicleDetails?.vehicleType;
                             if (vType === 'bicycle') return null;
 
                             return (
@@ -269,7 +330,7 @@ const DeliveryOnboarding = () => {
 
             case 3: // Document Upload
                 return (
-                    <Form layout="vertical" onFinish={next}>
+                    <Form form={form} layout="vertical" onFinish={next}>
                         <Title level={4}>Identity & Eligibility</Title>
                         <Paragraph>Upload high-quality photos of your documents.</Paragraph>
                         <Form.Item label="Government ID (Passport / National ID)" name="governmentId" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
@@ -280,7 +341,7 @@ const DeliveryOnboarding = () => {
 
                         {/* Conditional Docs for Non-Bicycle */}
                         {(() => {
-                            const vType = profile?.vehicleDetails?.type || form.getFieldValue('type');
+                            const vType = form.getFieldValue('type') || profile?.vehicleDetails?.vehicleType;
                             if (vType === 'bicycle') return null;
 
                             return (
@@ -310,7 +371,7 @@ const DeliveryOnboarding = () => {
 
             case 4: // Background Check
                 return (
-                    <Form layout="vertical" onFinish={next}>
+                    <Form form={form} layout="vertical" onFinish={next}>
                         <Title level={4}>Background Check</Title>
                         <div className="background-info">
                             <SafetyOutlined className="bg-icon" />
@@ -330,7 +391,7 @@ const DeliveryOnboarding = () => {
 
             case 5: // Payment Setup
                 return (
-                    <Form layout="vertical" onFinish={next}>
+                    <Form form={form} layout="vertical" onFinish={next}>
                         <Title level={4}>Bank & Payment Setup</Title>
                         <Form.Item label="Bank Name" name="bankName" rules={[{ required: true }]}>
                             <Select size="large">
@@ -360,22 +421,46 @@ const DeliveryOnboarding = () => {
 
             case 6: // Vehicle Inspection
                 return (
-                    <Form layout="vertical" onFinish={next}>
-                        <Title level={4}>Vehicle Inspection</Title>
-                        <Paragraph>Take clear photos of your vehicle (Front, Side, Interior/Storage area).</Paragraph>
-                        <Form.Item name="inspectionPhotos" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
-                            <Upload
-                                listType="picture-card"
-                                beforeUpload={() => false}
-                                multiple
-                            >
-                                <div style={{ marginTop: 8 }}>
-                                    <CameraOutlined />
-                                    <div style={{ marginTop: 8 }}>Upload Photo</div>
-                                </div>
-                            </Upload>
-                        </Form.Item>
-                        <Button type="primary" htmlType="submit" size="large" block loading={loading}>Submit for Inspection</Button>
+                    <Form form={form} layout="vertical" onFinish={next}>
+                        <Title level={4}>Finalize Application</Title>
+                        {(() => {
+                            const vType = form.getFieldValue('type') || profile?.vehicleDetails?.vehicleType;
+                            if (vType === 'bicycle') {
+                                return (
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <Paragraph>
+                                            Since you are using a <strong>Bicycle</strong>, no formal vehicle inspection is required.
+                                            Please click the button below to submit your application for review.
+                                        </Paragraph>
+                                        <div style={{ display: 'none' }}>
+                                            <Form.Item name="inspectionPhotos" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                                                <Upload />
+                                            </Form.Item>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <>
+                                    <Paragraph>Take clear photos of your vehicle (Front, Side, Interior/Storage area).</Paragraph>
+                                    <Form.Item name="inspectionPhotos" valuePropName="fileList" getValueFromEvent={e => e.fileList}>
+                                        <Upload
+                                            listType="picture-card"
+                                            beforeUpload={() => false}
+                                            multiple
+                                        >
+                                            <div style={{ marginTop: 8 }}>
+                                                <CameraOutlined />
+                                                <div style={{ marginTop: 8 }}>Upload Photo</div>
+                                            </div>
+                                        </Upload>
+                                    </Form.Item>
+                                </>
+                            );
+                        })()}
+                        <Button type="primary" htmlType="submit" size="large" block loading={loading}>
+                            {(form.getFieldValue('type') || profile?.vehicleDetails?.vehicleType) === 'bicycle' ? 'Finalize & Submit Application' : 'Submit for Inspection'}
+                        </Button>
                     </Form>
                 );
 

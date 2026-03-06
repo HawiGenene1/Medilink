@@ -5,7 +5,7 @@
 
 .search-input-premium {
     border-radius: 12px !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid var(--border-color) !important;
     padding: 10px 16px !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
     transition: all 0.3s ease !important;
@@ -19,18 +19,18 @@
 
 .category-select-premium .ant-select-selector {
     border-radius: 12px !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid var(--border-color) !important;
     height: 44px !important;
     padding: 6px 16px !important;
 }
 
 .item-card-premium {
     border-radius: 20px !important;
-    border: 1px solid #f1f5f9 !important;
+    border: 1px solid var(--border-color) !important;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     height: 100%;
-    background: #ffffff;
+    background: var(--bg-card);
 }
 
 .item-card-premium:hover {
@@ -40,14 +40,14 @@
 }
 
 .medicine-image-container {
-    background: #f8fafc;
+    background: var(--bg-soft);
     border-radius: 12px;
     padding: 4px;
-    border: 1px solid #f1f5f9;
+    border: 1px solid var(--border-color);
 }
 
 .favorite-btn {
-    background: rgba(241, 245, 249, 0.8) !important;
+    background: var(--bg-soft) !important;
     border-radius: 50% !important;
     width: 32px !important;
     height: 32px !important;
@@ -57,7 +57,7 @@
 }
 
 .favorite-btn:hover {
-    background: #fff !important;
+    background: var(--bg-card) !important;
     transform: scale(1.1);
 }
 
@@ -97,8 +97,8 @@
 
 /* Ant Design Overrides */
 .item-card-premium .ant-card-actions {
-    background: #fafafa;
-    border-top: 1px solid #f1f5f9;
+    background: var(--bg-soft);
+    border-top: 1px solid var(--border-color);
     border-bottom-left-radius: 20px;
     border-bottom-right-radius: 20px;
 }

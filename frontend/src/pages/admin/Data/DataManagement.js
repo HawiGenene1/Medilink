@@ -1,5 +1,5 @@
-
 import React from 'react';
+import api from '../../../services/api';
 import { Row, Col, Card, Button, Table, Tag, Space, Typography, Upload, message, Alert } from 'antd';
 import {
     CloudDownloadOutlined,
@@ -15,12 +15,67 @@ const { Title, Text } = Typography;
 
 const DataManagement = () => {
 
-    const backups = [
-        { key: 1, date: '2024-01-20 02:00 AM', type: 'Automated', size: '450 MB', status: 'Success' },
-        { key: 2, date: '2024-01-19 02:00 AM', type: 'Automated', size: '448 MB', status: 'Success' },
-        { key: 3, date: '2024-01-18 14:30 PM', type: 'Manual', size: '445 MB', status: 'Success' },
-        { key: 4, date: '2024-01-17 02:00 AM', type: 'Automated', size: '0 MB', status: 'Failed' },
-    ];
+    const [loading, setLoading] = React.useState(false);
+    const [backups, setBackups] = React.useState([]);
+
+    const fetchBackups = async () => {
+        try {
+            const res = await api.get('/admin/data/backups');
+            if (res.data.success) {
+                setBackups(res.data.data.map(b => ({
+                    key: b._id,
+                    date: new Date(b.createdAt).toLocaleString(),
+                    type: b.type === 'manual' ? 'Manual Export' : 'Automated',
+                    size: (b.size / 1024).toFixed(2) + ' KB',
+                    status: b.status === 'success' ? 'Success' : 'Failed'
+                })));
+            }
+        } catch (error) {
+            console.error('Failed to fetch backups');
+        }
+    };
+
+    React.useEffect(() => {
+        fetchBackups();
+    }, []);
+
+    const handleTriggerBackup = async () => {
+        try {
+            setLoading(true);
+            const res = await api.post('/admin/data/backup/trigger');
+            if (res.data.success) {
+                message.success('System backup initiated successfully');
+                fetchBackups();
+            }
+        } catch (error) {
+            message.error('Failed to trigger backup');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleExport = async (type) => {
+        try {
+            setLoading(true);
+            const response = await api.post('/admin/data/export',
+                { type, format: 'csv' },
+                { responseType: 'blob' }
+            );
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${type}_export.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            message.success(`${type} exported successfully`);
+            fetchBackups();
+        } catch (error) {
+            message.error(`Failed to export ${type}`);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const columns = [
         { title: 'Backup Date', dataIndex: 'date', key: 'date' },
@@ -58,7 +113,11 @@ const DataManagement = () => {
 
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
-                    <Card title={<span><HistoryOutlined /> System Backups</span>} extra={<Button type="primary" icon={<DatabaseOutlined />}>Trigger Backup Now</Button>}>
+                    <Card
+                        title={<span><HistoryOutlined /> System Backups</span>}
+                        extra={<Button type="primary" icon={<DatabaseOutlined />} loading={loading} onClick={handleTriggerBackup}>Trigger Backup Now</Button>}
+                        style={{ height: '100%' }}
+                    >
                         <Table
                             columns={columns}
                             dataSource={backups}
@@ -71,9 +130,9 @@ const DataManagement = () => {
                     <Card title="Data Exports" style={{ marginBottom: 24 }}>
                         <Text strong>Select Data Source</Text>
                         <Space direction="vertical" style={{ width: '100%', marginTop: 16 }}>
-                            <Button block icon={<FileExcelOutlined />}>Export All Users (CSV)</Button>
-                            <Button block icon={<FileExcelOutlined />}>Export Pharmacy Registry (CSV)</Button>
-                            <Button block icon={<FilePdfOutlined />}>Download Audit Report (PDF)</Button>
+                            <Button block icon={<FileExcelOutlined />} loading={loading} onClick={() => handleExport('users')}>Export All Users (CSV)</Button>
+                            <Button block icon={<FileExcelOutlined />} loading={loading} onClick={() => handleExport('pharmacies')}>Export Pharmacy Registry (CSV)</Button>
+                            <Button block icon={<FilePdfOutlined />} loading={loading} onClick={() => message.info('Generating PDF Report...')}>Download Audit Report (PDF)</Button>
                         </Space>
                     </Card>
 

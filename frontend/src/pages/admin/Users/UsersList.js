@@ -213,6 +213,26 @@ const UsersList = () => {
         }
     };
 
+    const handleBulkAction = async (action) => {
+        if (selectedRowKeys.length === 0) return;
+
+        try {
+            setLoading(true);
+            const endpoint = action === 'Activate' ? 'enable' : 'disable';
+            await Promise.all(selectedRowKeys.map(id =>
+                api.patch(`/admin/users/${id}/${endpoint}`)
+            ));
+            message.success(`Successfully ${action.toLowerCase()}d ${selectedRowKeys.length} users`);
+            setSelectedRowKeys([]);
+            fetchUsers();
+        } catch (error) {
+            console.error('Bulk action error:', error);
+            message.error('Failed to perform bulk action');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const onSelectChange = (newSelectedRowKeys) => {
         setSelectedRowKeys(newSelectedRowKeys);
     };
@@ -222,9 +242,28 @@ const UsersList = () => {
         onChange: onSelectChange,
     };
 
-    const handleBulkAction = (action) => {
-        message.success(`${action} applied to ${selectedRowKeys.length} users`);
-        setSelectedRowKeys([]);
+    const handleExportCSV = async () => {
+        try {
+            setLoading(true);
+            const response = await api.post('/admin/data/export',
+                { type: 'users', format: 'csv' },
+                { responseType: 'blob' }
+            );
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'users_export.csv');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            message.success('Users exported successfully');
+        } catch (error) {
+            console.error('Export error:', error);
+            message.error('Failed to export users');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -343,13 +382,20 @@ const UsersList = () => {
                         >
                             <Option value="customer">Customer</Option>
                             <Option value="delivery">Delivery</Option>
+                            <Option value="pharmacy_owner">Pharmacy Owner</Option>
                             <Option value="pharmacy_admin">Pharmacy Admin</Option>
+                            <Option value="pharmacist">Pharmacist</Option>
+                            <Option value="technician">Technician</Option>
+                            <Option value="assistant">Assistant</Option>
+                            <Option value="cashier">Cashier</Option>
+                            <Option value="staff">Staff</Option>
+                            <Option value="pharmacy_staff">Pharmacy Staff</Option>
                             <Option value="admin">Admin</Option>
                             <Option value="system_admin">System Admin</Option>
                         </Select>
                         <Select
-                            placeholder="Filter by Status"
-                            style={{ width: 150 }}
+                            placeholder="Status"
+                            style={{ width: 120 }}
                             allowClear
                             value={statusFilter || undefined}
                             onChange={value => setStatusFilter(value || '')}
@@ -357,8 +403,8 @@ const UsersList = () => {
                             <Option value="active">Active</Option>
                             <Option value="pending">Pending</Option>
                             <Option value="suspended">Suspended</Option>
+                            <Option value="rejected">Rejected</Option>
                         </Select>
-                        <Button type="primary" onClick={handleSearch}>Apply</Button>
                     </Space>
 
                     <Space>
@@ -368,7 +414,7 @@ const UsersList = () => {
                                 <Button danger onClick={() => handleBulkAction('Disable')}>Disable</Button>
                             </Space>
                         )}
-                        <Button icon={<ExportOutlined />}>Export CSV</Button>
+                        <Button icon={<ExportOutlined />} onClick={handleExportCSV}>Export CSV</Button>
                     </Space>
                 </div>
 
@@ -384,8 +430,8 @@ const UsersList = () => {
                         showSizeChanger: true
                     }}
                 />
-            </Card>
-        </div>
+            </Card >
+        </div >
     );
 };
 

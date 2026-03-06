@@ -18,14 +18,14 @@
 
 /* Stats Banner */
 .stats-banner-mini {
-    padding: 20px;
-    box-shadow: 0 8px 16px rgba(30, 136, 229, 0.15);
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.1);
 }
 
 .banner-divider {
     width: 1px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--border-color);
 }
 
 /* Quick Action Cards Refined */
@@ -37,7 +37,7 @@
 }
 
 .quick-action-card-refined .ant-card-body {
-    padding: 20px !important;
+    padding: 16px !important;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -50,14 +50,14 @@
 }
 
 .action-icon-refined {
-    width: 64px;
-    height: 64px;
-    border-radius: 14px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 26px;
-    margin-bottom: 16px;
+    font-size: 20px;
+    margin-bottom: 12px;
     transition: all 0.3s ease;
 }
 
@@ -127,7 +127,7 @@
 }
 
 .category-tag {
-    background: #f1f5f9 !important;
+    background: var(--bg-soft) !important;
     color: var(--text-secondary) !important;
     border: none !important;
     border-radius: 4px !important;
@@ -151,7 +151,7 @@
 }
 
 .pharmacy-search-item:hover {
-    background: #ffffff;
+    background: var(--bg-card);
     border-color: var(--primary-color);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
@@ -171,7 +171,7 @@
 
 .map-list-container {
     height: calc(100vh - 300px);
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: 16px;
     border: 1px solid var(--border-color);
     overflow: hidden;
@@ -182,12 +182,12 @@
     width: 400px;
     border-right: 1px solid var(--border-color);
     overflow-y: auto;
-    background: #ffffff;
+    background: var(--bg-card);
 }
 
 .map-side {
     flex: 1;
-    background: #f8fafc;
+    background: var(--bg-main);
     position: relative;
 }
 

@@ -1,7 +1,7 @@
-
-import React, { useState } from 'react';
-import { Table, Card, Tag, Button, Input, DatePicker, Space, Drawer, Typography, Descriptions } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Table, Card, Tag, Button, Input, DatePicker, Space, Drawer, Typography, Descriptions, message } from 'antd';
 import { SearchOutlined, FilterOutlined, EyeOutlined, FileSearchOutlined } from '@ant-design/icons';
+import api from '../../../services/api';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -9,31 +9,74 @@ const { RangePicker } = DatePicker;
 const AuditLogs = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [selectedLog, setSelectedLog] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [logs, setLogs] = useState([]);
+    const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
+    const [search, setSearch] = useState('');
 
-    // All audit logs loaded from database
-    const logs = [];
+    const fetchLogs = async () => {
+        setLoading(true);
+        try {
+            const params = {
+                page: pagination.current,
+                limit: pagination.pageSize,
+                action: search || undefined
+            };
+            const response = await api.get('/admin/audit-logs', { params });
+            if (response.data.success) {
+                setLogs(response.data.data.logs);
+                setPagination(prev => ({ ...prev, total: response.data.data.pagination.total }));
+            }
+        } catch (error) {
+            console.error('Failed to fetch logs:', error);
+            message.error('Failed to load audit logs');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLogs();
+    }, [pagination.current, pagination.pageSize]);
+
+    const handleSearch = () => {
+        setPagination(prev => ({ ...prev, current: 1 }));
+        fetchLogs();
+    };
 
     const columns = [
-        { title: 'Timestamp', dataIndex: 'timestamp', key: 'timestamp', width: 180 },
+        {
+            title: 'Timestamp',
+            dataIndex: 'createdAt',
+            key: 'timestamp',
+            width: 180,
+            render: date => new Date(date).toLocaleString()
+        },
         {
             title: 'Action',
             dataIndex: 'action',
             key: 'action',
             render: action => {
                 let color = 'blue';
-                if (action === 'DELETE') color = 'red';
-                if (action === 'CREATE') color = 'green';
+                if (action?.includes('DELETE')) color = 'red';
+                if (action?.includes('CREATE')) color = 'green';
+                if (action?.includes('FAILED')) color = 'orange';
                 return <Tag color={color}>{action}</Tag>;
             }
         },
-        { title: 'Actor', dataIndex: 'actor', key: 'actor' },
-        { title: 'Resource', dataIndex: 'resource', key: 'resource' },
-        { title: 'IP Address', dataIndex: 'ip', key: 'ip' },
+        {
+            title: 'Actor',
+            dataIndex: 'user',
+            key: 'actor',
+            render: user => user ? `${user.name || user.email}` : 'System'
+        },
+        { title: 'Resource', dataIndex: 'entityType', key: 'resource' },
+        { title: 'IP Address', dataIndex: 'ipAddress', key: 'ip' },
         {
             title: 'Status',
             dataIndex: 'status',
             key: 'status',
-            render: status => <Tag color={status === 'Success' ? 'success' : 'error'}>{status}</Tag>
+            render: status => <Tag color={status === 'SUCCESS' ? 'success' : 'error'}>{status}</Tag>
         },
         {
             title: 'Details',
@@ -59,16 +102,28 @@ const AuditLogs = () => {
 
             <Card bordered={false}>
                 <div style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <Input placeholder="Search by Actor or Resource" prefix={<SearchOutlined />} style={{ width: 250 }} />
+                    <Input
+                        placeholder="Search by Action (e.g. LOGIN)"
+                        prefix={<SearchOutlined />}
+                        style={{ width: 250 }}
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        onPressEnter={handleSearch}
+                    />
                     <RangePicker />
-                    <Button icon={<FilterOutlined />}>Filter Action</Button>
+                    <Button icon={<FilterOutlined />} onClick={handleSearch}>Apply Filters</Button>
                     <Button type="primary" icon={<FileSearchOutlined />}>Export Report</Button>
                 </div>
 
                 <Table
                     columns={columns}
                     dataSource={logs}
-                    pagination={{ pageSize: 10 }}
+                    loading={loading}
+                    pagination={{
+                        ...pagination,
+                        onChange: (page, pageSize) => setPagination(prev => ({ ...prev, current: page, pageSize }))
+                    }}
+                    rowKey="_id"
                     size="middle"
                 />
             </Card>
@@ -83,26 +138,22 @@ const AuditLogs = () => {
                 {selectedLog && (
                     <div className="log-detail-content">
                         <Descriptions title="Transaction Meta" bordered column={1} size="small">
-                            <Descriptions.Item label="Transaction ID">LOG-{selectedLog.key}99823</Descriptions.Item>
-                            <Descriptions.Item label="Timestamp">{selectedLog.timestamp}</Descriptions.Item>
-                            <Descriptions.Item label="Actor">{selectedLog.actor}</Descriptions.Item>
+                            <Descriptions.Item label="Transaction ID">LOG-{selectedLog._id?.substring(selectedLog._id.length - 6).toUpperCase()}</Descriptions.Item>
+                            <Descriptions.Item label="Timestamp">{new Date(selectedLog.createdAt).toLocaleString()}</Descriptions.Item>
+                            <Descriptions.Item label="Actor">{selectedLog.user?.name || selectedLog.user?.email || 'System'}</Descriptions.Item>
                             <Descriptions.Item label="Status">{selectedLog.status}</Descriptions.Item>
-                            <Descriptions.Item label="IP Origin">{selectedLog.ip}</Descriptions.Item>
+                            <Descriptions.Item label="IP Origin">{selectedLog.ipAddress}</Descriptions.Item>
                         </Descriptions>
 
                         <div style={{ marginTop: 24 }}>
                             <Text strong>Payload Change (Diff)</Text>
-                            <div style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, marginTop: 8, fontFamily: 'monospace', fontSize: 12 }}>
-                                {`{
-  "resource": "${selectedLog.resource}",
-  "changes": {
-    "status": {
-      "before": "PENDING",
-      "after": "APPROVED"
-    },
-    "updated_by": "admin_user"
-  }
-}`}
+                            <div style={{ background: '#1e1e1e', color: '#d4d4d4', padding: 12, borderRadius: 6, marginTop: 8, fontFamily: 'monospace', fontSize: 12, overflowX: 'auto' }}>
+                                {JSON.stringify({
+                                    entityType: selectedLog.entityType,
+                                    entityId: selectedLog.entityId,
+                                    description: selectedLog.description,
+                                    details: selectedLog.details
+                                }, null, 2)}
                             </div>
                         </div>
                     </div>

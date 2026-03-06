@@ -98,6 +98,7 @@ const OrderManagement = () => {
     const getStatusTag = (status) => {
         const map = {
             awaiting_prescription: { color: 'warning', text: 'NEEDS VERIFICATION' },
+            verified: { color: 'blue', text: 'VERIFIED' },
             awaiting_physical_prescription: { color: 'orange', text: 'AWAITING PHYSICAL RX' },
             pending: { color: 'gold', text: 'PENDING' },
             processing: { color: 'blue', text: 'PREPARING' },
@@ -171,15 +172,15 @@ const OrderManagement = () => {
             align: 'right',
             render: (_, record) => (
                 <Space>
-                    <Button icon={<EyeOutlined />} onClick={() => { setSelectedOrder(record); setDetailVisible(true); }} className="btn-modern-secondary">Details</Button>
+                    <Button icon={<EyeOutlined />} onClick={() => { setSelectedOrder(record); setDetailVisible(true); }} className="btn-compact-secondary" size="small">Details</Button>
                     {canProcess && (record.status === 'awaiting_prescription' || record.status === 'awaiting_physical_prescription' || (record.status === 'pending' && record.prescriptionRequired)) && (
-                        <Button type="primary" size="small" className="btn-process-gradient" onClick={() => { setSelectedOrder(record); setDetailVisible(true); }}>Review Rx</Button>
+                        <Button type="primary" size="small" className="btn-compact-action" onClick={() => { setSelectedOrder(record); setDetailVisible(true); }}>Review Rx</Button>
                     )}
-                    {canProcess && record.status === 'pending' && !record.prescriptionRequired && (
-                        <Button type="primary" size="small" className="btn-process-gradient" onClick={() => handleUpdateStatus(record._id, 'processing')}>Start Preparing</Button>
+                    {canProcess && (record.status === 'pending' || record.status === 'verified') && !record.prescriptionRequired && (
+                        <Button type="primary" size="small" className="btn-compact-action" onClick={() => handleUpdateStatus(record._id, 'processing')}>Start Preparing</Button>
                     )}
                     {canProcess && record.status === 'processing' && (
-                        <Button type="primary" size="small" className="btn-process-gradient" onClick={() => handleUpdateStatus(record._id, 'ready_for_pickup')}>Mark Ready</Button>
+                        <Button type="primary" size="small" className="btn-compact-action" onClick={() => handleUpdateStatus(record._id, 'ready_for_pickup')}>Mark Ready</Button>
                     )}
                 </Space>
             )
@@ -318,19 +319,19 @@ const OrderManagement = () => {
 
                         <div style={{ marginTop: 32, textAlign: 'right', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
                             <Space size="middle">
-                                <Button onClick={() => setDetailVisible(false)} size="large" style={{ borderRadius: '8px' }}>Close</Button>
+                                <Button onClick={() => setDetailVisible(false)} size="small" className="btn-compact-secondary">Close</Button>
                                 {canProcess && (selectedOrder.status === 'awaiting_prescription' || selectedOrder.status === 'awaiting_physical_prescription' || (selectedOrder.status === 'pending' && selectedOrder.prescriptionRequired)) && (
                                     <Space>
-                                        <Button onClick={() => handleRequestPhysicalRx(selectedOrder._id)} size="large">Request Physical</Button>
-                                        <Button danger onClick={() => handleVerifyPrescription(selectedOrder._id, false)} size="large">Reject</Button>
-                                        <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleVerifyPrescription(selectedOrder._id, true)} size="large" className="btn-process-gradient">Approve</Button>
+                                        <Button onClick={() => handleRequestPhysicalRx(selectedOrder._id)} size="small" className="btn-compact-secondary">Request Physical</Button>
+                                        <Button danger onClick={() => handleVerifyPrescription(selectedOrder._id, false)} size="small" style={{ borderRadius: '6px' }}>Reject</Button>
+                                        <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleVerifyPrescription(selectedOrder._id, true)} size="small" className="btn-compact-action">Approve</Button>
                                     </Space>
                                 )}
-                                {canProcess && selectedOrder.status === 'pending' && (
-                                    <Button type="primary" size="large" className="btn-process-gradient" onClick={() => handleUpdateStatus(selectedOrder._id, 'processing')}>Start Preparing</Button>
+                                {canProcess && (selectedOrder.status === 'pending' || selectedOrder.status === 'verified') && (
+                                    <Button type="primary" size="small" className="btn-process-gradient" style={{ height: '32px', borderRadius: '8px' }} onClick={() => handleUpdateStatus(selectedOrder._id, 'processing')}>Start Preparing</Button>
                                 )}
                                 {canProcess && selectedOrder.status === 'processing' && (
-                                    <Button type="primary" icon={<CheckCircleOutlined />} size="large" className="btn-process-gradient" onClick={() => handleUpdateStatus(selectedOrder._id, 'ready_for_pickup')}>Mark Ready</Button>
+                                    <Button type="primary" icon={<CheckCircleOutlined />} size="small" className="btn-process-gradient" style={{ height: '32px', borderRadius: '8px' }} onClick={() => handleUpdateStatus(selectedOrder._id, 'ready_for_pickup')}>Mark Ready</Button>
                                 )}
                             </Space>
                         </div>

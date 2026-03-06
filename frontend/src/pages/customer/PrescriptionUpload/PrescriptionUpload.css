@@ -1,6 +1,6 @@
 .prescription-upload-container {
   padding: 24px;
-  background: #f0f2f5;
+  background: var(--bg-main);
   min-height: 100vh;
 }
 
@@ -14,7 +14,7 @@
   text-align: center;
   margin-bottom: 32px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .upload-header h3 {
@@ -27,15 +27,15 @@
 }
 
 .upload-dragger {
-  border: 2px dashed #d9d9d9 !important;
+  border: 2px dashed var(--border-color) !important;
   border-radius: 8px !important;
-  background: #fafafa !important;
+  background: var(--bg-soft) !important;
   transition: all 0.3s ease;
 }
 
 .upload-dragger:hover {
   border-color: #1890ff !important;
-  background: #f0f8ff !important;
+  background: var(--primary-soft) !important;
 }
 
 .upload-dragger .ant-upload-drag-icon {
@@ -45,20 +45,20 @@
 .upload-dragger .ant-upload-text {
   font-size: 16px;
   font-weight: 500;
-  color: #262626;
+  color: var(--text-main);
   margin-bottom: 8px;
 }
 
 .upload-dragger .ant-upload-hint {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--text-secondary);
 }
 
 .uploaded-file-preview {
   margin-top: 16px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: #f9f9f9;
+  background: var(--bg-soft);
 }
 
 .file-info {
@@ -69,8 +69,8 @@
 }
 
 .upload-tips {
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
+  background: var(--success-soft);
+  border: 1px solid var(--success-color);
   border-radius: 6px;
   padding: 16px;
   margin-top: 24px;
@@ -195,8 +195,8 @@
 }
 
 .upload-card .ant-alert-info {
-  background-color: #e6f7ff;
-  border-color: #91d5ff;
+  background-color: var(--info-soft);
+  border-color: var(--info-color);
 }
 
 .upload-card .ant-alert-info .ant-alert-icon {

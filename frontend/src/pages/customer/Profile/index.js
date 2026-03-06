@@ -304,7 +304,7 @@ const Profile = () => {
               <Avatar
                 size={100}
                 icon={<UserOutlined />}
-                src={user?.avatar ? `http://localhost:5001${user.avatar}` : null}
+                src={user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `http://localhost:5000${user.avatar}?t=${new Date().getTime()}`) : null}
                 style={{ backgroundColor: '#4361ee', border: '4px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
               <Button

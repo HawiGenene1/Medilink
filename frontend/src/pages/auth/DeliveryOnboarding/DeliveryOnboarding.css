@@ -1,6 +1,6 @@
 .onboarding-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+    background: var(--bg-main);
     padding: 40px 20px;
     display: flex;
     justify-content: center;
@@ -24,14 +24,14 @@
 }
 
 .step-content-wrapper {
-    background: #ffffff;
+    background: var(--bg-card);
     padding: 24px;
     border-radius: 16px;
-    border: 1px solid #f0f0f0;
+    border: 1px solid var(--border-color);
 }
 
 .background-info {
-    background: #f0f7ff;
+    background: var(--info-soft);
     padding: 24px;
     border-radius: 12px;
     margin-bottom: 24px;
@@ -63,7 +63,7 @@
 }
 
 .mini-feature {
-    background: #f8fafc;
+    background: var(--bg-main);
     border-radius: 12px;
     height: 100%;
     display: flex;
@@ -81,7 +81,7 @@
 
 .ant-form-item-label>label {
     font-weight: 600;
-    color: #475569;
+    color: var(--text-secondary);
 }
 
 .ant-btn-primary {

@@ -1,6 +1,6 @@
 /* Order Management Modern Styles */
 .order-management-container {
-    background: #f8fafc;
+    background: var(--bg-main);
     min-height: 100vh;
     padding: 24px;
 }
@@ -13,22 +13,22 @@
 .order-table-card {
     border-radius: 16px !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
-    border: 1px solid #f1f5f9 !important;
+    border: 1px solid var(--border-color) !important;
     overflow: hidden;
 }
 
 .order-mgmt-table .ant-table-thead > tr > th {
-    background: #fdfdfd !important;
+    background: var(--bg-soft) !important;
     font-weight: 600 !important;
     color: #64748b !important;
     text-transform: uppercase;
     font-size: 12px;
     letter-spacing: 0.5px;
-    border-bottom: 1px solid #f1f5f9 !important;
+    border-bottom: 1px solid var(--border-color) !important;
 }
 
 .order-mgmt-table .ant-table-row:hover > td {
-    background: #f8fafc !important;
+    background: var(--bg-main) !important;
 }
 
 .btn-process-gradient {
@@ -40,10 +40,26 @@
     transition: all 0.3s ease !important;
 }
 
-.btn-process-gradient:hover {
-    box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3) !important;
-    transform: translateY(-1px);
-    opacity: 0.95;
+.btn-compact-action {
+    background: #1e88e5 !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 0 12px !important;
+    height: 28px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: white !important;
+}
+
+.btn-compact-secondary {
+    background: var(--bg-soft) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 0 10px !important;
+    height: 28px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: #475569 !important;
 }
 
 .order-detail-modal .ant-modal-content {

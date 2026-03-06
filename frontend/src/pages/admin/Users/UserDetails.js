@@ -1,13 +1,13 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Row, Col, Card, Avatar, Button, Tabs, Descriptions,
     Tag, Timeline, Divider, Typography, message, Alert,
-    Modal, Input
+    Modal, Input, Form, Space
 } from 'antd';
 import {
     UserOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined,
-    UnorderedListOutlined, SafetyCertificateOutlined, HistoryOutlined, KeyOutlined
+    UnorderedListOutlined, SafetyCertificateOutlined, HistoryOutlined, KeyOutlined,
+    EditOutlined, SaveOutlined, CloseOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
@@ -19,6 +19,10 @@ const UserDetails = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
+    const [rawUser, setRawUser] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [saveLoading, setSaveLoading] = useState(false);
+    const [form] = Form.useForm();
 
     const fetchUser = async () => {
         setLoading(true);
@@ -26,7 +30,10 @@ const UserDetails = () => {
             const response = await api.get(`/admin/users/${id}`);
             if (response.data.success) {
                 const userData = response.data.data;
+                setRawUser(userData);
                 setUser({
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
                     name: `${userData.firstName} ${userData.lastName}`,
                     email: userData.email,
                     phone: userData.phone || 'N/A',
@@ -35,7 +42,14 @@ const UserDetails = () => {
                     location: userData.address ? `${userData.address.city}, ${userData.address.state}` : 'N/A',
                     avatar: userData.avatar,
                     createdAt: userData.createdAt,
-                    lastLogin: userData.lastLogin
+                    lastLogin: userData.lastLogin,
+                    isActive: userData.isActive !== false
+                });
+                form.setFieldsValue({
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
+                    email: userData.email,
+                    phone: userData.phone
                 });
             }
         } catch (error) {
@@ -46,22 +60,132 @@ const UserDetails = () => {
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         fetchUser();
     }, [id]);
+
+    const handleSaveProfile = async (values) => {
+        setSaveLoading(true);
+        try {
+            const res = await api.put(`/admin/users/${id}`, values);
+            if (res.data.success) {
+                message.success('User profile updated successfully');
+                setIsEditing(false);
+                fetchUser();
+            }
+        } catch (error) {
+            console.error('Save profile error:', error);
+            message.error(error.response?.data?.message || 'Failed to update profile');
+        } finally {
+            setSaveLoading(false);
+        }
+    };
 
     if (loading) return <Card loading />;
     if (!user) return <Alert message="User not found" type="error" />;
 
     const ProfileTab = () => (
-        <Descriptions title="Personal Information" bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
-            <Descriptions.Item label="Full Name">{user.name}</Descriptions.Item>
-            <Descriptions.Item label="Email">{user.email}</Descriptions.Item>
-            <Descriptions.Item label="Phone Number">{user.phone}</Descriptions.Item>
-            <Descriptions.Item label="Location">{user.location}</Descriptions.Item>
-            <Descriptions.Item label="Registered Date">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</Descriptions.Item>
-            <Descriptions.Item label="Last Login">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</Descriptions.Item>
-        </Descriptions>
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Title level={5} style={{ margin: 0 }}>Personal Information</Title>
+                {!isEditing ? (
+                    <Button
+                        type="primary"
+                        ghost
+                        icon={<EditOutlined />}
+                        onClick={() => setIsEditing(true)}
+                    >
+                        Edit Profile
+                    </Button>
+                ) : (
+                    <Space>
+                        <Button
+                            icon={<CloseOutlined />}
+                            onClick={() => {
+                                setIsEditing(false);
+                                form.resetFields();
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="primary"
+                            icon={<SaveOutlined />}
+                            loading={saveLoading}
+                            onClick={() => form.submit()}
+                        >
+                            Save Changes
+                        </Button>
+                    </Space>
+                )}
+            </div>
+
+            {isEditing ? (
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleSaveProfile}
+                    initialValues={{
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        phone: user.phone === 'N/A' ? '' : user.phone
+                    }}
+                >
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="firstName"
+                                label="First Name"
+                                rules={[{ required: true, message: 'Please enter first name' }]}
+                            >
+                                <Input />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="lastName"
+                                label="Last Name"
+                                rules={[{ required: true, message: 'Please enter last name' }]}
+                            >
+                                <Input />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="email"
+                                label="Email Address"
+                                rules={[
+                                    { required: true, message: 'Please enter email' },
+                                    { type: 'email', message: 'Please enter a valid email' }
+                                ]}
+                            >
+                                <Input />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="phone"
+                                label="Phone Number"
+                            >
+                                <Input />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                </Form>
+            ) : (
+                <Descriptions bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
+                    <Descriptions.Item label="Full Name">{user.name}</Descriptions.Item>
+                    <Descriptions.Item label="Email">{user.email}</Descriptions.Item>
+                    <Descriptions.Item label="Phone Number">{user.phone}</Descriptions.Item>
+                    <Descriptions.Item label="Location">{user.location}</Descriptions.Item>
+                    <Descriptions.Item label="Registered Date">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Last Login">{user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</Descriptions.Item>
+                </Descriptions>
+            )}
+        </div>
     );
 
     const toggleStatus = async () => {
@@ -175,7 +299,9 @@ const UserDetails = () => {
                         <Title level={4} style={{ marginBottom: 4 }}>{user.name}</Title>
                         <Text type="secondary">{user.role}</Text>
                         <br />
-                        <Tag color="success" style={{ marginTop: 8 }}>{user.status}</Tag>
+                        <Tag color={user.isActive ? "success" : "error"} style={{ marginTop: 8 }}>
+                            {user.isActive ? "ACTIVE" : "DISABLED"}
+                        </Tag>
 
                         <Divider />
 

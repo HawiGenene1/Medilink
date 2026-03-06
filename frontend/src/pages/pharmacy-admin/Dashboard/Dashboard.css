@@ -19,9 +19,9 @@
 /* Stats Banner with Divider */
 .stats-banner-mini {
     padding: 24px;
-    background: #ffffff;
+    background: var(--bg-card);
     border-radius: 16px;
-    border: 1px solid #f0f0f0;
+    border: 1px solid var(--border-color);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
@@ -33,15 +33,15 @@
 .banner-divider {
     width: 1px;
     height: 48px;
-    background: #f0f0f0;
+    background: var(--border-color);
 }
 
 /* Quick Action Cards */
 .quick-action-card-refined {
     border-radius: 16px !important;
-    border: 1px solid #f0f0f0 !important;
+    border: 1px solid var(--border-color) !important;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    background: #fff !important;
+    background: var(--bg-card) !important;
 }
 
 .quick-action-card-refined:hover {
@@ -64,13 +64,13 @@
 /* List/Table Styles */
 .dashboard-card {
     border-radius: 16px !important;
-    border: 1px solid #f0f0f0 !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--card-shadow) !important;
 }
 
 .dashboard-list-item {
     padding: 16px 0 !important;
-    border-bottom: 1px solid #f5f5f5 !important;
+    border-bottom: 1px solid var(--border-color) !important;
 }
 
 .dashboard-list-item:last-child {

@@ -39,7 +39,8 @@
 
 .ant-table-cell {
     white-space: nowrap !important;
-    padding: 12px 16px !important;
+    padding: 10px 12px !important;
     text-overflow: ellipsis;
     overflow: hidden;
+    font-size: 14px;
 }

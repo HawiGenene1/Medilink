@@ -97,8 +97,12 @@ const PharmacyDetail = () => {
                 <Col xs={24} lg={16}>
                     <Card title="Pharmacy Information" bordered={false} style={{ marginBottom: 24 }}>
                         <Descriptions bordered column={2}>
-                            <Descriptions.Item label="Owner Name">{pharmacy.owner}</Descriptions.Item>
-                            <Descriptions.Item label="License Number">{pharmacy.license}</Descriptions.Item>
+                            <Descriptions.Item label="Owner Name">
+                                {typeof pharmacy.owner === 'object'
+                                    ? `${pharmacy.owner.firstName} ${pharmacy.owner.lastName}`
+                                    : (pharmacy.owner || 'N/A')}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="License Number">{pharmacy.license || pharmacy.licenseNumber}</Descriptions.Item>
                             <Descriptions.Item label="Email">{pharmacy.email}</Descriptions.Item>
                             <Descriptions.Item label="Phone">{pharmacy.phone}</Descriptions.Item>
                             <Descriptions.Item label="Address" span={2}>

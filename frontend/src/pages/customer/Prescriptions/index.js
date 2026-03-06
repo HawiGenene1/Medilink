@@ -44,7 +44,7 @@ const Prescriptions = () => {
           status: p.status === 'pending_review' ? 'Pending' :
             p.status === 'approved' ? 'Verified' :
               p.status === 'rejected' ? 'Rejected' :
-                p.status === 'processed' ? 'Processed' : 'Completed',
+                p.status === 'processed' ? 'Verified' : 'Completed',
           pharmacy: p.pharmacy?.name || 'Awaiting Selection',
           expiryDate: p.expiryDate ? new Date(p.expiryDate).toLocaleDateString() : 'N/A'
         })));
@@ -93,11 +93,11 @@ const Prescriptions = () => {
 
   const getStatusTag = (status) => {
     switch (status) {
-      case 'Verified': return <Tag color="success" icon={<CheckCircleOutlined />} style={{ borderRadius: '6px', marginRight: '16px' }}>Verified</Tag>;
-      case 'Pending': return <Tag color="processing" icon={<ClockCircleOutlined />} style={{ borderRadius: '6px', fontWeight: 500, marginRight: '16px' }}>Pending Review</Tag>;
-      case 'Expired': return <Tag color="default" style={{ borderRadius: '6px', marginRight: '16px' }}>Expired</Tag>;
-      case 'Rejected': return <Tag color="error" icon={<CloseCircleOutlined />} style={{ borderRadius: '6px', marginRight: '16px' }}>Rejected</Tag>;
-      default: return <Tag>{status}</Tag>;
+      case 'Verified': return <Tag color="success" icon={<CheckCircleOutlined />} style={{ borderRadius: '6px', marginRight: '8px', fontSize: '12px' }}>Verified</Tag>;
+      case 'Pending': return <Tag color="processing" icon={<ClockCircleOutlined />} style={{ borderRadius: '6px', fontWeight: 500, marginRight: '8px', fontSize: '12px' }}>Pending</Tag>;
+      case 'Expired': return <Tag color="default" style={{ borderRadius: '6px', marginRight: '8px', fontSize: '12px' }}>Expired</Tag>;
+      case 'Rejected': return <Tag color="error" icon={<CloseCircleOutlined />} style={{ borderRadius: '6px', marginRight: '8px', fontSize: '12px' }}>Rejected</Tag>;
+      default: return <Tag style={{ fontSize: '12px' }}>{status}</Tag>;
     }
   };
 
@@ -115,9 +115,9 @@ const Prescriptions = () => {
       width: 250,
       ellipsis: true,
       render: (text) => (
-        <Space>
+        <Space title={typeof text === 'string' ? text : ''}>
           <FileProtectOutlined style={{ color: token.colorPrimary }} />
-          <Text title={text}>{text}</Text>
+          <Text>{typeof text === 'string' ? text : 'Unknown File'}</Text>
         </Space>
       )
     },
@@ -138,6 +138,7 @@ const Prescriptions = () => {
       dataIndex: 'pharmacy',
       key: 'pharmacy',
       width: 200,
+      render: (pharm) => typeof pharm === 'object' ? pharm?.name || 'N/A' : (pharm || 'Awaiting Selection')
     },
     {
       title: 'Action',
@@ -169,12 +170,12 @@ const Prescriptions = () => {
 
   return (
     <div className="prescriptions-page fade-in">
-      <div className="page-header" style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div className="page-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
-          <Title level={2}>My Prescriptions</Title>
-          <Text type="secondary">Manage your medical documents and clinical authorizations.</Text>
+          <Title level={3} style={{ marginBottom: '4px' }}>My Prescriptions</Title>
+          <Text type="secondary" style={{ fontSize: '13px' }}>Manage your medical documents and clinical authorizations.</Text>
         </div>
-        <Button type="primary" size="large" icon={<InboxOutlined />} onClick={() => setUploadModalVisible(true)}>
+        <Button type="primary" size="middle" icon={<InboxOutlined />} onClick={() => setUploadModalVisible(true)}>
           Upload New Rx
         </Button>
       </div>

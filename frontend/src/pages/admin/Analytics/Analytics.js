@@ -1,89 +1,133 @@
-
-import React from 'react';
-import { Row, Col, Card, Select, Typography, Statistic } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Select, Typography, Statistic, message, Spin } from 'antd';
 import {
     BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import api from '../../../services/api';
 
 const { Title } = Typography;
 const { Option } = Select;
 
 const Analytics = () => {
+    const [loading, setLoading] = useState(true);
+    const [period, setPeriod] = useState('30d');
+    const [revenueTrend, setRevenueTrend] = useState([]);
+    const [statusDistribution, setStatusDistribution] = useState([]);
+    const [stats, setStats] = useState({
+        totalRevenue: 0,
+        orderVolume: 0,
+        avgOrderValue: 0,
+        activeUsers: 0
+    });
 
-    const monthlyRevenue = [
-        { name: 'Jan', value: 4000 },
-        { name: 'Feb', value: 3000 },
-        { name: 'Mar', value: 2000 },
-        { name: 'Apr', value: 2780 },
-        { name: 'May', value: 1890 },
-        { name: 'Jun', value: 2390 },
-        { name: 'Jul', value: 3490 },
-    ];
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [orderRes, userRes] = await Promise.all([
+                api.get(`/admin/analytics/orders?period=${period}`),
+                api.get(`/admin/analytics/users?period=${period}`)
+            ]);
 
-    const categoryData = [
-        { name: 'Antibiotics', value: 400 },
-        { name: 'Pain Relief', value: 300 },
-        { name: 'Supplements', value: 300 },
-        { name: 'Chronic Care', value: 200 },
-    ];
+            if (orderRes.data.success) {
+                const { revenueTrends, statusDistribution: statusData, orderTrends } = orderRes.data.data;
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+                setRevenueTrend(revenueTrends.map(item => ({
+                    name: item._id,
+                    value: item.revenue
+                })));
+
+                setStatusDistribution(statusData.map(item => ({
+                    name: item._id.toUpperCase(),
+                    value: item.count
+                })));
+
+                const totalRev = revenueTrends.reduce((acc, curr) => acc + curr.revenue, 0);
+                const totalOrders = orderTrends.reduce((acc, curr) => acc + curr.count, 0);
+
+                setStats(prev => ({
+                    ...prev,
+                    totalRevenue: totalRev,
+                    orderVolume: totalOrders,
+                    avgOrderValue: totalOrders > 0 ? totalRev / totalOrders : 0
+                }));
+            }
+
+            if (userRes.data.success) {
+                setStats(prev => ({
+                    ...prev,
+                    activeUsers: userRes.data.data.activeUsers
+                }));
+            }
+        } catch (error) {
+            console.error('Analytics Fetch Error:', error);
+            message.error('Failed to load business intelligence data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, [period]);
+
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+    if (loading && revenueTrend.length === 0) {
+        return <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" tip="Analyzing data..." /></div>;
+    }
 
     return (
         <div className="analytics-page">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <Title level={2}>Business Intelligence</Title>
-                <Select defaultValue="this_year" style={{ width: 120 }}>
-                    <Option value="this_month">This Month</Option>
-                    <Option value="this_quarter">This Quarter</Option>
-                    <Option value="this_year">This Year</Option>
+                <Select value={period} style={{ width: 120 }} onChange={value => setPeriod(value)}>
+                    <Option value="7d">Last 7 Days</Option>
+                    <Option value="30d">Last 30 Days</Option>
+                    <Option value="90d">Last 90 Days</Option>
                 </Select>
             </div>
 
             {/* KPI Cards */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={12} sm={6}>
-                    <Card bordered={false}>
+                    <Card bordered={false} loading={loading}>
                         <Statistic
                             title="Total Revenue"
-                            value={112893}
+                            value={stats.totalRevenue}
                             precision={2}
                             valueStyle={{ color: '#3f8600' }}
                             prefix="ETB"
-                            suffix={<ArrowUpOutlined />}
                         />
                     </Card>
                 </Col>
                 <Col xs={12} sm={6}>
-                    <Card bordered={false}>
+                    <Card bordered={false} loading={loading}>
                         <Statistic
                             title="Order Volume"
-                            value={982}
-                            valueStyle={{ color: '#3f8600' }}
-                            suffix={<ArrowUpOutlined />}
+                            value={stats.orderVolume}
+                            valueStyle={{ color: '#1890ff' }}
                         />
                     </Card>
                 </Col>
                 <Col xs={12} sm={6}>
-                    <Card bordered={false}>
+                    <Card bordered={false} loading={loading}>
                         <Statistic
                             title="Avg Order Value"
-                            value={112}
+                            value={stats.avgOrderValue}
                             precision={2}
                             prefix="ETB"
-                            valueStyle={{ color: '#cf1322' }}
-                            suffix={<ArrowDownOutlined />}
+                            valueStyle={{ color: '#722ed1' }}
                         />
                     </Card>
                 </Col>
                 <Col xs={12} sm={6}>
-                    <Card bordered={false}>
+                    <Card bordered={false} loading={loading}>
                         <Statistic
                             title="Active Users"
-                            value={4503}
-                            prefix=<ArrowUpOutlined />
+                            value={stats.activeUsers}
+                            prefix={<ArrowUpOutlined />}
                         />
                     </Card>
                 </Col>
@@ -91,27 +135,27 @@ const Analytics = () => {
 
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
-                    <Card title="Revenue Trend" bordered={false}>
+                    <Card title="Revenue Trend" bordered={false} loading={loading}>
                         <div style={{ width: '100%', height: 300 }}>
                             <ResponsiveContainer>
-                                <AreaChart data={monthlyRevenue}>
-                                    <CartesianGrid strokeDasharray="3 3" />
+                                <AreaChart data={revenueTrend}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="name" />
                                     <YAxis />
-                                    <Tooltip />
-                                    <Area type="monotone" dataKey="value" stroke="#8884d8" fill="#8884d8" />
+                                    <Tooltip formatter={(value) => [`ETB ${value.toFixed(2)}`, 'Revenue']} />
+                                    <Area type="monotone" dataKey="value" stroke="#1890ff" fill="#e6f7ff" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </Card>
                 </Col>
                 <Col xs={24} lg={8}>
-                    <Card title="Sales by Category" bordered={false}>
+                    <Card title="Order Status Distribution" bordered={false} loading={loading}>
                         <div style={{ width: '100%', height: 300 }}>
                             <ResponsiveContainer>
                                 <PieChart>
                                     <Pie
-                                        data={categoryData}
+                                        data={statusDistribution}
                                         cx="50%"
                                         cy="50%"
                                         innerRadius={60}
@@ -120,7 +164,7 @@ const Analytics = () => {
                                         paddingAngle={5}
                                         dataKey="value"
                                     >
-                                        {categoryData.map((entry, index) => (
+                                        {statusDistribution.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>

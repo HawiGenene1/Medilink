@@ -105,7 +105,7 @@ const Home = () => {
       </section>
 
       {/* For Patients Section */}
-      <section className="segment-section bg-white">
+      <section className="segment-section patients-section">
         <div className="container">
           <div className="section-header text-center">
             <Tag color="#56AB2F" style={{ marginBottom: '16px' }}>FOR PATIENTS</Tag>
@@ -162,7 +162,7 @@ const Home = () => {
 
 
       {/* For Pharmacies Section */}
-      <section className="segment-section bg-gray">
+      <section className="segment-section pharmacies-section">
         <div className="container">
           <Row gutter={[48, 48]} align="middle" className="reverse-mobile">
             <Col xs={24} lg={12}>
@@ -206,7 +206,7 @@ const Home = () => {
                 </div>
               </Space>
 
-              <Button type="primary" size="large" style={{ marginTop: '40px' }} onClick={() => navigate('/auth/pharmacy/register')}>
+              <Button type="primary" size="large" className="btn-get-started" style={{ marginTop: '40px' }} onClick={() => navigate('/auth/pharmacy/register')}>
                 Get Started
               </Button>
             </Col>
@@ -215,7 +215,7 @@ const Home = () => {
       </section>
 
       {/* For Delivery Partners Section */}
-      <section className="segment-section bg-white">
+      <section className="segment-section delivery-section">
         <div className="container">
           <Row gutter={[48, 48]} align="middle">
             <Col xs={24} lg={12}>
@@ -276,7 +276,7 @@ const Home = () => {
             </Paragraph>
             <Space size="middle">
               <Button size="large" className="btn-white" onClick={() => navigate('/auth/register')}>Create Free Account</Button>
-              <Button size="large" type="text" style={{ color: 'white', border: '1px solid white' }} onClick={() => navigate('/contact')}>Contact Sales</Button>
+              <Button size="large" type="text" style={{ color: 'white', border: '1px solid white' }} onClick={() => navigate('/about#contact')}>Contact Sales</Button>
             </Space>
           </div>
         </div>

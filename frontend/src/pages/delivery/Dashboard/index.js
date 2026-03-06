@@ -41,8 +41,10 @@ const MapController = ({ center, follow }) => {
 
       // USE setView with animate: false for MAXIMUM stability
       // This eliminates transition-end events that cause the _leaflet_pos crash
-      map.setView(center, map.getZoom(), { animate: false });
-      lastPos.current = center;
+      if (lat && lng) {
+        map.setView([lat, lng], map.getZoom(), { animate: false });
+        lastPos.current = [lat, lng];
+      }
     }
   }, [center, follow, map]);
 
