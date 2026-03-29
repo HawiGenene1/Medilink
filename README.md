@@ -72,22 +72,3 @@ cd frontend
 npm install
 npm start
 
-# Demo Accounts
-
-You can register recieve a generated password email with a new account or use the demo credentials below to explore different roles in the system.
-
-Customer  
-Email: cranchychoco@gmail.com  
-Password: customer123
-
-Pharmacy Owner  
-Email: unacceptable.scorpion.fqnu@protectsm  
-Password: Fews123
-
-Delivery Personnel  
-Email: circular.bandicoot.eohm@protectsmail.net  
-Password: Delivery123
-
-Admin  
-Email: admin@medilink.com
-Password: AdminPassword123!
