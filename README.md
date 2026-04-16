@@ -56,19 +56,4 @@ Database: MongoDB
 
 
 
-## How to Run the Project
-1. Clone the repository
-
-```bash
-https://github.com/HawiGenene1/Medilink.git
-
-2.Backend
-cd backend
-npm install
-npm run dev
-
-3.Frontend
-cd frontend
-npm install
-npm start
 
