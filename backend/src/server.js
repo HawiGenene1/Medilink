@@ -26,8 +26,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Handle preflight requests explicitly
-app.options('/{*path}', cors());
 const { monitoringMiddleware } = require('./middleware/monitoringMiddleware');
 app.use(monitoringMiddleware);
 app.use(express.json()); // parse JSON requests
