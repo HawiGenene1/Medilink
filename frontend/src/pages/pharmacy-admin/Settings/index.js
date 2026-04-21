@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Typography, Divider, Switch, List, Avatar, Button, Space, Modal, Form, Input, message } from 'antd';
+import { Card, Typography, Switch, List, Button, Modal, Form, Input, message } from 'antd';
 import { UserOutlined, BellOutlined, LockOutlined, GlobalOutlined } from '@ant-design/icons';
 import pharmacyAdminService from '../../../services/pharmacyAdminService';
 import { useAuth } from '../../../contexts/AuthContext';

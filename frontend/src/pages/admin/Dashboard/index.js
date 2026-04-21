@@ -4,7 +4,6 @@ import {
   UserOutlined,
   ShopOutlined,
   ShoppingOutlined,
-  DollarOutlined,
   SafetyOutlined,
   WarningOutlined,
   ArrowUpOutlined,

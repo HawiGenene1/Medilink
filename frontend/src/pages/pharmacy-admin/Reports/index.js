@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, List, Button, Space, Progress, Statistic, Select, DatePicker, message, Avatar } from 'antd';
+import { Row, Col, Card, Typography, List, Button, Space, Statistic, Select, message, Avatar } from 'antd';
 import {
     BarChartOutlined, PieChartOutlined, LineChartOutlined, DownloadOutlined,
-    FileTextOutlined, GlobalOutlined, ShopOutlined, CheckCircleOutlined,
-    CrownOutlined, SolutionOutlined
+    FileTextOutlined
 } from '@ant-design/icons';
 import pharmacyAdminService from '../../../services/pharmacyAdminService';
 import moment from 'moment';

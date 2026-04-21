@@ -17,8 +17,7 @@ import {
   SettingOutlined,
   LogoutOutlined,
   RightOutlined,
-  MenuOutlined,
-  BellOutlined,
+
   BarChartOutlined,
   InfoCircleOutlined,
   ArrowUpOutlined,
@@ -33,7 +32,6 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  BarChart,
   Bar,
   Cell
 } from 'recharts';
