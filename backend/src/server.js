@@ -27,7 +27,7 @@ app.use(cors({
 }));
 
 // Handle preflight requests explicitly
-app.options('*', cors());
+app.options('/{*path}', cors());
 const { monitoringMiddleware } = require('./middleware/monitoringMiddleware');
 app.use(monitoringMiddleware);
 app.use(express.json()); // parse JSON requests
