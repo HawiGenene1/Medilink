@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Typography, Table, Tag, Button, Space, Statistic, Modal, Form, Input, Select, DatePicker, message, Drawer, Timeline, List } from 'antd';
-import { CrownOutlined, DollarOutlined, SolutionOutlined, UserAddOutlined, PlusOutlined, HistoryOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Typography, Table, Tag, Button, Space, Modal, Form, Select, message, Drawer, Timeline, List } from 'antd';
+import { PlusOutlined, HistoryOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import pharmacyAdminService from '../../../services/pharmacyAdminService';
-import moment from 'moment';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
