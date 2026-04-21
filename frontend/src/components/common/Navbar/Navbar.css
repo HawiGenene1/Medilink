@@ -85,16 +85,42 @@
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 14px;
-  /* Reduced from 15px */
-  /* Slightly smaller text */
   position: relative;
-  transition: color 0.3s;
+  padding: 6px 14px;
+  border-radius: 20px;
+  transition: color 0.25s ease, background 0.25s ease, transform 0.2s ease;
   white-space: nowrap;
 }
 
-.navbar-links a:hover,
+.navbar-links a::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 60%;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 2px;
+  transition: transform 0.25s ease;
+}
+
+.navbar-links a:hover {
+  color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.navbar-links a:hover::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
 .navbar-links a.active {
   color: var(--primary-color);
+  font-weight: 600;
+}
+
+.navbar-links a.active::after {
+  transform: translateX(-50%) scaleX(1);
 }
 
 .navbar-actions {

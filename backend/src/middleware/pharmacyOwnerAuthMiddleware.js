@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const PharmacyOwner = require('../models/PharmacyOwner');
-const { JWT_SECRET } = require('../config/jwt');
 const asyncHandler = require('./async');
 const ErrorResponse = require('../utils/errorResponse');
 const Pharmacy = require('../models/Pharmacy');
@@ -26,7 +25,7 @@ const protectPharmacyOwner = asyncHandler(async (req, res, next) => {
         // Standard JWT Verification
         let decoded;
         try {
-            decoded = jwt.verify(token, JWT_SECRET);
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
         } catch (err) {
             console.error('[Auth] JWT Verification failed:', err.message);
             return next(new ErrorResponse('Invalid token', 401));

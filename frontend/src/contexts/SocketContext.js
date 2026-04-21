@@ -14,7 +14,11 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         // Initialize socket connection
-        socket.current = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
+        const serverUrl = process.env.REACT_APP_SOCKET_URL ||
+            (process.env.REACT_APP_API_URL
+                ? process.env.REACT_APP_API_URL.split('/api')[0]
+                : 'http://localhost:5000');
+        socket.current = io(serverUrl);
 
         socket.current.on('connect', () => {
             if (user) {

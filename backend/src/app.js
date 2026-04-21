@@ -1,8 +1,11 @@
 // In app.js
+// Load env vars FIRST before any other imports that read process.env
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-require('colors');  // Add this line here
+require('colors');
 const errorHandler = require('./middleware/error');
 const connectDB = require('./config/db');
 
@@ -13,9 +16,6 @@ const medicineRoutes = require('./routes/medicineRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const chapaRoutes = require('./routes/chapaRoutes');
 const paymentCallbackRoutes = require('./routes/paymentCallbackRoutes');
-
-// Load env vars
-require('dotenv').config();
 
 // Connect to database
 connectDB();

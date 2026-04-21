@@ -23,7 +23,9 @@ const PharmacyAdminProfile = () => {
     const getAvatarUrl = (path) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
-        const baseUrl = 'http://localhost:5000'; // Fallback for dev
+        const baseUrl = process.env.REACT_APP_API_URL
+            ? process.env.REACT_APP_API_URL.split('/api')[0]
+            : 'http://localhost:5000';
         return `${baseUrl}${path}?t=${new Date().getTime()}`;
     };
 

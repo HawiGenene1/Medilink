@@ -1,16 +1,32 @@
 {
   "files": {
-    "main.css": "/static/css/main.635690b8.css",
-    "main.js": "/static/js/main.c3487431.js",
+    "main.css": "/static/css/main.9e897523.css",
+    "main.js": "/static/js/main.0e020bb2.js",
+    "static/js/909.8970f872.chunk.js": "/static/js/909.8970f872.chunk.js",
+    "static/css/603.c0b98d3d.chunk.css": "/static/css/603.c0b98d3d.chunk.css",
+    "static/js/603.f72b614c.chunk.js": "/static/js/603.f72b614c.chunk.js",
+    "static/js/320.4ded8592.chunk.js": "/static/js/320.4ded8592.chunk.js",
+    "static/js/808.f6441b6c.chunk.js": "/static/js/808.f6441b6c.chunk.js",
+    "static/js/150.888868a0.chunk.js": "/static/js/150.888868a0.chunk.js",
+    "static/js/356.ee241cf7.chunk.js": "/static/js/356.ee241cf7.chunk.js",
+    "static/js/563.a4ee9902.chunk.js": "/static/js/563.a4ee9902.chunk.js",
     "static/media/pharmacy-dashboard-3d.png": "/static/media/pharmacy-dashboard-3d.e23db4afd37279ea5490.png",
     "static/media/delivery-app-3d.png": "/static/media/delivery-app-3d.e69da72a6212b9187048.png",
     "static/media/hero-pharmacy-3d.png": "/static/media/hero-pharmacy-3d.ce5109318fbfd06df106.png",
     "index.html": "/index.html",
-    "main.635690b8.css.map": "/static/css/main.635690b8.css.map",
-    "main.c3487431.js.map": "/static/js/main.c3487431.js.map"
+    "main.9e897523.css.map": "/static/css/main.9e897523.css.map",
+    "main.0e020bb2.js.map": "/static/js/main.0e020bb2.js.map",
+    "909.8970f872.chunk.js.map": "/static/js/909.8970f872.chunk.js.map",
+    "603.c0b98d3d.chunk.css.map": "/static/css/603.c0b98d3d.chunk.css.map",
+    "603.f72b614c.chunk.js.map": "/static/js/603.f72b614c.chunk.js.map",
+    "320.4ded8592.chunk.js.map": "/static/js/320.4ded8592.chunk.js.map",
+    "808.f6441b6c.chunk.js.map": "/static/js/808.f6441b6c.chunk.js.map",
+    "150.888868a0.chunk.js.map": "/static/js/150.888868a0.chunk.js.map",
+    "356.ee241cf7.chunk.js.map": "/static/js/356.ee241cf7.chunk.js.map",
+    "563.a4ee9902.chunk.js.map": "/static/js/563.a4ee9902.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.635690b8.css",
-    "static/js/main.c3487431.js"
+    "static/css/main.9e897523.css",
+    "static/js/main.0e020bb2.js"
   ]
 }

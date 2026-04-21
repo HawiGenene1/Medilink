@@ -308,7 +308,7 @@ const OrderManagement = () => {
                                         <div style={{ textAlign: 'center', margin: '12px 0' }}>
                                             <Image
                                                 width="100%"
-                                                src={`http://localhost:5000${selectedOrder.prescriptionImage}`}
+                                                src={`${process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.split('/api')[0] : 'http://localhost:5000'}${selectedOrder.prescriptionImage}`}
                                                 style={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                             />
                                         </div>
